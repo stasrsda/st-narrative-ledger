@@ -448,3 +448,24 @@ body.story-ledger-locked {
         gap: 8px;
     }
 }
+
+/* 在场勾选 */
+.sl-check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 2px;
+    cursor: pointer;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, .04);
+}
+
+.sl-check-row:last-child { border-bottom: 0; }
+
+.sl-check-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+}
+
+.sl-check-name { flex: 1 1 auto; }

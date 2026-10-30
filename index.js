@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -330,6 +330,11 @@ function diagInfo() {
             affNow: metaHint.affSample || '（无）',
             books: worldBookNames(),
             vars: syncChatVariables(state),
+            actorList: Object.values(pack.index?.actor ?? {}).map(a => ({
+                id: a.id,
+                name: a.name,
+                on: (meta?.onstage ?? []).includes(a.id),
+            })),
             directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
             keyLen: (settings.direct?.apiKey ?? '').length,
             profileId: settings.profileId,
@@ -508,6 +513,25 @@ const settleQueue = createQueue({
             refreshPanel({ settle: { ...settleStatus } });
             return;
         }
+        // 模型判到谁，说明谁在场 —— 自动补进名单
+        try {
+            const seen = [...(parsed.data.results ?? []), ...(parsed.data.beats ?? [])]
+                .map(x => x.actor)
+                .filter(Boolean);
+            if (seen.length) {
+                const meta = readMeta() ?? {};
+                const list = Array.isArray(meta.onstage) ? [...meta.onstage] : [];
+                let added = 0;
+                for (const id of new Set(seen)) {
+                    if (!list.includes(id)) { list.push(id); added++; }
+                }
+                if (added) {
+                    writeMeta({ onstage: list });
+                    log('结算补充在场', list.join(','));
+                }
+            }
+        } catch { /* noop */ }
+
         settleStatus.at = Date.now();
         settleStatus.ok = true;
         settleStatus.msg = '已应用 ' + events.length + ' 条';
@@ -745,6 +769,17 @@ function boot() {
         } catch { /* noop */ }
         refreshPanel({ profileId: id, transport: transportAvailable() ? (id ? '就绪' : '缺连接配置') : '不可用' });
         log('副模型已保存', id || '（关闭）');
+    });
+
+    onOnstageChange((id, on) => {
+        const meta = readMeta() ?? {};
+        const list = Array.isArray(meta.onstage) ? [...meta.onstage] : [];
+        const has = list.includes(id);
+        if (on && !has) list.push(id);
+        if (!on && has) list.splice(list.indexOf(id), 1);
+        writeMeta({ onstage: list });
+        composeAndInject();
+        log('在场名单更新', list.join(',') || '（空）');
     });
 
     onExportDiag(() => diagDump());

@@ -48,6 +48,7 @@ let importHandler = null;
 let listHandler = null;
 let settleNowHandler = null;
 let diagHandler = null;
+let onstageHandler = null;
 
 try {
     const saved = localStorage.getItem('storyLedger.hud');
@@ -88,6 +89,10 @@ export function onSettleNow(fn) {
 
 export function onExportDiag(fn) {
     diagHandler = fn;
+}
+
+export function onOnstageChange(fn) {
+    onstageHandler = fn;
 }
 
 function el(tag, cls, text) {
@@ -247,6 +252,28 @@ function render() {
         c.append(row('聊天', S.chatId));
         c.append(row('楼层', S.messageCount));
         body.append(c);
+
+        if (S.diag?.actorList?.length) {
+            const oc = card('在场（勾选）');
+            oc.append(el('div', 'sl-note', '只有勾上的人会变好感、才出现在底部条。'));
+            for (const a of S.diag.actorList) {
+                const line = el('label', 'sl-check-row');
+                const cb = el('input', '');
+                cb.type = 'checkbox';
+                cb.checked = Boolean(a.on);
+                cb.addEventListener('change', () => {
+                    a.on = cb.checked;
+                    try {
+                        onstageHandler?.(a.id, cb.checked);
+                    } catch (e) {
+                        console.warn('[叙事账本] onstage change failed', e);
+                    }
+                });
+                line.append(cb, el('span', 'sl-check-name', a.name));
+                oc.append(line);
+            }
+            body.append(oc);
+        }
 
         if (S.aff?.all?.length) {
             const ac = card('好感（全部角色）');
