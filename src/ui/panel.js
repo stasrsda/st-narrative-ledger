@@ -32,6 +32,7 @@ const S = {
     testResult: null,
     importStatus: '',
     direct: {},
+    settle: null,
 };
 
 let profileHandler = null;
@@ -41,6 +42,7 @@ let saveHandler = null;
 let testHandler = null;
 let importHandler = null;
 let listHandler = null;
+let settleNowHandler = null;
 
 export function onProfileChange(fn) {
     profileHandler = fn;
@@ -68,6 +70,10 @@ export function onImportPack(fn) {
 
 export function onListModels(fn) {
     listHandler = fn;
+}
+
+export function onSettleNow(fn) {
+    settleNowHandler = fn;
 }
 
 function el(tag, cls, text) {
@@ -157,6 +163,29 @@ function render() {
         c.append(row('预算', S.tokens ? `${S.tokens} token` : '—'));
         c.append(row('裁剪', S.dropped?.length ? S.dropped.join('、') : '无'));
         c.append(row('副模型', S.transport));
+
+        const st = S.settle ?? null;
+        const settleText = st
+            ? (st.at ? `${st.ok === false ? '失败' : st.ok === true ? '成功' : '等待'} · ${st.msg}` : '尚未结算')
+            : '尚未结算';
+        c.append(row('结算', settleText));
+
+        const retry = el('button', 'sl-btn', '重试结算这一楼');
+        retry.type = 'button';
+        retry.addEventListener('click', async () => {
+            retry.disabled = true;
+            try {
+                const r = await settleNowHandler?.();
+                if (r && !r.ok) {
+                    S.settle = { at: Date.now(), ok: false, msg: r.msg };
+                    render();
+                }
+            } finally {
+                setTimeout(() => { retry.disabled = false; }, 1500);
+            }
+        });
+        c.append(retry);
+
         c.append(row('聊天', S.chatId));
         c.append(row('楼层', S.messageCount));
         body.append(c);

@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -28,6 +28,9 @@ import { reviewText, summarize } from './src/core/review/review.js';
 const MENU_CLASS = 'story-ledger-menu-item';
 const registry = createRegistry();
 const settings = { profileId: '', depth: 1, enabled: true, direct: { baseUrl: '', apiKey: '', model: '' } };
+
+/** 最近一次结算的状态，显示在面板上——否则失败只能翻控制台 */
+const settleStatus = { at: 0, ok: null, msg: '尚未结算', events: 0 };
 
 // 启动信标：模块一被求值就在 <head> 留痕，不依赖控制台就能查
 try {
@@ -293,9 +296,22 @@ function settleMessage() {
 
     // 投递结算
     const directReady = Boolean(settings.direct?.baseUrl && settings.direct?.model);
-    if (pack && transportAvailable() && (settings.profileId || directReady)) {
+    const hasChannel = Boolean(settings.profileId || directReady);
+    if (!pack) {
+        settleStatus.msg = '没有世界包，跳过结算';
+        settleStatus.ok = false;
+    } else if (!transportAvailable()) {
+        settleStatus.msg = 'ST 没有提供转发接口（getRequestHeaders 缺失）';
+        settleStatus.ok = false;
+    } else if (!hasChannel) {
+        settleStatus.msg = '没配副模型（直连或连接配置都空着）';
+        settleStatus.ok = null;
+    } else {
+        settleStatus.msg = '已投递，等待返回…';
+        settleStatus.ok = null;
         enqueueSettle(idx, pack, state, userText, msg.mes);
     }
+    refreshPanel({ settle: { ...settleStatus } });
 }
 
 const settleQueue = createQueue({
@@ -314,7 +330,19 @@ const settleQueue = createQueue({
         const parsed = normalizeSettle(res, { actorIds, text: task.text });
         if (!parsed.ok) throw new Error(parsed.error);
         const events = toEvents(task.pack, task.state, parsed.data);
-        if (!events.length) return;
+        if (!events.length) {
+            settleStatus.at = Date.now();
+            settleStatus.ok = true;
+            settleStatus.msg = '通了，但这轮判定为无事件';
+            settleStatus.events = 0;
+            refreshPanel({ settle: { ...settleStatus } });
+            return;
+        }
+        settleStatus.at = Date.now();
+        settleStatus.ok = true;
+        settleStatus.msg = '已应用 ' + events.length + ' 条';
+        settleStatus.events = events.length;
+        refreshPanel({ settle: { ...settleStatus } });
         const msg = messages()[task.msgIndex];
         appendEvents(msg, events);
         try {
@@ -325,7 +353,14 @@ const settleQueue = createQueue({
         composeAndInject();
     },
     retries: 2,
-    onError: e => log('结算失败', e?.message),
+    onError: (e, task) => {
+        log('结算失败', e?.message);
+        settleStatus.at = Date.now();
+        settleStatus.ok = false;
+        settleStatus.msg = e?.message ?? String(e);
+        settleStatus.events = 0;
+        refreshPanel({ settle: { ...settleStatus } });
+    },
 });
 
 function enqueueSettle(msgIndex, pack, state, userText, aiText) {
@@ -529,6 +564,18 @@ function boot() {
         } catch { /* noop */ }
         refreshPanel({ profileId: id, transport: transportAvailable() ? (id ? '就绪' : '缺连接配置') : '不可用' });
         log('副模型已保存', id || '（关闭）');
+    });
+
+    onSettleNow(() => {
+        const idx = lastMessageIndex();
+        const msg = messages()[idx];
+        if (!msg || msg.is_user) return { ok: false, msg: '最后一楼不是 AI 回复' };
+        try {
+            settleMessage();
+            return { ok: true, msg: '已重新投递' };
+        } catch (e) {
+            return { ok: false, msg: e?.message ?? String(e) };
+        }
     });
 
     onListModels(async direct => {
