@@ -229,54 +229,18 @@ function enqueueSettle(msgIndex, pack, state, userText, aiText) {
 }
 
 /**
- * 挂入口。1.19 取消了 #extensionsMenu，改成把界面塞进 #extensions_settings。
- * 两种都试：老版本走菜单项，新版本走设置块。
+ * 老版本 ST 的魔杖菜单入口；1.19 没有 #extensionsMenu，走 setupSettings。
  */
 function mountMenu() {
-    // 老版本：魔杖菜单里加一项
     const menu = document.getElementById('extensionsMenu');
-    if (menu && !menu.querySelector('.' + MENU_CLASS)) {
-        const item = document.createElement('div');
-        item.className = 'extension_container interactable ' + MENU_CLASS;
-        item.tabIndex = 0;
-        item.innerHTML = '<div class="fa-solid fa-scroll fa-fw"></div><span>叙事账本</span>';
-        item.addEventListener('click', () => openDrawer());
-        menu.append(item);
-        return true;
-    }
-    if (menu) return true;
-
-    // 1.19：扩展设置区里的一个块
-    const host = document.getElementById('extensions_settings')
-        ?? document.getElementById('extensions_settings2');
-    if (!host) return false;
-    if (host.querySelector('.' + MENU_CLASS)) {
-        return true;
-    }
-
-    const block = document.createElement('div');
-    block.className = 'story-ledger-settings ' + MENU_CLASS;
-    block.innerHTML = [
-        '<div class="inline-drawer">',
-        '  <div class="inline-drawer-toggle inline-drawer-header">',
-        '    <b>叙事账本</b>',
-        '    <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>',
-        '  </div>',
-        '  <div class="inline-drawer-content">',
-        `    <div class="sl-note">v${VERSION} · 状态账本（时间 / 地点 / 在场 / 好感 / 礼法 / 器物）</div>`,
-        '    <div class="menu_button menu_button_icon story-ledger-open">',
-        '      <i class="fa-solid fa-scroll"></i><span>打开面板</span>',
-        '    </div>',
-        '  </div>',
-        '</div>',
-    ].join('\n');
-    block.querySelector('.story-ledger-open')?.addEventListener('click', () => openDrawer());
-    host.append(block);
-
-    // 折叠行为交给 ST 自己的 inline-drawer 处理；若没响应，点标题也能开
-    block.querySelector('.inline-drawer-toggle')?.addEventListener('click', () => {
-        block.querySelector('.inline-drawer-content')?.classList.toggle('displayNone');
-    });
+    if (!menu) return false;
+    if (menu.querySelector('.' + MENU_CLASS)) return true;
+    const item = document.createElement('div');
+    item.className = 'extension_container interactable ' + MENU_CLASS;
+    item.tabIndex = 0;
+    item.innerHTML = '<div class="fa-solid fa-scroll fa-fw"></div><span>叙事账本</span>';
+    item.addEventListener('click', () => openDrawer());
+    menu.append(item);
     return true;
 }
 
@@ -340,31 +304,28 @@ async function setupSettings(attempt = 0) {
         log('等不到 #extensions_settings，只保留悬浮按钮');
         return false;
     }
-    if (host.querySelector('.' + MENU_CLASS)) {
-        return true;
-    }
+    if (host.querySelector('.story-ledger-settings')) return true;
 
+    // 不用 ST 的 inline-drawer：它的折叠动画会把内容吃掉。做成常开的一块。
     const block = document.createElement('div');
-    block.className = 'story-ledger-settings ' + MENU_CLASS;
+    block.className = 'story-ledger-settings';
     block.innerHTML = [
-        '<div class="inline-drawer">',
-        '  <div class="inline-drawer-toggle inline-drawer-header">',
-        '    <b>叙事账本</b>',
-        '    <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>',
-        '  </div>',
-        '  <div class="inline-drawer-content">',
-        `    <div class="sl-note">v${VERSION} · 时间 / 地点 / 在场 / 好感 / 礼法 / 器物</div>`,
-        '    <div class="menu_button menu_button_icon story-ledger-open">',
-        '      <i class="fa-solid fa-scroll"></i><span>打开面板</span>',
-        '    </div>',
-        '  </div>',
-        '</div>',
-    ].join('\n');
-    block.querySelector('.story-ledger-open')?.addEventListener('click', () => openDrawer());
+        '<div class="story-ledger-head"><b>叙事账本</b>',
+        `<span class="story-ledger-ver">v${VERSION}</span></div>`,
+        '<div class="story-ledger-desc">时间 / 地点 / 在场 / 好感 / 礼法 / 器物</div>',
+        '<div class="menu_button menu_button_icon story-ledger-open">',
+        '<i class="fa-solid fa-scroll"></i><span>打开面板</span></div>',
+    ].join('');
+    const btn = block.querySelector('.story-ledger-open');
+    if (btn) {
+        btn.style.cursor = 'pointer';
+        btn.addEventListener('click', ev => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            openDrawer();
+        });
+    }
     host.append(block);
-    block.querySelector('.inline-drawer-toggle')?.addEventListener('click', () => {
-        block.querySelector('.inline-drawer-content')?.classList.toggle('displayNone');
-    });
     log('已挂到扩展设置区');
     return true;
 }
