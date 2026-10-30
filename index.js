@@ -242,7 +242,6 @@ function mountMenu() {
         item.innerHTML = '<div class="fa-solid fa-scroll fa-fw"></div><span>叙事账本</span>';
         item.addEventListener('click', () => openDrawer());
         menu.append(item);
-        document.getElementById('story-ledger-fab')?.remove();
         return true;
     }
     if (menu) return true;
@@ -252,7 +251,6 @@ function mountMenu() {
         ?? document.getElementById('extensions_settings2');
     if (!host) return false;
     if (host.querySelector('.' + MENU_CLASS)) {
-        document.getElementById('story-ledger-fab')?.remove();
         return true;
     }
 
@@ -279,7 +277,6 @@ function mountMenu() {
     block.querySelector('.inline-drawer-toggle')?.addEventListener('click', () => {
         block.querySelector('.inline-drawer-content')?.classList.toggle('displayNone');
     });
-    document.getElementById('story-ledger-fab')?.remove();
     return true;
 }
 
@@ -344,7 +341,6 @@ async function setupSettings(attempt = 0) {
         return false;
     }
     if (host.querySelector('.' + MENU_CLASS)) {
-        document.getElementById('story-ledger-fab')?.remove();
         return true;
     }
 
@@ -369,7 +365,6 @@ async function setupSettings(attempt = 0) {
     block.querySelector('.inline-drawer-toggle')?.addEventListener('click', () => {
         block.querySelector('.inline-drawer-content')?.classList.toggle('displayNone');
     });
-    document.getElementById('story-ledger-fab')?.remove();
     log('已挂到扩展设置区');
     return true;
 }

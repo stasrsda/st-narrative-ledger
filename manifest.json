@@ -1,5 +1,5 @@
 {
-    "display_name":  "叙事账本",
+    "display_name":  "鍙欎簨璐︽湰",
     "loading_order":  60,
     "requires":  [
 
@@ -10,7 +10,7 @@
     "js":  "index.js",
     "css":  "style.css",
     "author":  "stasrsda",
-    "version":  "0.2.6",
+    "version":  "0.2.7",
     "homePage":  "https://github.com/stasrsda/st-narrative-ledger",
     "auto_update":  false,
     "hooks":  {
