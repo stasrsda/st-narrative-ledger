@@ -200,6 +200,24 @@ function packErrorText() {
     return `${ids[0]}：${one?.msg ?? '校验未通过'}`;
 }
 
+/** 诊断信息：不依赖任何局部变量，任何地方都能调 */
+function diagInfo() {
+    try {
+        const { pack } = ensurePack();
+        return {
+            packId: pack?.id ?? '—',
+            packName: pack?.name ?? '—',
+            actors: Object.keys(pack?.index?.actor ?? {}).length,
+            sample: pack ? sampleAffinity(pack) : '无角色',
+            directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
+            keyLen: (settings.direct?.apiKey ?? '').length,
+            profileId: settings.profileId,
+        };
+    } catch (e) {
+        return { packId: '读取失败', packName: String(e?.message ?? e), actors: 0, sample: '—' };
+    }
+}
+
 /** 诊断用：取两个角色的基础好感，看包读没读对 */
 function sampleAffinity(pack) {
     const a = pack.index?.actor ?? {};
@@ -267,15 +285,7 @@ function composeAndInject() {
             ? '不可用'
             : (settings.direct?.model || settings.profileId ? '就绪' : '缺连接配置'),
         direct: settings.direct,
-        diag: {
-            packId: pack.id,
-            packName: pack.name,
-            actors: Object.keys(pack.index?.actor ?? {}).length,
-            sample: sampleAffinity(pack),
-            directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
-            keyLen: (settings.direct?.apiKey ?? '').length,
-            profileId: settings.profileId,
-        },
+        diag: diagInfo(),
         chatId: chatId(),
         messageCount: messages().length,
     });
@@ -567,15 +577,7 @@ function boot() {
             }
             refreshPanel({
                 direct: settings.direct,
-        diag: {
-            packId: pack.id,
-            packName: pack.name,
-            actors: Object.keys(pack.index?.actor ?? {}).length,
-            sample: sampleAffinity(pack),
-            directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
-            keyLen: (settings.direct?.apiKey ?? '').length,
-            profileId: settings.profileId,
-        },
+        diag: diagInfo(),
                 transport: !transportAvailable()
                     ? '不可用'
                     : (settings.direct.model || settings.profileId ? '就绪' : '缺连接配置'),
