@@ -277,6 +277,20 @@ function render() {
             : '尚未结算';
         c.append(row('结算', settleText));
 
+        if (st?.changed?.length) {
+            for (const x of st.changed) {
+                const up = x.to > x.from;
+                c.append(row(x.name, `${x.from} → ${x.to}${up ? ' ▲' : ' ▼'}`));
+            }
+        } else if (st?.at && st.ok !== false) {
+            c.append(row('好感变化', '这轮没有人变'));
+        }
+
+        if (st?.dropped?.length) {
+            c.append(el('div', 'sl-note',
+                '被丢掉的判定：' + st.dropped.map(d => `${d.raw}（${d.why}）`).join('、')));
+        }
+
         const retry = el('button', 'sl-btn', '重试结算这一楼');
         retry.type = 'button';
         retry.addEventListener('click', async () => {

@@ -701,7 +701,14 @@ const settleQueue = createQueue({
             })
             : await requestCompletion(task.messages, { profileId: settings.profileId });
         const actorIds = new Set(Object.keys(task.pack.index?.actor ?? {}));
-        const parsed = normalizeSettle(res, { actorIds, text: task.text });
+        // 模型经常直接写中文名，这里建一张「名字/别称 → id」的表
+        const aliasMap = new Map();
+        for (const [id, a] of Object.entries(task.pack.index?.actor ?? {})) {
+            aliasMap.set(id, id);
+            if (a.name) aliasMap.set(a.name, id);
+            for (const al of a.aliases ?? []) aliasMap.set(al, id);
+        }
+        const parsed = normalizeSettle(res, { actorIds, aliasMap, text: task.text });
         if (!parsed.ok) throw new Error(parsed.error);
         const events = toEvents(task.pack, task.state, parsed.data);
         if (!events.length) {
@@ -730,6 +737,25 @@ const settleQueue = createQueue({
                 }
             }
         } catch { /* noop */ }
+
+        // 把这一轮的好感变化算出来，写进状态给面板看
+        try {
+            const before = currentState().state.aff ?? {};
+            const msgNow = messages()[task.msgIndex];
+            const eventsNow = msgNow?.extra?.storyLedger?.events ?? [];
+            const after = fold(readMeta()?.seed, eventsByFloor()).aff ?? {};
+            const changed = [];
+            for (const id of new Set([...Object.keys(before), ...Object.keys(after)])) {
+                const a = before[id] ?? task.pack.index?.actor?.[id]?.aff ?? 0;
+                const b2 = after[id] ?? task.pack.index?.actor?.[id]?.aff ?? 0;
+                if (a !== b2) changed.push({ name: task.pack.index?.actor?.[id]?.name ?? id, from: a, to: b2 });
+            }
+            settleStatus.changed = changed;
+            settleStatus.dropped = parsed.data?.dropped ?? [];
+            log('好感变化', changed.map(x => `${x.name} ${x.from}→${x.to}`).join('、') || '（无）');
+        } catch (e) {
+            log('计算好感变化失败', e?.message ?? e);
+        }
 
         settleStatus.at = Date.now();
         settleStatus.ok = true;

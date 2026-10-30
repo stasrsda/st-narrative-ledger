@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizePack } from '../src/core/pack/registry.js';
 import { createQueue } from '../src/llm/queue.js';
-import { normalizeSettle, extractJson } from '../src/llm/schema.js';
+import { normalizeSettle, extractJson, resolveActor } from '../src/llm/schema.js';
 import { toEvents } from '../src/llm/settle.js';
 import { reviewText, echoOfUser, summarize, looksTruncated } from '../src/core/review/review.js';
 
@@ -203,4 +203,36 @@ test('截断检测：以标签收尾不算截断', () => {
     assert.equal(looksTruncated('故事写完了。\n</记录>'), false);
     assert.equal(looksTruncated('故事写完了。\n</content>'), false);
     assert.equal(looksTruncated('写到一半，'), true);
+});
+
+test('结算结果：模型写中文名也能解析成 id', () => {
+    const ids = new Set(['huozhen', 'zhiwei']);
+    const alias = new Map([['霍振', 'huozhen'], ['沈知微', 'zhiwei'], ['知微', 'zhiwei']]);
+    const r = normalizeSettle(
+        { results: [{ actor: '霍振', kind: 'B' }, { actor: '知微', kind: 'C' }] },
+        { actorIds: ids, aliasMap: alias, text: '' },
+    );
+    assert.deepEqual(r.data.results.map(x => x.actor), ['huozhen', 'zhiwei']);
+});
+
+test('结算结果：认不出的角色进 dropped，不静默消失', () => {
+    const ids = new Set(['huozhen']);
+    const alias = new Map([['霍振', 'huozhen']]);
+    const r = normalizeSettle(
+        { results: [{ actor: '张三', kind: 'A' }] },
+        { actorIds: ids, aliasMap: alias, text: '' },
+    );
+    assert.equal(r.data.results.length, 0);
+    assert.equal(r.data.dropped.length, 1);
+    assert.equal(r.data.dropped[0].raw, '张三');
+});
+
+test('resolveActor：id / 全名 / 别称 / 带后缀都能认', () => {
+    const ids = new Set(['huozhen']);
+    const alias = new Map([['霍振', 'huozhen'], ['霍将军', 'huozhen']]);
+    assert.equal(resolveActor('huozhen', ids, alias), 'huozhen');
+    assert.equal(resolveActor('霍振', ids, alias), 'huozhen');
+    assert.equal(resolveActor('霍将军', ids, alias), 'huozhen');
+    assert.equal(resolveActor('霍振说', ids, alias), 'huozhen');
+    assert.equal(resolveActor('张三', ids, alias), null);
 });

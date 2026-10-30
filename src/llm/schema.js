@@ -2,7 +2,9 @@
 export const KINDS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 export function emptyPayload() {
-    return { results: [], motives: [], beats: [], codeHits: [], happened: [], knows: [], intimate: [] };
+    // 记录被丢掉的条目，便于面板排查
+    return { results: [],
+        dropped: [], motives: [], beats: [], codeHits: [], happened: [], knows: [], intimate: [] };
 }
 
 /**
@@ -12,7 +14,25 @@ export function emptyPayload() {
  * @param {Set<string>} [o.actorIds] 只保留在册角色
  * @param {string} [o.text] 用来核对 quote 是否真的在正文里
  */
-export function normalizeSettle(raw, { actorIds = null, text = '' } = {}) {
+/**
+ * 把模型给的东西解析成角色 id：
+ * 认 id、认全名、认别称（模型经常直接写「霍振」而不是 huozhen）。
+ */
+export function resolveActor(raw, actorIds = null, aliasMap = null) {
+    const v = String(raw ?? '').trim();
+    if (!v) return null;
+    if (actorIds && actorIds.has(v)) return v;
+    if (aliasMap) {
+        if (aliasMap.has(v)) return aliasMap.get(v);
+        // 允许「霍振说他」这类带后缀的写法
+        for (const [name, id] of aliasMap) {
+            if (name.length >= 2 && v.includes(name)) return id;
+        }
+    }
+    return actorIds ? null : v;
+}
+
+export function normalizeSettle(raw, { actorIds = null, aliasMap = null, text = '' } = {}) {
     let obj = raw;
     if (typeof raw === 'string') {
         try {
@@ -29,13 +49,15 @@ export function normalizeSettle(raw, { actorIds = null, text = '' } = {}) {
 
     for (const r of asArray(obj.results)) {
         if (!r?.actor || !KINDS.includes(r.kind)) continue;
-        if (actorIds && !actorIds.has(r.actor)) continue;
-        data.results.push({ actor: r.actor, kind: r.kind, note: truncate(r.note, 40), quote: pickQuote(r.quote, text) });
+        const id = resolveActor(r.actor, actorIds, aliasMap);
+        if (!id) { data.dropped.push({ raw: r.actor, why: '认不出这个角色' }); continue; }
+        data.results.push({ actor: id, kind: r.kind, note: truncate(r.note, 40), quote: pickQuote(r.quote, text) });
     }
     for (const b of asArray(obj.beats)) {
         if (!b?.actor || !b.id) continue;
-        if (actorIds && !actorIds.has(b.actor)) continue;
-        data.beats.push({ actor: b.actor, id: String(b.id) });
+        const id = resolveActor(b.actor, actorIds, aliasMap);
+        if (!id) { data.dropped.push({ raw: b.actor, why: '节拍：认不出角色' }); continue; }
+        data.beats.push({ actor: id, id: String(b.id) });
     }
     for (const c of asArray(obj.codeHits)) {
         if (!c?.id) continue;
