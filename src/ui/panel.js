@@ -1,4 +1,4 @@
-import { VERSION, PANEL_ID } from '../core/version.js';
+import { VERSION, BUILD, PANEL_ID } from '../core/version.js';
 
 const TABS = [
     ['state', '状态'],
@@ -64,7 +64,9 @@ function buildDrawer() {
     d.setAttribute('aria-hidden', 'true');
     const head = el('div', 'sl-head');
     head.append(el('span', 'sl-title', '叙事账本'));
-    head.append(el('span', 'sl-version', 'v' + VERSION));
+    const ver = el('span', 'sl-version', 'v' + VERSION);
+    ver.title = '构建于 ' + BUILD;
+    head.append(ver);
     const close = el('button', 'sl-close', '×');
     close.type = 'button';
     close.addEventListener('click', closeDrawer);
@@ -104,6 +106,7 @@ function render() {
 
     if (S.tab === 'state') {
         const c = card('状态');
+        c.append(row('版本', `v${VERSION}（${BUILD}）`));
         c.append(row('世界包', S.packName || S.packId));
         c.append(row('注入', S.injected ? '开' : '关'));
         c.append(row('预算', S.tokens ? `${S.tokens} token` : '—'));
