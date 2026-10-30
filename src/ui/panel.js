@@ -375,6 +375,8 @@ function render() {
             dg.append(row('在场来源', S.diag.onstageSrc === 'ai' ? '主模型写的【在场】行' : '手动/开局'));
             dg.append(row('事件数', S.diag.lastEvents ?? 0));
             dg.append(row('末楼字数', S.diag.lastLen ?? 0));
+            const h = S.diag.hud ?? {};
+            dg.append(row('好感条', h.on === false ? '已关闭（世界包页可开）' : `开 · 在场 ${h.onstage ?? 0} 人`));
             if (S.diag.lastThink) {
                 dg.append(row('其中思考', `${S.diag.lastThink} 字（正文 ${S.diag.lastBody ?? 0} 字）`));
             }
@@ -816,11 +818,17 @@ function render() {
     }
 
     body.scrollTop = keepTop;
-    renderHud();
 }
 
 export function refreshPanel(patch = {}) {
     Object.assign(S, patch);
+    // HUD 必须在面板之前刷新：面板没建出来时 render() 会提前返回，
+    // 但底部好感条跟面板无关，不能因此不显示
+    try {
+        renderHud();
+    } catch (e) {
+        console.warn('[叙事账本] HUD 渲染失败', e);
+    }
     render();
 }
 

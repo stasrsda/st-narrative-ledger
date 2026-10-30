@@ -424,6 +424,10 @@ function diagInfo() {
             affNow: metaHint.affSample || '（无）',
             onstageSrc: readMeta()?.onstageSrc ?? 'manual',
             books: worldBookNames(),
+            hud: {
+                on: (() => { try { return globalThis.localStorage?.getItem('storyLedger.hud') !== '0'; } catch { return true; } })(),
+                onstage: (readMeta()?.onstage ?? []).length,
+            },
             vars: syncChatVariables(state),
             actorList: Object.values(pack.index?.actor ?? {}).map(a => ({
                 id: a.id,
