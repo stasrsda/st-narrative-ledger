@@ -265,6 +265,49 @@ function diagDump() {
     return lines.join('\n');
 }
 
+/** 把状态写回聊天变量（aff_<id> 等），兼容读 getvar 的界面与世界书 */
+function syncChatVariables(state) {
+    try {
+        const api = ctx().variables?.local;
+        if (!api?.set) return 0;
+        let n = 0;
+        for (const [id, val] of Object.entries(state.aff ?? {})) {
+            api.set(`aff_${id}`, String(val ?? 0));
+            n++;
+        }
+        for (const [id, rank] of Object.entries(state.rank ?? {})) {
+            if (rank) api.set(`rank_${id}`, String(rank));
+        }
+        return n;
+    } catch (e) {
+        log('写变量失败', e?.message ?? e);
+        return 0;
+    }
+}
+
+/** 好感视图：在场的一行 + 全量列表，给面板和底部好感条用 */
+function affinityView(pack, state, meta) {
+    const bandOf = (v) => {
+        const ladder = pack.affinity?.ladder ?? [];
+        const min = pack.affinity?.min ?? -100;
+        const step = pack.affinity?.step ?? 10;
+        const idx = Math.max(0, Math.min(ladder.length - 1, Math.floor((Math.max(min, Math.min(100, v)) - min) / step)));
+        return ladder[idx] ?? '';
+    };
+    const onstageIds = (meta?.onstage ?? []).filter(id => pack.index?.actor?.[id]);
+    const row = id => {
+        const a = pack.index.actor[id];
+        const aff = state.aff?.[id] ?? a.aff ?? 0;
+        return { id, name: a.name, aff, band: bandOf(aff) };
+    };
+    return {
+        bar: onstageIds.map(row),
+        all: Object.keys(pack.index?.actor ?? {})
+            .map(row)
+            .sort((x, y) => y.aff - x.aff),
+    };
+}
+
 /** 诊断信息：不依赖任何局部变量，任何地方都能调 */
 function diagInfo() {
     try {
@@ -286,6 +329,7 @@ function diagInfo() {
             lastEvents: metaHint.lastEvents ?? 0,
             affNow: metaHint.affSample || '（无）',
             books: worldBookNames(),
+            vars: syncChatVariables(state),
             directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
             keyLen: (settings.direct?.apiKey ?? '').length,
             profileId: settings.profileId,
@@ -361,6 +405,7 @@ function composeAndInject() {
     const lastUser = [...msgs].reverse().find(m => m.is_user)?.mes ?? '';
     const lastAi = msgs[msgs.length - 1]?.mes?.slice(-200) ?? '';
     const hintText = lastUser + lastAi;
+    const varCount = syncChatVariables(state);
     const block = buildSceneBlock({ pack, state, tree, chatSeed: chatId(), meta: { ...meta, hintText }, budget: settings.depth === 1 ? 220 : 260 });
     const ok = settings.enabled && (setStatePrompt(block.text) || setRawSlot(block.text));
 
@@ -383,6 +428,7 @@ function composeAndInject() {
             : (settings.direct?.model || settings.profileId ? '就绪' : '缺连接配置'),
         direct: settings.direct,
         diag: diagInfo(),
+        aff: affinityView(pack, state, meta),
         chatId: chatId(),
         messageCount: messages().length,
     });
@@ -679,6 +725,7 @@ function boot() {
             refreshPanel({
                 direct: settings.direct,
         diag: diagInfo(),
+        aff: affinityView(pack, state, meta),
                 transport: !transportAvailable()
                     ? '不可用'
                     : (settings.direct.model || settings.profileId ? '就绪' : '缺连接配置'),

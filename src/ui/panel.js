@@ -33,6 +33,8 @@ const S = {
     importStatus: '',
     direct: {},
     settle: null,
+    aff: null,
+    hudOn: true,
     directMsg: '',
     profileMsg: '',
 };
@@ -46,6 +48,11 @@ let importHandler = null;
 let listHandler = null;
 let settleNowHandler = null;
 let diagHandler = null;
+
+try {
+    const saved = localStorage.getItem('storyLedger.hud');
+    if (saved === '0') S.hudOn = false;
+} catch { /* noop */ }
 
 export function onProfileChange(fn) {
     profileHandler = fn;
@@ -152,6 +159,32 @@ function ensureModal() {
     return document.getElementById(PANEL_ID) ?? buildModal();
 }
 
+/** 底部常驻好感条（只在有人在场时出现） */
+function renderHud() {
+    const id = 'story-ledger-hud';
+    let hud = document.getElementById(id);
+    const bar = S.aff?.bar ?? [];
+    if (!S.hudOn || !bar.length) {
+        hud?.remove();
+        return;
+    }
+    if (!hud) {
+        hud = el('div', 'story-ledger-hud');
+        hud.id = id;
+        hud.title = '叙事账本 · 点击打开面板';
+        hud.addEventListener('click', () => openDrawer());
+        (document.body ?? document.documentElement).append(hud);
+    }
+    hud.replaceChildren();
+    for (const p of bar) {
+        const item = el('span', 'sl-hud-item');
+        item.append(el('span', 'sl-hud-name', p.name));
+        item.append(el('span', 'sl-hud-aff' + (p.aff < 0 ? ' is-neg' : p.aff > 0 ? ' is-pos' : ''), String(p.aff)));
+        item.append(el('span', 'sl-hud-band', p.band));
+        hud.append(item);
+    }
+}
+
 function render() {
     const modal = document.getElementById(PANEL_ID);
     if (!modal) return;
@@ -215,6 +248,14 @@ function render() {
         c.append(row('楼层', S.messageCount));
         body.append(c);
 
+        if (S.aff?.all?.length) {
+            const ac = card('好感（全部角色）');
+            for (const p of S.aff.all) {
+                ac.append(row(`${p.name}`, `${p.aff} · ${p.band}`));
+            }
+            body.append(ac);
+        }
+
         if (S.block) {
             const b = card('本轮注入');
             b.append(el('pre', 'sl-block', S.block));
@@ -228,6 +269,7 @@ function render() {
             dg.append(row('此刻好感', S.diag.affNow ?? '—'));
             dg.append(row('在场名单', S.diag.onstage ?? '（空）'));
             dg.append(row('事件数', S.diag.lastEvents ?? 0));
+            dg.append(row('变量同步', (S.diag.vars ?? 0) + ' 个'));
             const books = S.diag.books ?? [];
             dg.append(row('世界书', books.length ? books.join(' / ') : '（无）'));
             if (books.length > 1) {
@@ -643,6 +685,7 @@ function render() {
     }
 
     body.scrollTop = keepTop;
+    renderHud();
 }
 
 export function refreshPanel(patch = {}) {

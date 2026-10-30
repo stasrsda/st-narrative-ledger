@@ -395,3 +395,56 @@ body.story-ledger-locked {
     outline: 2px dashed var(--SmartThemeQuoteColor, #8ab4f8);
     outline-offset: 2px;
 }
+
+/* ── 底部常驻好感条 ── */
+.story-ledger-hud {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 8px;
+    max-width: 92vw;
+    display: flex;
+    gap: 10px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(24, 24, 28, .82);
+    border: 1px solid var(--SmartThemeBorderColor, #3a3a40);
+    color: var(--SmartThemeBodyColor, #ddd);
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    z-index: 29000;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+}
+
+.story-ledger-hud::-webkit-scrollbar { display: none; }
+
+.sl-hud-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.sl-hud-name { opacity: .85; }
+
+.sl-hud-aff {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.sl-hud-aff.is-pos { color: #7ec8a0; }
+.sl-hud-aff.is-neg { color: #e08a8a; }
+
+.sl-hud-band { opacity: .55; font-size: 11px; }
+
+@media (max-width: 768px) {
+    .story-ledger-hud {
+        bottom: 72px;
+        font-size: 11px;
+        padding: 4px 10px;
+        gap: 8px;
+    }
+}
