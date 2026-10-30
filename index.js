@@ -235,6 +235,7 @@ function mountMenu() {
         item.innerHTML = '<div class="fa-solid fa-scroll fa-fw"></div><span>叙事账本</span>';
         item.addEventListener('click', () => openDrawer());
         menu.append(item);
+        document.getElementById('story-ledger-fab')?.remove();
         return true;
     }
     if (menu) return true;
@@ -243,7 +244,10 @@ function mountMenu() {
     const host = document.getElementById('extensions_settings')
         ?? document.getElementById('extensions_settings2');
     if (!host) return false;
-    if (host.querySelector('.' + MENU_CLASS)) return true;
+    if (host.querySelector('.' + MENU_CLASS)) {
+        document.getElementById('story-ledger-fab')?.remove();
+        return true;
+    }
 
     const block = document.createElement('div');
     block.className = 'story-ledger-settings ' + MENU_CLASS;
@@ -268,10 +272,24 @@ function mountMenu() {
     block.querySelector('.inline-drawer-toggle')?.addEventListener('click', () => {
         block.querySelector('.inline-drawer-content')?.classList.toggle('displayNone');
     });
+    document.getElementById('story-ledger-fab')?.remove();
     return true;
 }
 
-/** 面板可能比扩展晚就绪，最多重试 10 次 */
+/** 兜底：右下角常驻小按钮，容器找不到时也能进面板 */
+function mountFab() {
+    if (document.getElementById('story-ledger-fab')) return true;
+    const fab = document.createElement('div');
+    fab.id = 'story-ledger-fab';
+    fab.className = MENU_CLASS;
+    fab.title = '叙事账本 v' + VERSION;
+    fab.innerHTML = '<i class="fa-solid fa-scroll"></i>';
+    fab.addEventListener('click', () => openDrawer());
+    (document.body ?? document.documentElement).append(fab);
+    return true;
+}
+
+/** 面板可能比扩展晚就绪，最多重试 40 次；始终失败就挂悬浮按钮 */
 function mountMenuWithRetry(attempt = 0) {
     let ok = false;
     try {
@@ -280,11 +298,12 @@ function mountMenuWithRetry(attempt = 0) {
         log('挂载入口失败', e?.message ?? e);
     }
     if (ok) return;
-    if (attempt >= 10) {
-        log('找不到扩展容器，#extensions_settings 也不存在');
+    if (attempt >= 40) {
+        log('找不到扩展容器，改用悬浮按钮');
+        mountFab();
         return;
     }
-    setTimeout(() => mountMenuWithRetry(attempt + 1), 300);
+    setTimeout(() => mountMenuWithRetry(attempt + 1), 500);
 }
 
 function onChatChanged() {
@@ -293,7 +312,8 @@ function onChatChanged() {
 }
 
 function boot() {
-    mountMenuWithRetry();
+    mountFab();            // 先保证有入口
+    mountMenuWithRetry();  // 挂上正规入口后自动撤掉
     try {
         const saved = ctx().extensionSettings?.storyLedger;
         if (saved?.profileId) settings.profileId = saved.profileId;
