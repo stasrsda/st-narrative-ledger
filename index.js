@@ -215,12 +215,23 @@ function packErrorText() {
 /** 诊断信息：不依赖任何局部变量，任何地方都能调 */
 function diagInfo() {
     try {
-        const { pack } = ensurePack();
+        const { pack, state, meta } = currentState();
+        const metaHint = {
+            onstage: meta?.onstage ?? [],
+            lastEvents: (state.done?.length ?? 0) + (state.emergent?.length ?? 0),
+            affSample: ['huozhen', 'zhiwei']
+                .filter(id => state.aff?.[id] != null)
+                .map(id => `${id} ${state.aff[id]}`)
+                .join(' / '),
+        };
         return {
             packId: pack?.id ?? '—',
             packName: pack?.name ?? '—',
             actors: Object.keys(pack?.index?.actor ?? {}).length,
             sample: pack ? sampleAffinity(pack) : '无角色',
+            onstage: (metaHint.onstage ?? []).join(',') || '（空）',
+            lastEvents: metaHint.lastEvents ?? 0,
+            affNow: metaHint.affSample || '（无）',
             directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
             keyLen: (settings.direct?.apiKey ?? '').length,
             profileId: settings.profileId,
@@ -265,6 +276,15 @@ function currentState() {
     }
     const state = fold(meta.seed, eventsByFloor());
     state.place = meta.placeId ?? meta.seed?.place ?? state.place;
+
+    // 在场名单：meta 里没写、或者写了太多（>6）都回落到世界包的开局名单
+    const openingList = pack.opening?.onstage ?? [];
+    if (!Array.isArray(meta.onstage) || meta.onstage.length === 0 || meta.onstage.length > 6) {
+        if (openingList.length) {
+            meta.onstage = [...openingList];
+            log('在场名单异常，回落到开局：', openingList.join(','));
+        }
+    }
     return { pack, state, meta };
 }
 
