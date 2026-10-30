@@ -37,6 +37,7 @@ const S = {
     onstageEdit: false,
     hudCollapsed: false,
     stateDetail: 'lean',
+    cleanMsg: '',
     hudOn: true,
     directMsg: '',
     profileMsg: '',
@@ -368,6 +369,21 @@ function render() {
             dg.append(row('连接配置', S.diag.profileId || '未填'));
             body.append(dg);
         }
+
+        // 一次性工具：清掉历史楼层里遗留的状态块
+        const sc = card('清理旧楼（一次性）');
+        sc.append(el('div', 'sl-note',
+            '新楼会自动清理；这个按钮清的是已经写进历史的旧内容（<好感> 块、【在场】行、误抄的状态块）。点一次就够。'));
+        const scBtn = el('button', 'sl-btn', '清掉历史里的状态残留');
+        scBtn.type = 'button';
+        scBtn.addEventListener('click', () => {
+            const r = scrubHandler?.();
+            S.cleanMsg = r ? `已清理 ${r.messages} 楼、${r.blocks} 处` : '没有需要清理的';
+            render();
+        });
+        sc.append(scBtn);
+        if (S.cleanMsg) sc.append(el('div', 'sl-note', S.cleanMsg));
+        body.append(sc);
 
         if (S.env) {
             const e = card('环境');
@@ -746,18 +762,6 @@ function render() {
         });
 
         body.append(d);
-
-        const scrubCard = card('清理');
-        const scrubBtn = el('button', 'sl-btn', '清掉历史里的状态残留');
-        scrubBtn.type = 'button';
-        scrubBtn.addEventListener('click', () => {
-            const r = scrubHandler?.();
-            S.profileMsg = r ? `已清理 ${r.messages} 楼、${r.blocks} 处` : '没有需要清理的';
-            render();
-        });
-        scrubCard.append(scrubBtn);
-        scrubCard.append(el('div', 'sl-note', '删除旧消息里的 <好感> 块、【在场】行与误写进正文的状态块。只改文字，不动聊天记录本身。'));
-        body.append(scrubCard);
 
         const r = card('开局');
         const btn = el('button', 'sl-btn', '重置到开局' + (S.openingLabel ? `（${S.openingLabel}）` : ''));
