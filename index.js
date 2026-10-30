@@ -263,6 +263,27 @@ function diagDump() {
             : '未配置');
         push('连接配置', settings.profileId || '未填');
         push('结算', `${settleStatus.ok === null ? '待定' : settleStatus.ok ? '成功' : '失败'} · ${settleStatus.msg}`);
+
+        // 这一轮的好感变化
+        const changed = settleStatus.changed ?? [];
+        push('好感变化', changed.length
+            ? changed.map(x => `${x.name} ${x.from}→${x.to}`).join('｜')
+            : '（这轮没有人变）');
+        const dropped = settleStatus.dropped ?? [];
+        if (dropped.length) {
+            push('被丢弃的判定', dropped.map(d => `${d.raw}（${d.why}）`).join('｜'));
+        }
+
+        // 末楼事件明细
+        const lastMsg = msgs[msgs.length - 1];
+        const evs = lastMsg?.extra?.storyLedger?.events ?? [];
+        if (evs.length) {
+            lines.push('');
+            lines.push('── 末楼事件 ──');
+            for (const e of evs) {
+                lines.push('  ' + JSON.stringify(e));
+            }
+        }
         lines.push('');
         lines.push('── 本轮注入 ──');
         lines.push(block.text);
