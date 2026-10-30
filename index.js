@@ -309,6 +309,42 @@ function affinityView(pack, state, meta) {
     };
 }
 
+/**
+ * 面板公共数据：全部自取值，任何地方调用都安全。
+ * 以后新增字段只加在这里，避免再次出现「某个调用点缺变量」。
+ */
+function panelBase() {
+    let label = '';
+    try {
+        const { pack } = ensurePack();
+        label = openingLabel(pack);
+    } catch { /* noop */ }
+    return {
+        packs: packChoices(),
+        profiles: profileNames(),
+        packError: packErrorText(),
+        openingLabel: label,
+        transport: !transportAvailable()
+            ? '不可用'
+            : (settings.direct?.model || settings.profileId ? '就绪' : '缺连接配置'),
+        direct: settings.direct,
+        diag: diagInfo(),
+        aff: affView(),
+        chatId: chatId(),
+        messageCount: messages().length,
+    };
+}
+
+/** 好感视图（自取值版，任何地方都能调） */
+function affView() {
+    try {
+        const { pack, state, meta } = currentState();
+        return affinityView(pack, state, meta);
+    } catch {
+        return { bar: [], all: [] };
+    }
+}
+
 /** 诊断信息：不依赖任何局部变量，任何地方都能调 */
 function diagInfo() {
     try {
@@ -417,12 +453,9 @@ function composeAndInject() {
     const ok = settings.enabled && (setStatePrompt(block.text) || setRawSlot(block.text));
 
     refreshPanel({
+        ...panelBase(),
         packId: pack.id,
         packName: pack.name,
-        packs: packChoices(),
-        profiles: profileNames(),
-        packError: packErrorText(),
-        openingLabel: openingLabel(pack),
         injected: Boolean(ok),
         tokens: block.tokens,
         dropped: block.dropped,
@@ -430,14 +463,6 @@ function composeAndInject() {
         pending: pendingEvents(pack, state, 6),
         done: doneEventNames(pack, state, 6),
         items: Object.values(state.items ?? {}),
-        transport: !transportAvailable()
-            ? '不可用'
-            : (settings.direct?.model || settings.profileId ? '就绪' : '缺连接配置'),
-        direct: settings.direct,
-        diag: diagInfo(),
-        aff: affinityView(pack, state, meta),
-        chatId: chatId(),
-        messageCount: messages().length,
     });
     return block;
 }
@@ -726,7 +751,7 @@ function boot() {
         } catch {
             /* noop */
         }
-        refreshPanel({ profileId: id, transport: transportAvailable() ? (id ? '就绪' : '缺连接配置') : '不可用' });
+        refreshPanel({ ...panelBase(), profileId: id });
     });
     onReset(() => {
         const { pack } = ensurePack();
@@ -763,14 +788,7 @@ function boot() {
             } catch (e) {
                 log('写 ST 设置失败（已存本地）', e?.message ?? e);
             }
-            refreshPanel({
-                direct: settings.direct,
-        diag: diagInfo(),
-        aff: affinityView(pack, state, meta),
-                transport: !transportAvailable()
-                    ? '不可用'
-                    : (settings.direct.model || settings.profileId ? '就绪' : '缺连接配置'),
-            });
+            refreshPanel({ ...panelBase(), direct: settings.direct });
             log('直连已保存', settings.direct.model || '（空）');
             return;
         }
@@ -784,7 +802,7 @@ function boot() {
                 c.saveSettingsDebounced?.();
             }
         } catch { /* noop */ }
-        refreshPanel({ profileId: id, transport: transportAvailable() ? (id ? '就绪' : '缺连接配置') : '不可用' });
+        refreshPanel({ ...panelBase(), profileId: id });
         log('副模型已保存', id || '（关闭）');
     });
 
@@ -862,7 +880,7 @@ function boot() {
         return { ok: true, id: r.pack.id, name: r.pack.name };
     });
 
-    refreshPanel({ chatId: chatId(), messageCount: messages().length, profileId: settings.profileId, direct: settings.direct, env: envInfo() });
+    refreshPanel({ ...panelBase(), profileId: settings.profileId, env: envInfo() });
     if (typeof eventSource?.on !== 'function') { log('事件源不可用，扩展只会显示面板'); refreshPanel({ env: envInfo() }); return; }
     try {
         eventSource.on(EV.CHAT_CHANGED, onChatChanged);
