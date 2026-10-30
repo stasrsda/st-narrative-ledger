@@ -499,7 +499,7 @@ function composeAndInject() {
     const lastAi = msgs[msgs.length - 1]?.mes?.slice(-200) ?? '';
     const hintText = lastUser + lastAi;
     const varCount = syncChatVariables(state);
-    const block = buildSceneBlock({ pack, state, tree, chatSeed: chatId(), meta: { ...meta, hintText }, budget: settings.depth === 1 ? 220 : 260 });
+    const block = buildSceneBlock({ pack, state, tree, chatSeed: chatId(), meta: { ...meta, hintText }, budget: Number.POSITIVE_INFINITY });   // 不设上限：一行都不丢
     const ok = settings.enabled && (setStatePrompt(block.text) || setRawSlot(block.text));
 
     // 称谓块：只有两个以上在场者才需要（§5.2）

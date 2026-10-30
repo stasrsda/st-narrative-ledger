@@ -78,7 +78,13 @@ export function composeSceneBlock(o = {}) {
     const dropped = [];
     let text = assemble(parts);
     while (estimateTokens(text) > budget) {
-        const victim = DROP_ORDER.find(k => parts.some(p => p.key === k));
+        // budget 为 Infinity 时不丢任何一行
+    if (!Number.isFinite(budget)) {
+        const text = parts.map(p => p.text).join('\n');
+        return { text, tokens: Math.ceil(text.length / 1.4), dropped: [] };
+    }
+
+    const victim = DROP_ORDER.find(k => parts.some(p => p.key === k));
         if (!victim) break;
         for (let i = parts.length - 1; i >= 0; i--) {
             if (parts[i].key === victim) parts.splice(i, 1);
