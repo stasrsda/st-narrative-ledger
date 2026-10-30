@@ -23,6 +23,7 @@ import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
+import { splitThinking, thinkingDominates } from './src/core/cleanup/thinking.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
 import { candidatesFor } from './src/core/codes/codes.js';
 import { retrieveCodes } from './src/core/codes/retrieve.js';
@@ -543,21 +544,28 @@ function settleMessage() {
     if (!msg || msg.is_user) return;
 
     const { pack, state, meta } = currentState();
+    // 思考块与正文分开：时间头、在场、截断判断都只认正文
+    const { body, thinking } = splitThinking(msg.mes ?? '');
+    if (thinkingDominates(thinking, body)) {
+        log('思考块比正文长很多：', `思考 ${thinking.length} 字 / 正文 ${body.length} 字`);
+    }
+
     // 时钟由插件推进：按这一轮的内容估算耗时，写一条 clock 事件
     const userTextForClock = messages()[idx - 1]?.mes ?? '';
-    const step = advanceTurn(state.t ?? 0, userTextForClock + String(msg.mes ?? ''));
+    const step = advanceTurn(state.t ?? 0, userTextForClock + body);
     appendEvents(msg, [{ k: 'clock', t: step.t, src: 'auto' }]);
     writeMeta({ lastAdvance: { minutes: step.minutes, why: step.why, from: state.t, to: step.t } });
     log('时间推进', renderAdvance(step.minutes, step.why));
 
-    let parsed = parseHeader(msg.mes ?? '', pack.calendar);
+    let parsed = parseHeader(body, pack.calendar);
     if (!parsed) {
         // 模型没写或写坏了：用当前状态补一行，保证时地永远在
         const treeNow = treeOf(pack);
         const node = meta.placeId || state.place ? treeNow.nodes?.[meta.placeId ?? state.place] : null;
         const placeName = meta.placeName || node?.name || '';
         const header = renderHeader(step.t, placeName, pack.calendar);
-        msg.mes = header + '\n\n' + String(msg.mes ?? '').trim();
+        const thinkingPart = thinking ? `${thinking}\n\n` : '';
+        msg.mes = header + '\n\n' + thinkingPart + String(body ?? '').trim();
         parsed = parseHeader(msg.mes, pack.calendar);
         log('模型没写时间头，已补：', header);
         try { ctx().saveChat?.(); } catch { /* noop */ }
@@ -591,7 +599,7 @@ function settleMessage() {
     }
 
     // 在场：优先用旧协议的【在场】行（兼容），否则从正文推断
-    const declared = parsePresence(msg.mes ?? '');
+    const declared = parsePresence(body);
     let onIds = null;
     if (declared && declared.length) {
         const { ids } = resolveActors(pack, declared);
@@ -605,7 +613,7 @@ function settleMessage() {
     } else if (declared && declared.length === 0) {
         onIds = [];
     } else {
-        onIds = inferPresence(pack, msg.mes ?? '');
+        onIds = inferPresence(pack, body);
         if (!onIds.length) {
             // 这一楼没提到任何人（或被截断）→ 不要清空名单，沿用上一轮
             onIds = null;
