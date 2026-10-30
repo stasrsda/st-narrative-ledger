@@ -9,7 +9,7 @@ import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
 } from './src/adapters/st/context.js';
-import { setStatePrompt, clearStatePrompt, setRawSlot } from './src/adapters/st/prompt.js';
+import { setStatePrompt, clearStatePrompt, setRawSlot, configurePrompt } from './src/adapters/st/prompt.js';
 import { transportAvailable, requestCompletion, requestCustom, probeModel, listModels } from './src/adapters/st/llm.js';
 import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.js';
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
@@ -51,6 +51,9 @@ let EV = globalThis.event_types ?? {
     MESSAGE_DELETED: 'message_deleted',
 };
 
+/** 从 script.js 拿到的运行期信息 */
+const ST_INFO = { version: '未知', promptTypes: null, promptRoles: null };
+
 async function loadSTEvents() {
     // 1) 优先从 SillyTavern.getContext() 取（1.19 里它直接带 eventSource / eventTypes）
     try {
@@ -65,6 +68,15 @@ async function loadSTEvents() {
         const mod = await import('../../../../script.js');
         eventSource = mod.eventSource ?? eventSource;
         if (mod.event_types) EV = { ...EV, ...mod.event_types };
+
+        // 版本与 prompt 常量都是 script.js 的导出，getContext() 上没有
+        ST_INFO.version = mod.displayVersion ?? mod.currentVersion ?? '未知';
+        ST_INFO.promptTypes = mod.extension_prompt_types ?? null;
+        ST_INFO.promptRoles = mod.extension_prompt_roles ?? null;
+        if (ST_INFO.promptTypes || ST_INFO.promptRoles) {
+            configurePrompt({ types: ST_INFO.promptTypes, roles: ST_INFO.promptRoles });
+        }
+        log('ST 版本', ST_INFO.version);
     } catch (e) {
         log('script.js 取不到，用上下文或字符串常量', e?.message ?? e);
     }
@@ -74,10 +86,10 @@ async function loadSTEvents() {
 function envInfo() {
     const c = ctx();
     return {
-        st: c.version ?? c.SillyTavern?.version ?? '未知',
+        st: ST_INFO.version !== '未知' ? ST_INFO.version : (c.version ?? '未知'),
         eventSource: typeof eventSource?.on === 'function',
         setPrompt: typeof c.setExtensionPrompt === 'function',
-        promptTypes: Boolean(c.extension_prompt_types),
+        promptTypes: Boolean(ST_INFO.promptTypes ?? c.extension_prompt_types),
         chatMetadata: Boolean(c.chatMetadata),
         conn: typeof c.ConnectionManagerRequestService?.sendRequest === 'function',
         extSettings: Boolean(c.extensionSettings),
