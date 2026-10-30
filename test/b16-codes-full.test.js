@@ -11,11 +11,11 @@ const all = [
 const ids = new Set(all.map(c => c.id));
 
 test('四组齐备且数量足够', () => {
-    assert.ok(pack.codes.rites.length >= 30, '礼应当 >= 30');
-    assert.ok(pack.codes.house.length >= 20, '家法应当 >= 20');
+    assert.ok(pack.codes.rites.length >= 58, '礼应当 >= 58');
+    assert.ok(pack.codes.house.length >= 40, '家法应当 >= 40');
     assert.ok(pack.codes.laws.length >= 35, '律应当 >= 35');
     assert.ok((pack.codes.procedure ?? []).length >= 33, '程序应当 >= 33');
-    assert.ok(all.length >= 140, `总数应当 >= 140，现在 ${all.length}`);
+    assert.ok(all.length >= 170, `总数应当 >= 170，现在 ${all.length}`);
 });
 
 test('id 全局唯一', () => {
@@ -147,4 +147,41 @@ test('府制仪礼：府制、服色、进献、宗室、阅兵、巡边、营�
         assert.ok(ids.has(need), `缺 ${need}`);
     }
     assert.match(all.find(c => c.id === 'border_patrol').detail, /谁也不许问/);
+});
+
+test('岁时节俗八节都在', () => {
+    for (const need of ['new_year', 'lantern', 'qingming', 'dragon_boat',
+        'mid_autumn', 'winter_solstice', 'new_year_eve', 'birthday']) {
+        assert.ok(ids.has(need), `缺 ${need}`);
+    }
+});
+
+test('起居六事：晨起、午歇、夜读、沐浴、就寝、酒礼', () => {
+    for (const need of ['morning_routine', 'noon_rest', 'night_reading',
+        'bath_incense', 'sleep_rite', 'wine_rite']) {
+        assert.ok(ids.has(need), `缺 ${need}`);
+    }
+});
+
+test('游艺：听曲、弈棋、投壶射、赏花宴、秋狝', () => {
+    for (const need of ['music_gathering', 'chess', 'archery_game', 'garden_party', 'autumn_hunt']) {
+        assert.ok(ids.has(need), `缺 ${need}`);
+    }
+});
+
+test('侍疾与丧葬：请医、侍疾、养病、停灵、成服、出殡、守孝', () => {
+    for (const need of ['sick_call', 'nursing', 'convalesce',
+        'funeral_wake', 'mourning_dress', 'burial', 'mourning_period']) {
+        assert.ok(ids.has(need), `缺 ${need}`);
+    }
+    assert.match(all.find(c => c.id === 'mourning_period').detail, /夺情/);
+});
+
+test('赏罚：赏差事最重，罚不到送官', () => {
+    assert.match(all.find(c => c.id === 'reward_rite').detail, /差事最重/);
+    assert.match(all.find(c => c.id === 'punish_rite').detail, /送官就是“不念旧”/);
+});
+
+test('听曲写清了清韵的琵琶来自教坊司', () => {
+    assert.match(all.find(c => c.id === 'music_gathering').detail, /教坊司/);
 });
