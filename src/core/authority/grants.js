@@ -54,6 +54,7 @@ export function grantLine(g) {
 }
 
 function scopeCn(s) {
+    if (s === '*') return '诸事';
     return s.startsWith('p_') ? '本院' : ({
         household: '内宅', ledger: '账目', storehouse: '库房', staff: '人事',
         protocol: '外事', army: '军务', dispatch: '文书', investigate: '查案',

@@ -2917,16 +2917,16 @@
         "沈母",
         "娘"
       ],
-      "rank": "亲",
-      "aff": 25,
-      "bond": "kin",
+      "rank": "客",
+      "aff": -35,
+      "bond": "love",
       "stance": "beiliang_folk",
       "knows": [],
       "temper": "timid",
       "lines": [
         {
           "id": "daughter",
-          "text": "她只问女儿吃没吃饭，不问别的",
+          "text": "她只问女儿吃没吃饭，不问别的；对着他时话更少",
           "from": "第1幕"
         }
       ],
@@ -2938,16 +2938,16 @@
       "aliases": [
         "知砚"
       ],
-      "rank": "亲",
-      "aff": 20,
-      "bond": "kin",
+      "rank": "客",
+      "aff": -30,
+      "bond": "love",
       "stance": "beiliang_folk",
       "knows": [],
       "temper": "timid",
       "lines": [
         {
           "id": "boy",
-          "text": "他怕人，但更怕姐姐被人带走",
+          "text": "他怕这人，但更怕姐姐被带走",
           "from": "第1幕"
         }
       ],
@@ -4242,7 +4242,7 @@
     "render": "取 stance.base，逐项加 knowledge.mod；fear 高且 respect 低 → 跪、躲、不敢称；respect 高 → 抱拳、敢说话；contempt 高 → 礼数齐全但慢半拍、不看人；closeness 高 → 少礼、说话随意。temper.shift 只调一级姿态，不改四轴。"
   },
   "authority": {
-    "note": "职权不是位份。位份决定礼数与待遇，职权决定「这件事归谁办」。两者常常错位，错位本身就是戏。",
+    "note": "职权不等于位份，也不等于「什么都管」。白景昭手里只有北凉的兵权与自家府内的处置权；朝廷、别府、律法都不归他。两者常常错位，错位本身就是戏。",
     "scopes": [
       {
         "id": "household",
@@ -4341,13 +4341,40 @@
     "seed": [
       {
         "holder": "baijingzhao",
-        "scope": "*",
+        "scope": "army",
         "rights": [
           "view",
           "act",
           "delegate"
         ],
-        "source": "封号"
+        "source": "镇北王·北凉兵权"
+      },
+      {
+        "holder": "baijingzhao",
+        "scope": "household",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "府主"
+      },
+      {
+        "holder": "baijingzhao",
+        "scope": "storehouse",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "府主"
+      },
+      {
+        "holder": "baijingzhao",
+        "scope": "staff",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "府主"
       },
       {
         "holder": "huozhen",
@@ -5429,8 +5456,8 @@
       "wubo": 50,
       "zhengbo": 50,
       "cuizhanggui": 40,
-      "shenmu": 25,
-      "shenzhiyan": 20
+      "shenmu": -35,
+      "shenzhiyan": -30
     },
     "rank": {
       "zhiwei": "囚",
@@ -5442,8 +5469,8 @@
       "wubo": "仆",
       "zhengbo": "仆",
       "cuizhanggui": "客",
-      "shenmu": "亲",
-      "shenzhiyan": "亲"
+      "shenmu": "客",
+      "shenzhiyan": "客"
     },
     "done": [
       "e_break_city"
