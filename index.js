@@ -336,6 +336,7 @@ function onChatChanged() {
 }
 
 function boot() {
+    try { mountPanel(); } catch (e) { log('建面板失败', e?.message ?? e); }
     mountFab();                    // 先保证有入口（内联样式，不依赖 CSS）
     void injectStyles();           // 自己注入样式，不等 manifest 的 css
     void setupSettings();          // 等扩展设置区出现后挂正规入口
@@ -398,6 +399,19 @@ function boot() {
     }
     log('loaded v' + VERSION);
 }
+
+// 点击委托：即使入口被重构过，只要 class 在就能开
+document.addEventListener('click', ev => {
+    const hit = ev.target?.closest?.('.story-ledger-open, .story-ledger-settings');
+    if (!hit) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    try {
+        openDrawer();
+    } catch (e) {
+        log('打开面板失败', e?.message ?? e);
+    }
+}, true);
 
 jQuery(async () => {
     await loadSTEvents();
