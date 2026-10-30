@@ -306,25 +306,26 @@ async function setupSettings(attempt = 0) {
     }
     if (host.querySelector('.story-ledger-settings')) return true;
 
-    // 不用 ST 的 inline-drawer：它的折叠动画会把内容吃掉。做成常开的一块。
+    // 结构与小白X 的 settings.html 一致；折叠逻辑交给 ST 的全局处理器
+    // （script.js: $(document).on('click', '.inline-drawer-toggle', ...)）
     const block = document.createElement('div');
     block.className = 'story-ledger-settings';
     block.innerHTML = [
-        '<div class="story-ledger-head"><b>叙事账本</b>',
-        `<span class="story-ledger-ver">v${VERSION}</span></div>`,
-        '<div class="story-ledger-desc">时间 / 地点 / 在场 / 好感 / 礼法 / 器物</div>',
-        '<div class="menu_button menu_button_icon story-ledger-open">',
-        '<i class="fa-solid fa-scroll"></i><span>打开面板</span></div>',
-    ].join('');
-    const btn = block.querySelector('.story-ledger-open');
-    if (btn) {
-        btn.style.cursor = 'pointer';
-        btn.addEventListener('click', ev => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            openDrawer();
-        });
-    }
+        '<div class="inline-drawer">',
+        '  <div class="inline-drawer-toggle inline-drawer-header">',
+        '    <b>叙事账本</b>',
+        '    <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>',
+        '  </div>',
+        '  <div class="inline-drawer-content">',
+        '    <div class="story-ledger-body">',
+        `      <div class="sl-note">v${VERSION} · 时间 / 地点 / 在场 / 好感 / 礼法 / 器物</div>`,
+        '      <div class="menu_button menu_button_icon story-ledger-open">',
+        '        <i class="fa-solid fa-scroll"></i><span>打开面板</span>',
+        '      </div>',
+        '    </div>',
+        '  </div>',
+        '</div>',
+    ].join('\n');
     host.append(block);
     log('已挂到扩展设置区');
     return true;
@@ -402,7 +403,7 @@ function boot() {
 
 // 点击委托：即使入口被重构过，只要 class 在就能开
 document.addEventListener('click', ev => {
-    const hit = ev.target?.closest?.('.story-ledger-open, .story-ledger-settings');
+    const hit = ev.target?.closest?.('.story-ledger-open');
     if (!hit) return;
     ev.preventDefault();
     ev.stopPropagation();

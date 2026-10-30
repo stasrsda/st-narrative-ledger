@@ -178,29 +178,14 @@
     border-color: var(--SmartThemeQuoteColor, #8ab4f8);
 }
 
-/* 扩展设置里的入口块（常开，不用 inline-drawer） */
-.story-ledger-settings {
-    padding: 6px 8px;
-    border: 1px solid var(--SmartThemeBorderColor, #444);
-    border-radius: 6px;
-    margin: 6px 0;
-    background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, .15));
+
+/* 扩展设置里的入口块内容（折叠由 ST 的 inline-drawer 负责） */
+.story-ledger-body {
+    padding: 4px 2px 8px;
 }
 
-.story-ledger-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.story-ledger-ver {
+.story-ledger-body .sl-note {
     font-size: 11px;
-    opacity: .6;
-}
-
-.story-ledger-desc {
-    font-size: 11px;
-    opacity: .65;
-    margin: 2px 0 6px;
+    opacity: .7;
+    margin-bottom: 6px;
 }
