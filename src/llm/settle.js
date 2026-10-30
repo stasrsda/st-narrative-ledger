@@ -17,7 +17,7 @@ export function toEvents(pack, state, data = {}) {
         if (!actorIds.has(r.actor)) continue;
         const delta = deltaFor(pack, r.kind);
         if (!delta) continue;
-        events.push({ k: 'aff', actor: r.actor, delta, kind: r.kind, note: r.note ?? '' });
+        events.push({ k: 'aff', actor: r.actor, delta, kind: r.kind, note: r.note ?? '', src: 'settle' });
     }
 
     for (const b of data.beats ?? []) {
@@ -25,29 +25,29 @@ export function toEvents(pack, state, data = {}) {
         const beat = (pack.index?.actor?.[b.actor]?.beats ?? []).find(x => x.id === b.id);
         if (!beat) continue;
         if (beat.once && doneIds.has(`beat:${b.actor}:${b.id}`)) continue;
-        events.push({ k: 'event', id: `beat:${b.actor}:${b.id}`, source: 'beat' });
+        events.push({ k: 'event', id: `beat:${b.actor}:${b.id}`, source: 'beat', src: 'settle' });
     }
 
     for (const c of data.codeHits ?? []) {
         if (!pack.index?.code?.[c.id]) continue;
-        events.push({ k: 'trace', code: c.id, kind: c.kind });
+        events.push({ k: 'trace', code: c.id, kind: c.kind, src: 'settle' });
     }
 
     for (const h of data.happened ?? []) {
         const key = h.quote || h.name;
         if (seenEmergent.has(key)) continue;
         seenEmergent.add(key);
-        events.push({ k: 'emergent', name: h.name, quote: h.quote ?? '' });
+        events.push({ k: 'emergent', name: h.name, quote: h.quote ?? '', src: 'settle' });
     }
 
     for (const it of data.intimate ?? []) {
         if (!actorIds.has(it.actor)) continue;
-        events.push({ k: 'exp', actor: it.actor, phase: it.phase });
+        events.push({ k: 'exp', actor: it.actor, phase: it.phase, src: 'settle' });
     }
 
     for (const k of data.knows ?? []) {
         if (!actorIds.has(k.actor)) continue;
-        events.push({ k: 'know', actor: k.actor, fact: k.fact, state: 'know' });
+        events.push({ k: 'know', actor: k.actor, fact: k.fact, state: 'know', src: 'settle' });
     }
 
     return events;

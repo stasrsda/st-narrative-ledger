@@ -383,6 +383,10 @@ const settleQueue = createQueue({
         settleStatus.events = events.length;
         refreshPanel({ settle: { ...settleStatus } });
         const msg = messages()[task.msgIndex];
+        // 重试会重新判定同一楼：先去掉上一次结算留下的事件，避免好感重复累加
+        if (msg?.extra?.storyLedger?.events) {
+            msg.extra.storyLedger.events = msg.extra.storyLedger.events.filter(e => e?.src !== 'settle');
+        }
         appendEvents(msg, events);
         try {
             ctx().saveChat?.();

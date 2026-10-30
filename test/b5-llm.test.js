@@ -156,3 +156,28 @@ test('协议：字符串里的花括号不会切断解析', () => {
 test('extractJson：没有对象时返回 null', () => {
     assert.equal(extractJson('这一轮没什么事'), null);
 });
+
+test('重试不叠加：同一楼重复结算只算一次', async () => {
+    const { fold } = await import('../src/core/ledger/ledger.js');
+    const { normalizeSettle } = await import('../src/llm/schema.js');
+    const { toEvents } = await import('../src/llm/settle.js');
+
+    const data = normalizeSettle({ results: [{ actor: 'zhiwei', kind: 'C' }] },
+        { actorIds: new Set(['zhiwei']) }).data;
+    const once = toEvents(pack, { emergent: [], done: [] }, data);
+    assert.equal(once[0].src, 'settle');
+
+    // 模拟重试：先清掉 src=settle 的，再追加新的一批
+    const apply = (existing) => {
+        const kept = existing.filter(e => e.src !== 'settle');
+        return [...kept, ...toEvents(pack, { emergent: [], done: [] }, data)];
+    };
+    const first = apply([]);
+    const second = apply(first);
+
+    const seed = { t: 0, place: null, aff: { zhiwei: -30 } };
+    const s1 = fold(seed, [{ floor: 0, events: first }]);
+    const s2 = fold(seed, [{ floor: 0, events: second }]);
+    assert.equal(s1.aff.zhiwei, s2.aff.zhiwei);
+    assert.equal(s2.aff.zhiwei, 0);   // -30 + 30
+});
