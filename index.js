@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange, onStateDetailChange } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange, onStateDetailChange, onScrubChat } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -19,6 +19,7 @@ import { createTree, putNode } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence } from './src/core/clock/presence.js';
+import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { candidatesFor } from './src/core/codes/codes.js';
 import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
@@ -28,7 +29,7 @@ import { reviewText, summarize } from './src/core/review/review.js';
 
 const MENU_CLASS = 'story-ledger-menu-item';
 const registry = createRegistry();
-const settings = { profileId: '', depth: 1, enabled: true, showAffNumbers: true, stateDetail: 'lean', direct: { baseUrl: '', apiKey: '', model: '' } };
+const settings = { profileId: '', depth: 1, enabled: true, showAffNumbers: true, stateDetail: 'full', direct: { baseUrl: '', apiKey: '', model: '' } };
 
 /** 最近一次结算的状态，显示在面板上——否则失败只能翻控制台 */
 const settleStatus = { at: 0, ok: null, msg: '尚未结算', events: 0 };
@@ -476,6 +477,14 @@ function settleMessage() {
     const { pack, state, meta } = currentState();
     const parsed = parseHeader(msg.mes ?? '', pack.calendar);
 
+    // 先清掉正文里的状态残留（<好感> 块、旧【在场】行等），避免它们跟着历史进上下文
+    const scrubbed = scrubText(msg.mes ?? '');
+    if (scrubbed.removed > 0) {
+        msg.mes = scrubbed.text;
+        log('清掉本楼状态残留', scrubbed.removed, '处');
+        try { ctx().saveChat?.(); } catch { /* noop */ }
+    }
+
     // 在场：优先用旧协议的【在场】行（兼容），否则从正文推断
     const declared = parsePresence(msg.mes ?? '');
     let onIds = null;
@@ -809,6 +818,14 @@ function boot() {
         } catch { /* noop */ }
         refreshPanel({ ...panelBase(), profileId: id });
         log('副模型已保存', id || '（关闭）');
+    });
+
+    onScrubChat(() => {
+        const r = scrubMessages(messages());
+        try { ctx().saveChat?.(); } catch { /* noop */ }
+        composeAndInject();
+        log('清理历史残留', r);
+        return r;
     });
 
     onStateDetailChange(v => {

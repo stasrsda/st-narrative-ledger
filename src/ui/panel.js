@@ -53,6 +53,7 @@ let settleNowHandler = null;
 let diagHandler = null;
 let onstageHandler = null;
 let detailHandler = null;
+let scrubHandler = null;
 
 try {
     const saved = localStorage.getItem('storyLedger.hud');
@@ -101,6 +102,10 @@ export function onOnstageChange(fn) {
 
 export function onStateDetailChange(fn) {
     detailHandler = fn;
+}
+
+export function onScrubChat(fn) {
+    scrubHandler = fn;
 }
 
 function el(tag, cls, text) {
@@ -741,6 +746,18 @@ function render() {
         });
 
         body.append(d);
+
+        const scrubCard = card('清理');
+        const scrubBtn = el('button', 'sl-btn', '清掉历史里的状态残留');
+        scrubBtn.type = 'button';
+        scrubBtn.addEventListener('click', () => {
+            const r = scrubHandler?.();
+            S.profileMsg = r ? `已清理 ${r.messages} 楼、${r.blocks} 处` : '没有需要清理的';
+            render();
+        });
+        scrubCard.append(scrubBtn);
+        scrubCard.append(el('div', 'sl-note', '删除旧消息里的 <好感> 块、【在场】行与误写进正文的状态块。只改文字，不动聊天记录本身。'));
+        body.append(scrubCard);
 
         const r = card('开局');
         const btn = el('button', 'sl-btn', '重置到开局' + (S.openingLabel ? `（${S.openingLabel}）` : ''));
