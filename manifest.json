@@ -1,19 +1,15 @@
 {
-    "display_name":  "闁告瑦鐟ょ花銊ф嫻閿旇姤鎷?,
-    "loading_order":  60,
-    "requires":  [
-
-                 ],
-    "optional":  [
-
-                 ],
-    "js":  "index.js",
-    "css":  "style.css",
-    "author":  "stasrsda",
-    "version":  "0.2.9",
-    "homePage":  "https://github.com/stasrsda/st-narrative-ledger",
-    "auto_update":  false,
-    "hooks":  {
-                  "activate":  "activate"
-              }
+  "display_name": "叙事账本",
+  "loading_order": 60,
+  "requires": [],
+  "optional": [],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "stasrsda",
+  "version": "0.2.9",
+  "homePage": "https://github.com/stasrsda/st-narrative-ledger",
+  "auto_update": false,
+  "hooks": {
+    "activate": "activate"
+  }
 }
