@@ -7,6 +7,18 @@ import { rankOf } from '../actors/rank.js';
 import { motiveLine } from '../actors/motive.js';
 import { bandOf } from '../affinity/affinity.js';
 import { grantLine } from '../authority/grants.js';
+
+/** scope id → 中文（与 grants.js 的 scopeCn 保持一致） */
+function scopeCnOf(scope) {
+    if (scope === '*') return '诸事';
+    if (String(scope).startsWith('p_')) return '本院';
+    return {
+        household: '内宅', ledger: '账目', storehouse: '库房', staff: '人事',
+        protocol: '外事', army: '军务', dispatch: '文书', investigate: '查案',
+        darkguard: '暗卫', guard: '宿卫', kitchen: '厨下', palace: '内廷',
+        court: '朝议', grassland: '草原', county: '州县',
+    }[scope] ?? scope;
+}
 import { renderProps, instantiateProps, condFromIdleYears } from '../props/prototype.js';
 import { renderItems } from '../props/items.js';
 import { expLine, expOf, shouldInjectExp } from '../actors/experience.js';
@@ -141,11 +153,22 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     ].filter(Boolean).join('｜');
 
     // holder 可能是 id（包内角色），也可能是名字（剧情里自动登记的官员）
+    // 同一个人合并成一行：`权:白景昭 军务·内宅·库房·人事（可处置）`
     const onstageKey = new Set(onstage.flatMap(o => [o.id, o.name]));
-    const auth = (state.grants ?? [])
-        .filter(g => onstageKey.has(g.holder))
-        .slice(0, 3)
-        .map(g => grantLine({ ...g, holder: pack.index?.actor?.[g.holder]?.name ?? g.holder }));
+    const byHolder = new Map();
+    for (const g of state.grants ?? []) {
+        if (!onstageKey.has(g.holder)) continue;
+        const name = pack.index?.actor?.[g.holder]?.name ?? g.holder;
+        const row = byHolder.get(name) ?? { name, scopes: [], rights: new Set() };
+        row.scopes.push(scopeCnOf(g.scope));
+        for (const r of g.rights ?? []) row.rights.add(r);
+        byHolder.set(name, row);
+    }
+    const auth = [...byHolder.values()].slice(0, 2).map(r => {
+        const scopes = [...new Set(r.scopes)].join('·');
+        const rights = [...r.rights].map(x => ({ view: '查看', act: '处置', delegate: '转授' }[x] ?? x)).join('·');
+        return `${r.name} ${scopes}（${rights}）`;
+    });
 
     const season = w?.season ?? null;
     const placeTag = placeTagOf(pack, node, season);

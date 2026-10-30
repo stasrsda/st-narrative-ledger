@@ -15,6 +15,14 @@ export function composeAddressBlock({ onstage = [], titlesMatrix = {}, userName 
     }
     if (!pairs.length) return { text: '', tokens: 0 };
 
+    // 大家的称呼完全一样、又没有私称时，这一块没有信息量（在场行里已有 /称"王爷"）
+    const distinct = new Set(onstage.slice(0, 6).map(a => a.address).filter(Boolean));
+    const hasPrivate = onstage.some(a => {
+        const priv = titlesMatrix?.[a.name]?.private;
+        return priv?.call && Number(a.aff ?? 0) >= Number(priv.min ?? 0);
+    });
+    if (distinct.size <= 1 && !hasPrivate) return { text: '', tokens: 0 };
+
     const lines = [`[称谓] 你称:${pairs.join('、')}`];
 
     // 私称（好感门槛）来自 titles.matrix 里 {actor: {private: {min, call}}}

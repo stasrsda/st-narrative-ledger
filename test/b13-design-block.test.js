@@ -46,22 +46,32 @@ test('§5.1 邻/禁：不在当前链上的大区才禁写', () => {
     assert.ok(!line.includes('北凉城'), '当前所在的大区不该被禁写');
 });
 
-test('§5.2 称谓块：两人以上才生成', () => {
+test('§5.2 称谓块：称呼有差异才生成', () => {
     const one = composeAddressBlock({
         onstage: [{ name: '沈知微', address: '王爷', aff: 0 }],
         titlesMatrix: pack.titles.matrix,
     });
     assert.equal(one.text, '');
 
-    const two = composeAddressBlock({
+    // 称呼相同、无私称 → 不注入（在场行里已有 /称"王爷"）
+    const same = composeAddressBlock({
         onstage: [
             { name: '沈知微', address: '王爷', aff: 0 },
             { name: '霍振', address: '王爷', aff: 60 },
         ],
         titlesMatrix: pack.titles.matrix,
     });
+    assert.equal(same.text, '');
+
+    // 称呼不同 → 生成
+    const two = composeAddressBlock({
+        onstage: [
+            { name: '沈知微', address: '王爷', aff: 0 },
+            { name: '皇兄', address: '陛下', aff: 30 },
+        ],
+        titlesMatrix: pack.titles.matrix,
+    });
     assert.match(two.text, /^\[称谓\]/);
-    assert.match(two.text, /沈知微→"王爷"/);
     assert.match(two.text, /泛称/);
 });
 

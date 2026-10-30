@@ -25,6 +25,7 @@ import { parsePresence, stripPresence, resolveActors, inferPresence } from './sr
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
 import { candidatesFor } from './src/core/codes/codes.js';
+import { retrieveCodes } from './src/core/codes/retrieve.js';
 import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
 import { normalizeSettle } from './src/llm/schema.js';
@@ -506,7 +507,7 @@ function composeAndInject() {
     try {
         const onstageView = onstageOf(pack, state, meta);
         const r = composeAddressBlock({
-            onstage: onstageView.map(o => ({
+            onstage: onstageView.filter(o => !o.isUser).map(o => ({
                 name: o.name,
                 address: o.address,
                 aff: o.aff,
@@ -732,7 +733,14 @@ function enqueueSettle(msgIndex, pack, state, userText, aiText) {
     const onstage = onstageOf(pack, state, meta);
     const rankIds = onstage.map(o => o.rank).filter(Boolean);
     const scene = state.place ? treeOf(pack).nodes?.[state.place]?.scene : null;
-    const candidates = candidatesFor(pack, { scene, rankIds, household: meta.household ?? {} });
+    // 先按场景/位份/正文关键词检索，只把最相关的 10 条交给副模型
+    // （全量候选项有 40~60 条，全给会稀释判断，也白烧 token）
+    const candidates = retrieveCodes(pack, {
+        scene,
+        rankIds,
+        text: `${userText ?? ''}\n${aiText ?? ''}`,
+        state,
+    }, 10);
     const msgs = buildSettleMessages({ pack, state, onstage, userText, aiText, candidates });
     settleQueue.push({ msgIndex, pack, state, messages: msgs, text: aiText });
 }
