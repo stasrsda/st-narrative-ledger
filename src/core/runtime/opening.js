@@ -1,8 +1,8 @@
 // 开局状态：人还在雁回县外
 import { fromParts } from '../calendar/guofeng.js';
 
-/** 承平二十七年九月十四 · 酉初三刻 · 北门外五里 */
-export const OPENING_TIME = Object.freeze({ year: 27, month: 9, day: 14, shichen: 9, ke: 3 });
+/** 承平十五年九月十四 · 酉初三刻 · 北门外五里 */
+export const OPENING_TIME = Object.freeze({ year: 15, month: 9, day: 14, shichen: 9, ke: 3 });
 
 /** 开场在场：只有霍振。知微还在牢里，不算在场。 */
 export const OPENING_ONSTAGE = Object.freeze(['huozhen']);

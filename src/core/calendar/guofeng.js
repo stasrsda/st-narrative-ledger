@@ -91,7 +91,7 @@ export function renderTime(t) {
     return SHICHEN[idx] + (ke <= 4 ? '初' : '正') + KE_CN[n - 1] + '刻';
 }
 
-/** t → 承平二十七年九月十四 */
+/** t → 承平十五年九月十四 */
 export function renderMonth(m) {
     if (m === 1) return '正月';
     if (m === 11) return '冬月';
@@ -113,7 +113,7 @@ export function renderDate(t, cal = DEFAULT_CAL) {
         + renderMonth(month) + renderDay(day);
 }
 
-/** t + 地点 → 『承平二十七年九月十四 · 子正三刻 · 雁回县』 */
+/** t + 地点 → 『承平十五年九月十四 · 子正三刻 · 雁回县』 */
 export function renderHeader(t, place = '', cal = DEFAULT_CAL) {
     const parts = [renderDate(t, cal), renderTime(t), place].filter(Boolean);
     return '『' + parts.join(' · ') + '』';

@@ -115,7 +115,7 @@ export function parseCnDay(raw = '') {
 
 /**
  * 解析首行时间头。
- * 支持 『承平二十七年九月十四 · 子正三刻 · 雁回县·北门外五里』
+ * 支持 『承平十五年九月十四 · 子正三刻 · 雁回县·北门外五里』
  * 也支持没有书名号的同样结构。
  */
 export function parseHeader(text = '', cal = DEFAULT_CAL) {

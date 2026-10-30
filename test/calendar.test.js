@@ -17,15 +17,15 @@ test('日期：跨月与跨年', () => {
     const d1 = fromDate({ year: 1, month: 12, day: 30 });
     assert.deepEqual(toDate(d1), { year: 1, month: 12, day: 30 });
     assert.deepEqual(toDate(d1 + MIN_PER_DAY), { year: 2, month: 1, day: 1 });
-    const d2 = fromDate({ year: 27, month: 9, day: 14 });
-    assert.deepEqual(toDate(d2), { year: 27, month: 9, day: 14 });
+    const d2 = fromDate({ year: 15, month: 9, day: 14 });
+    assert.deepEqual(toDate(d2), { year: 15, month: 9, day: 14 });
 });
 
 test('渲染：年号 + 月日 + 时间 + 地名', () => {
-    const t = fromParts({ year: 27, month: 9, day: 14, shichen: 9, ke: 3 });
-    assert.equal(renderDate(t), '承平二十七年九月十四');
+    const t = fromParts({ year: 15, month: 9, day: 14, shichen: 9, ke: 3 });
+    assert.equal(renderDate(t), '承平十五年九月十四');
     assert.equal(renderTime(t), '酉初三刻');
-    assert.equal(renderHeader(t, '雁回县·北门外五里'), '『承平二十七年九月十四 · 酉初三刻 · 雁回县·北门外五里』');
+    assert.equal(renderHeader(t, '雁回县·北门外五里'), '『承平十五年九月十四 · 酉初三刻 · 雁回县·北门外五里』');
 });
 
 test('来回：fromParts 与 toDate/renderTime 一致（随机 500 次）', () => {

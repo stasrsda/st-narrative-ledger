@@ -24,15 +24,15 @@ test('汉字数字解析', () => {
 });
 
 test('解析完整时间头（世界书格式）', () => {
-    const r = parseHeader('『承平二十七年九月十四 · 酉初三刻 · 雁回县·北门外五里』');
+    const r = parseHeader('『承平十五年九月十四 · 酉初三刻 · 雁回县·北门外五里』');
     assert.ok(r);
     assert.equal(r.place, '雁回县·北门外五里');
-    const expect = fromParts({ year: 27, month: 9, day: 14, shichen: 9, ke: 3 });
+    const expect = fromParts({ year: 15, month: 9, day: 14, shichen: 9, ke: 3 });
     assert.equal(r.t, expect);
 });
 
 test('没有书名号也能解析', () => {
-    const r = parseHeader('承平二十七年九月十四 · 子正一刻 · 北凉城');
+    const r = parseHeader('承平十五年九月十四 · 子正一刻 · 北凉城');
     assert.ok(r);
     assert.equal(r.place, '北凉城');
     assert.equal(renderTime(r.t), '子正一刻');
@@ -58,7 +58,7 @@ test('推进与枚举', () => {
 });
 
 test('重写时间头：换掉日期时间地名，保留天气', () => {
-    const src = '『承平二十七年九月十四 · 酉初三刻 · 雁回县 · 阴』\n正文第一句。';
+    const src = '『承平十五年九月十四 · 酉初三刻 · 雁回县 · 阴』\n正文第一句。';
     const t = fromParts({ year: 28, month: 1, day: 2, shichen: 3, ke: 2 });
     const out = rewriteHeader(src, t, '北凉城');
     assert.match(out, /承平二十八年正月初二/);

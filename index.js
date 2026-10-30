@@ -128,9 +128,16 @@ function treeOf(pack) {
 
 function currentState() {
     const { pack } = ensurePack();
-    const state = fold(readMeta()?.seed ?? { t: 0, place: null }, eventsByFloor());
-    const meta = readMeta() ?? {};
-    state.place = meta.placeId ?? state.place;
+    let meta = readMeta();
+    if (!meta?.seed) {
+        // 新聊天或从未设置过：直接落一份开局状态，避免出现「承平元年正月初一」
+        const fresh = openingMeta(pack);
+        writeMeta(fresh);
+        meta = { ...(readMeta() ?? {}), ...fresh };
+        log('首次进入本聊天，已写入开局状态');
+    }
+    const state = fold(meta.seed, eventsByFloor());
+    state.place = meta.placeId ?? meta.seed?.place ?? state.place;
     return { pack, state, meta };
 }
 
