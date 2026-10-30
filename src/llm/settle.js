@@ -13,11 +13,25 @@ export function toEvents(pack, state, data = {}) {
     const seenEmergent = new Set((state.emergent ?? []).map(e => e.quote || e.name));
     const doneIds = new Set(state.done ?? []);
 
+    // 单轮上限：同一个人这一轮的正向加分不能超过 pack.affinity.maxPerRound
+    const cap = Number(pack?.affinity?.maxPerRound ?? 0) || Infinity;
+    const gained = new Map();
     for (const r of data.results ?? []) {
         if (!actorIds.has(r.actor)) continue;
         const delta = deltaFor(pack, r.kind);
         if (!delta) continue;
-        events.push({ k: 'aff', actor: r.actor, delta, kind: r.kind, note: r.note ?? '', src: 'settle' });
+        let d = delta;
+        if (d > 0) {
+            const used = gained.get(r.actor) ?? 0;
+            const room = cap - used;
+            if (room <= 0) {
+                events.push({ k: 'aff', actor: r.actor, delta: 0, kind: 'F', note: '超出单轮上限', src: 'settle' });
+                continue;
+            }
+            d = Math.min(d, room);
+            gained.set(r.actor, used + d);
+        }
+        events.push({ k: 'aff', actor: r.actor, delta: d, kind: r.kind, note: r.note ?? '', src: 'settle' });
     }
 
     for (const b of data.beats ?? []) {

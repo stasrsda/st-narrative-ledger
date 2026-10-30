@@ -448,7 +448,9 @@ function diagInfo() {
 function worldBookNames() {
     try {
         const c = ctx();
-        const names = c.world_names ?? c.worldNames ?? [];
+        // 1.19 上 world_names 可能还没加载，优先用官方 getter
+        const viaGetter = typeof c.getWorldInfoNames === 'function' ? c.getWorldInfoNames() : null;
+        const names = viaGetter ?? c.world_names ?? c.worldNames ?? [];
         return Array.isArray(names) ? names : [];
     } catch {
         return [];
@@ -576,6 +578,13 @@ function settleMessage() {
 
     // 时钟由插件推进：按这一轮的内容估算耗时，写一条 clock 事件
     const userTextForClock = messages()[idx - 1]?.mes ?? '';
+    // 同一楼可能被处理多次（重试、事件重放）：先清掉插件自己写过的 clock，
+    // 否则时间会被推进好几遍
+    if (Array.isArray(msg.extra?.storyLedger?.events)) {
+        msg.extra.storyLedger.events = msg.extra.storyLedger.events.filter(
+            e => !(e?.k === 'clock' && e?.src === 'auto'),
+        );
+    }
     const step = advanceTurn(state.t ?? 0, userTextForClock + body);
     appendEvents(msg, [{ k: 'clock', t: step.t, src: 'auto' }]);
     writeMeta({ lastAdvance: { minutes: step.minutes, why: step.why, from: state.t, to: step.t } });

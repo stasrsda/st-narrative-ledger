@@ -236,3 +236,18 @@ test('resolveActor：id / 全名 / 别称 / 带后缀都能认', () => {
     assert.equal(resolveActor('霍振说', ids, alias), 'huozhen');
     assert.equal(resolveActor('张三', ids, alias), null);
 });
+
+test('单轮上限：同一个人一轮最多加 maxPerRound', () => {
+    const data = { results: [{ actor: 'huozhen', kind: 'D' }, { actor: 'huozhen', kind: 'D' }] };
+    const ev = toEvents(pack, { emergent: [], done: [] }, data).filter(e => e.k === 'aff');
+    const total = ev.reduce((s2, e) => s2 + (e.delta > 0 ? e.delta : 0), 0);
+    assert.ok(total <= (pack.affinity.maxPerRound ?? 50), `总加分 ${total} 超了上限`);
+});
+
+test('单轮上限：不同人各算各的', () => {
+    const data = { results: [{ actor: 'huozhen', kind: 'D' }, { actor: 'zhiwei', kind: 'D' }] };
+    const ev = toEvents(pack, { emergent: [], done: [] }, data).filter(e => e.k === 'aff');
+    const byActor = {};
+    for (const e of ev) byActor[e.actor] = (byActor[e.actor] ?? 0) + e.delta;
+    assert.ok(byActor.huozhen <= 50 && byActor.zhiwei <= 50);
+});
