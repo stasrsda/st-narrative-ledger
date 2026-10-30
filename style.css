@@ -352,3 +352,19 @@ body.story-ledger-locked {
     opacity: .5;
     cursor: default;
 }
+
+/* 粘贴区（导入世界包） */
+.sl-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 84px;
+    resize: vertical;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 6px 8px;
+    background: var(--SmartThemeInputColor, #222);
+    color: inherit;
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 6px;
+}

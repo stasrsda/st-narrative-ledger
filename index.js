@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -94,6 +94,17 @@ let bundledLoaded = false;
 /** 随扩展一起带的包：先私人包，再通用示例包；缺哪个跳过哪个 */
 const BUNDLED_PACKS = ['beiliang', 'guofeng'];
 
+/** 把之前导入过的包重新装进 registry */
+function restoreImportedPacks() {
+    const saved = importedPacks();
+    const ids = Object.keys(saved);
+    for (const id of ids) {
+        const r = addPack(registry, saved[id]);
+        if (!r.ok) log(`导入包 ${id} 恢复失败`, r.errors?.slice(0, 2));
+    }
+    if (ids.length) log(`已恢复 ${ids.length} 个导入的世界包`);
+}
+
 async function loadBundledPacks() {
     if (bundledLoaded) return;
     bundledLoaded = true;
@@ -118,6 +129,30 @@ function ensurePack() {
         ...packMatchNames(),
         defaultId: def,
     });
+}
+
+/** 用户导入过的世界包（存在 ST 设置里，重启仍在） */
+function importedPacks() {
+    try {
+        return ctx().extensionSettings?.storyLedger?.importedPacks ?? {};
+    } catch {
+        return {};
+    }
+}
+
+function saveImportedPack(id, pack) {
+    try {
+        const c = ctx();
+        c.extensionSettings = c.extensionSettings ?? {};
+        const sl = c.extensionSettings.storyLedger ?? {};
+        sl.importedPacks = { ...(sl.importedPacks ?? {}), [id]: pack };
+        c.extensionSettings.storyLedger = sl;
+        c.saveSettingsDebounced?.();
+        return true;
+    } catch (e) {
+        log('保存导入包失败', e?.message ?? e);
+        return false;
+    }
 }
 
 /** ST 里已有的连接配置名（Connection Manager → profiles[].name） */
@@ -447,6 +482,25 @@ function boot() {
         }
     });
 
+    onImportPack(async text => {
+        let raw;
+        try {
+            raw = typeof text === 'string' ? JSON.parse(text) : text;
+        } catch (e) {
+            return { ok: false, msg: '不是合法 JSON：' + (e?.message ?? e) };
+        }
+        const r = addPack(registry, raw);
+        if (!r.ok) {
+            const first = r.errors?.[0];
+            return { ok: false, msg: `${first?.path ?? '?'} ${first?.msg ?? '校验未通过'}` };
+        }
+        saveImportedPack(r.pack.id, raw);
+        writeMeta({ packId: r.pack.id });
+        composeAndInject();
+        log('已导入世界包', r.pack.id);
+        return { ok: true, id: r.pack.id, name: r.pack.name };
+    });
+
     refreshPanel({ chatId: chatId(), messageCount: messages().length, profileId: settings.profileId, env: envInfo() });
     if (typeof eventSource?.on !== 'function') { log('事件源不可用，扩展只会显示面板'); refreshPanel({ env: envInfo() }); return; }
     try {
@@ -489,6 +543,7 @@ document.addEventListener('click', ev => {
 
 jQuery(async () => {
     await loadSTEvents();
+    restoreImportedPacks();
     window.addEventListener('error', e => log('未捕获错误', e?.message));
     window.addEventListener('unhandledrejection', e => log('未处理的拒绝', e?.reason?.message ?? e?.reason));
     try {

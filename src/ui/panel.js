@@ -30,6 +30,7 @@ const S = {
     profiles: [],
     packError: '',
     testResult: null,
+    importStatus: '',
 };
 
 let profileHandler = null;
@@ -37,6 +38,7 @@ let resetHandler = null;
 let packHandler = null;
 let saveHandler = null;
 let testHandler = null;
+let importHandler = null;
 
 export function onProfileChange(fn) {
     profileHandler = fn;
@@ -56,6 +58,10 @@ export function onSaveProfile(fn) {
 
 export function onTestModel(fn) {
     testHandler = fn;
+}
+
+export function onImportPack(fn) {
+    importHandler = fn;
 }
 
 function el(tag, cls, text) {
@@ -216,6 +222,60 @@ function render() {
         }
         if (S.packError) c.append(el('div', 'sl-note', '载入问题：' + S.packError));
         body.append(c);
+
+        // ── 导入 ──
+        const imp = card('导入世界包');
+        const file = el('input', 'sl-input');
+        file.type = 'file';
+        file.accept = '.json,application/json';
+        imp.append(file);
+
+        const ta = el('textarea', 'sl-input sl-textarea');
+        ta.placeholder = '或把世界包 JSON 粘到这里';
+        ta.rows = 4;
+        imp.append(ta);
+
+        const ibtn = el('button', 'sl-btn', '导入');
+        ibtn.type = 'button';
+        imp.append(ibtn);
+
+        const istat = el('div', 'sl-note', S.importStatus || '导入后会自动切到这个包，并存进 ST 设置，重启仍在。');
+        imp.append(istat);
+
+        const doImport = async text => {
+            istat.textContent = '导入中…';
+            try {
+                const r = await importHandler?.(text);
+                if (r?.ok) {
+                    S.importStatus = `已导入：${r.name || r.id}`;
+                    istat.textContent = S.importStatus;
+                } else {
+                    istat.textContent = '失败：' + (r?.msg ?? '未知错误');
+                }
+            } catch (e) {
+                istat.textContent = '失败：' + (e?.message ?? e);
+            }
+        };
+
+        file.addEventListener('change', async () => {
+            const f = file.files?.[0];
+            if (!f) return;
+            const text = await f.text();
+            ta.value = text.length > 3000
+                ? text.slice(0, 3000) + ' …（已读入全文，仅显示前 3000 字）'
+                : text;
+        });
+
+        ibtn.addEventListener('click', () => {
+            const text = ta.value.trim();
+            if (!text) {
+                istat.textContent = '先选文件或粘贴 JSON';
+                return;
+            }
+            void doImport(text);
+        });
+
+        body.append(imp);
 
         const s = card('副模型');
         s.append(row('状态', S.transport));
