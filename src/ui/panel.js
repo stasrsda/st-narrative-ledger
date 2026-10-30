@@ -34,6 +34,7 @@ const S = {
     direct: {},
     settle: null,
     aff: null,
+    onstageEdit: false,
     hudOn: true,
     directMsg: '',
     profileMsg: '',
@@ -254,23 +255,40 @@ function render() {
         body.append(c);
 
         if (S.diag?.actorList?.length) {
-            const oc = card('在场（勾选）');
-            oc.append(el('div', 'sl-note', '只有勾上的人会变好感、才出现在底部条。'));
-            for (const a of S.diag.actorList) {
-                const line = el('label', 'sl-check-row');
-                const cb = el('input', '');
-                cb.type = 'checkbox';
-                cb.checked = Boolean(a.on);
-                cb.addEventListener('change', () => {
-                    a.on = cb.checked;
-                    try {
-                        onstageHandler?.(a.id, cb.checked);
-                    } catch (e) {
-                        console.warn('[叙事账本] onstage change failed', e);
-                    }
-                });
-                line.append(cb, el('span', 'sl-check-name', a.name));
-                oc.append(line);
+            const fromAi = S.diag.onstageSrc === 'ai';
+            const oc = card('在场');
+            oc.append(el('div', 'sl-note',
+                fromAi ? '由主模型每轮在【在场】行给出。' : '当前是开局/手动名单，等主模型写出【在场】行后会自动接管。'));
+
+            const on = S.diag.actorList.filter(a => a.on);
+            oc.append(row('现在在场', on.length ? on.map(a => a.name).join('、') : '（无人）'));
+
+            const toggle = el('button', 'sl-btn', S.onstageEdit ? '收起手动修正' : '手动修正');
+            toggle.type = 'button';
+            toggle.addEventListener('click', () => {
+                S.onstageEdit = !S.onstageEdit;
+                render();
+            });
+            oc.append(toggle);
+
+            if (S.onstageEdit) {
+                oc.append(el('div', 'sl-note', '勾选会直接覆盖名单；之后主模型写出【在场】行时会再接管。'));
+                for (const a of S.diag.actorList) {
+                    const line = el('label', 'sl-check-row');
+                    const cb = el('input', '');
+                    cb.type = 'checkbox';
+                    cb.checked = Boolean(a.on);
+                    cb.addEventListener('change', () => {
+                        a.on = cb.checked;
+                        try {
+                            onstageHandler?.(a.id, cb.checked);
+                        } catch (e) {
+                            console.warn('[叙事账本] onstage change failed', e);
+                        }
+                    });
+                    line.append(cb, el('span', 'sl-check-name', a.name));
+                    oc.append(line);
+                }
             }
             body.append(oc);
         }
