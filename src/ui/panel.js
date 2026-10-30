@@ -45,6 +45,7 @@ let testHandler = null;
 let importHandler = null;
 let listHandler = null;
 let settleNowHandler = null;
+let diagHandler = null;
 
 export function onProfileChange(fn) {
     profileHandler = fn;
@@ -76,6 +77,10 @@ export function onListModels(fn) {
 
 export function onSettleNow(fn) {
     settleNowHandler = fn;
+}
+
+export function onExportDiag(fn) {
+    diagHandler = fn;
 }
 
 function el(tag, cls, text) {
@@ -189,6 +194,22 @@ function render() {
             }
         });
         c.append(retry);
+
+        const copyBtn = el('button', 'sl-btn', '复制诊断信息');
+        copyBtn.type = 'button';
+        copyBtn.addEventListener('click', async () => {
+            try {
+                const text = diagHandler?.() ?? '';
+                await navigator.clipboard.writeText(text);
+                S.settle = { ...(S.settle ?? {}), msg: '诊断信息已复制' };
+            } catch (e) {
+                console.warn('[叙事账本] copy failed', e);
+                S.settle = { ...(S.settle ?? {}), msg: '复制失败，看控制台' };
+                try { console.log(diagHandler?.()); } catch { /* noop */ }
+            }
+            render();
+        });
+        c.append(copyBtn);
 
         c.append(row('聊天', S.chatId));
         c.append(row('楼层', S.messageCount));

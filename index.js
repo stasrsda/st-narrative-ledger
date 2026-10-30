@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -210,6 +210,59 @@ function packErrorText() {
     const first = errs[ids[0]];
     const one = first?.[0];
     return `${ids[0]}：${one?.msg ?? '校验未通过'}`;
+}
+
+/** 一次性导出诊断信息，便于排查（不含明文 key） */
+function diagDump() {
+    const lines = [];
+    const push = (k, v) => lines.push(`${k}: ${v}`);
+    try {
+        const { pack, state, meta } = currentState();
+        const tree = treeOf(pack);
+        const msgs = messages();
+        const lastUser = [...msgs].reverse().find(m => m.is_user)?.mes ?? '';
+        const lastAi = msgs[msgs.length - 1]?.mes ?? '';
+        const block = buildSceneBlock({
+            pack, state, tree, chatSeed: chatId(),
+            meta: { ...meta, hintText: lastUser + lastAi.slice(-200) },
+            budget: 220,
+        });
+
+        push('插件版本', VERSION);
+        push('ST 版本', ST_INFO.version);
+        push('聊天', chatId());
+        push('楼层', msgs.length);
+        push('世界书', worldBookNames().join(' / ') || '（无）');
+        push('当前包', `${pack?.name ?? '—'}（${pack?.id ?? '—'}）`);
+        push('包内角色数', Object.keys(pack?.index?.actor ?? {}).length);
+        push('基础好感', sampleAffinity(pack));
+        push('meta.packId', meta?.packId ?? '（无）');
+        push('meta.onstage', JSON.stringify(meta?.onstage ?? null));
+        push('meta.placeId', meta?.placeId ?? '（无）');
+        push('seed.t', meta?.seed?.t ?? '（无）');
+        push('seed.aff', JSON.stringify(meta?.seed?.aff ?? null));
+        push('此刻好感', JSON.stringify(
+            Object.fromEntries(['huozhen', 'zhiwei'].map(id => [id, state.aff?.[id] ?? null]))
+        ));
+        push('已完成事件', (state.done ?? []).length);
+        push('自生事件', (state.emergent ?? []).length);
+        push('末楼事件数', (msgs[msgs.length - 1]?.extra?.storyLedger?.events ?? []).length);
+        push('副模型', transportAvailable()
+            ? (settings.direct?.model || settings.profileId ? '就绪' : '缺连接配置')
+            : '不可用');
+        push('直连', settings.direct?.baseUrl
+            ? `${settings.direct.baseUrl} / ${settings.direct.model} / key长度 ${(settings.direct.apiKey ?? '').length}`
+            : '未配置');
+        push('连接配置', settings.profileId || '未填');
+        push('结算', `${settleStatus.ok === null ? '待定' : settleStatus.ok ? '成功' : '失败'} · ${settleStatus.msg}`);
+        lines.push('');
+        lines.push('── 本轮注入 ──');
+        lines.push(block.text);
+    } catch (e) {
+        lines.push('导出出错: ' + (e?.message ?? e));
+        lines.push(String(e?.stack ?? ''));
+    }
+    return lines.join('\n');
 }
 
 /** 诊断信息：不依赖任何局部变量，任何地方都能调 */
@@ -646,6 +699,8 @@ function boot() {
         refreshPanel({ profileId: id, transport: transportAvailable() ? (id ? '就绪' : '缺连接配置') : '不可用' });
         log('副模型已保存', id || '（关闭）');
     });
+
+    onExportDiag(() => diagDump());
 
     onSettleNow(() => {
         const idx = lastMessageIndex();
