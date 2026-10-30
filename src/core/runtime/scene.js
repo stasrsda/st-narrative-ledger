@@ -103,6 +103,7 @@ export function onstageOf(pack, state, meta = {}) {
         return {
             id,
             name: a.name,
+            isUser: Boolean(a.isUser),
             aff: state.aff?.[id] ?? a.aff ?? 0,
             address: r?.address ?? '',
             rank,
@@ -122,7 +123,7 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
 
     const onstage = onstageOf(pack, state, meta);
     // 动机与经验只对「情爱向」的角色有意义；臣属/亲族用 bond 区分，不走这条线
-    const focus = onstage.find(o => (o.bond ?? 'love') === 'love');
+    const focus = onstage.find(o => !o.isUser && (o.bond ?? 'love') === 'love');
     const motive = (!lean && focus) ? `${focus.name} ${motiveLine(pack, focus.aff, { hasRank: !!focus.rank })}` : '';
 
     const w = node ? weatherFor({ pack, placeNode: node, t: state.t ?? 0, chatSeed }) : null;
@@ -148,7 +149,7 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     const placeTag = placeTagOf(pack, node, season);
     const { nearby, forbid } = nearbyOf(tree, placeId);
     const recent = '';
-    const reaction = lean ? '' : reactionOf(pack, onstage);
+    const reaction = lean ? '' : reactionOf(pack, onstage.filter(a => !a.isUser));
     const codes = lean ? '' : codesLineOf(pack, state);
 
     let propList = state.props?.[placeId];

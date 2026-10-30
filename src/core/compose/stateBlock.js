@@ -17,6 +17,8 @@ function onstageNamesOnly(onstage = []) {
 
 function onstageLine(pack, onstage = [], showNumbers = true) {
     const parts = onstage.slice(0, 6).map(a => {
+        // 玩家本人只写名字：他没有“对自己的好感”
+        if (a.isUser) return a.name;
         const aff = a.aff ?? 0;
         const band = bandOf(pack, aff, a.bond ?? 'love').name;
         const addr = a.address ? `/称"${a.address}"` : '';

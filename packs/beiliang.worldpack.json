@@ -501,6 +501,16 @@
       "public": "可前厅议事",
       "after": {},
       "note": "外客：商人、幕僚、别府来人"
+    },
+    "王": {
+      "order": 0,
+      "address": "王爷",
+      "self": "本王",
+      "access": "everywhere",
+      "overnight": true,
+      "public": "在场即主位",
+      "after": {},
+      "note": "藩王本人；玩家角色，不参与好感判定"
     }
   },
   "motives": [
@@ -2454,6 +2464,24 @@
   ],
   "actors": [
     {
+      "id": "baijingzhao",
+      "name": "白景昭",
+      "aliases": [
+        "王爷",
+        "凉王",
+        "镇北王"
+      ],
+      "rank": "王",
+      "aff": 0,
+      "bond": "love",
+      "isUser": true,
+      "stance": "aristocrat",
+      "knows": [],
+      "temper": "cold",
+      "lines": [],
+      "beats": []
+    },
+    {
       "id": "zhiwei",
       "name": "沈知微",
       "aliases": [
@@ -2743,24 +2771,28 @@
       "bond": "loyalty",
       "stance": "new_follower",
       "knows": [
-        "butcher",
-        "protects_men"
+        "butcher"
       ],
-      "temper": "upright",
+      "temper": "cold",
       "lines": [
         {
-          "id": "life",
-          "text": "他的命是白景昭从死人堆里捡回来的；要他退，得给命令",
-          "from": "北凉五年"
+          "id": "scar",
+          "text": "左脸一道疤；话少，识字不多，记路记人极准",
+          "from": "[L4] 亲卫"
+        },
+        {
+          "id": "no_inner",
+          "text": "亲卫不进内院",
+          "from": "[L4] 亲卫"
         }
       ],
       "beats": [
         {
-          "id": "shield",
-          "when": "aff>=45",
+          "id": "sick",
+          "when": "王爷病发",
           "mode": "beat",
-          "once": true,
-          "do": "有人近身三步内，他会先横过刀挡在前面，不说话"
+          "once": false,
+          "do": "他只听赵伯一人调遣，其余人说什么都不动"
         }
       ]
     },
@@ -2771,25 +2803,25 @@
         "老福"
       ],
       "rank": "仆",
-      "aff": 65,
+      "aff": 55,
       "bond": "loyalty",
       "stance": "beiliang_old",
       "knows": [],
-      "temper": "upright",
+      "temper": "timid",
       "lines": [
         {
-          "id": "old_house",
-          "text": "府里的旧规矩他记得比谁都清，会拿它挡新规矩",
-          "from": "北凉元年 起"
+          "id": "cook",
+          "text": "就藩时是随行的车夫，后转厨；话少，只做羊肉汤、面饼、胡辣汤",
+          "from": "[L4] 王府众人"
         }
       ],
       "beats": [
         {
-          "id": "remember",
-          "when": "aff>=50",
+          "id": "soup",
+          "when": "王爷久不进食",
           "mode": "hint",
           "once": false,
-          "do": "他会提起十几年前的一件小事，说完自己先笑"
+          "do": "他端一碗胡辣汤来，不说话，放下就走"
         }
       ]
     },
@@ -2798,28 +2830,33 @@
       "name": "孙账房",
       "aliases": [
         "孙先生",
-        "孙账房"
+        "户房书吏"
       ],
       "rank": "仆",
       "aff": 45,
       "bond": "loyalty",
       "stance": "beiliang_old",
       "knows": [],
-      "temper": "sly",
+      "temper": "upright",
       "lines": [
         {
-          "id": "books",
-          "text": "账面上永远比实际少两成；他赌的是没人细看",
-          "from": "北凉九年"
+          "id": "only_books",
+          "text": "管田庄、军饷、采买账，兼商队内账；只管账，不管别的",
+          "from": "[L4] 王府众人"
+        },
+        {
+          "id": "rival",
+          "text": "与崔掌柜不对付，但对王爷都忠",
+          "from": "[L4] 崔掌柜"
         }
       ],
       "beats": [
         {
-          "id": "slip",
-          "when": "被问账目",
+          "id": "report",
+          "when": "问及账目",
           "mode": "beat",
-          "once": true,
-          "do": "他先把算盘推远半寸，再开口"
+          "once": false,
+          "do": "他照数念，念完就停，不猜王爷想问什么"
         }
       ]
     },
@@ -2838,8 +2875,13 @@
       "lines": [
         {
           "id": "gate",
-          "text": "他在门房里住了十五年，谁进谁出他都记着",
-          "from": "京中旧府"
+          "text": "看了四十年门，认得京城所有车马；嘴严，不收门包",
+          "from": "[L4] 京城三老奴"
+        },
+        {
+          "id": "still_liangwang",
+          "text": "背地里仍叫他「凉王」",
+          "from": "[L4] 京城三老奴"
         }
       ],
       "beats": []
@@ -2859,8 +2901,8 @@
       "lines": [
         {
           "id": "dust",
-          "text": "屋子里盖布的家具，是他每年晒过来的",
-          "from": "京中旧府"
+          "text": "每天擦一遍空屋的家具，晒被；沉默，背驼",
+          "from": "[L4] 京城三老奴"
         }
       ],
       "beats": []
@@ -2876,12 +2918,12 @@
       "bond": "loyalty",
       "stance": "beiliang_old",
       "knows": [],
-      "temper": "cold",
+      "temper": "bold",
       "lines": [
         {
-          "id": "stove",
-          "text": "厨房只烧一盆炭，是因为他只烧得起一盆",
-          "from": "京中旧府"
+          "id": "deaf",
+          "text": "只会做羊肉汤、面饼、胡辣汤；耳朵背，嗓门大",
+          "from": "[L4] 京城三老奴"
         }
       ],
       "beats": []
@@ -2890,22 +2932,24 @@
       "id": "cuizhanggui",
       "name": "崔掌柜",
       "aliases": [
-        "崔掌柜",
         "大掌柜"
       ],
       "rank": "客",
       "aff": 40,
       "bond": "loyalty",
       "stance": "capital_folk",
-      "knows": [
-        "butcher"
-      ],
+      "knows": [],
       "temper": "sly",
       "lines": [
         {
-          "id": "goods",
-          "text": "他只认货与契，不认情分；但货从来没误过期",
-          "from": "北凉十一年"
+          "id": "fear",
+          "text": "跟王爷十五年，精明，嘴严，怕王爷；算盘快，记价比记人准",
+          "from": "[L4] 崔掌柜"
+        },
+        {
+          "id": "front",
+          "text": "商队明面是他的产业，实际东家是王爷；他替王爷挡「藩王经商」的弹劾",
+          "from": "[L4] 崔掌柜"
         }
       ],
       "beats": []

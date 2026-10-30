@@ -309,6 +309,7 @@ function affinityView(pack, state, meta) {
     return {
         bar: onstageIds.map(row),
         all: Object.keys(pack.index?.actor ?? {})
+            .filter(id => !pack.index.actor[id]?.isUser)
             .map(row)
             .sort((x, y) => y.aff - x.aff),
     };
