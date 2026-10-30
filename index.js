@@ -29,6 +29,15 @@ const MENU_CLASS = 'story-ledger-menu-item';
 const registry = createRegistry();
 const settings = { profileId: '', depth: 1, enabled: true };
 
+// 启动信标：模块一被求值就在 <head> 留痕，不依赖控制台就能查
+try {
+    const beacon = document.createElement('meta');
+    beacon.id = 'story-ledger-boot';
+    beacon.setAttribute('data-version', VERSION);
+    beacon.setAttribute('data-at', new Date().toISOString());
+    document.head.appendChild(beacon);
+} catch { /* noop */ }
+
 /** 事件源与事件名：先取全局，再动态 import script.js，最后回落字符串常量 */
 let eventSource = globalThis.eventSource ?? null;
 let EV = globalThis.event_types ?? {
