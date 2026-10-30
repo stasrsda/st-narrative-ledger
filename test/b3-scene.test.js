@@ -91,3 +91,28 @@ test('整块：地点不在册也不崩', () => {
     assert.match(b.text, /^\[状态/);
     assert.ok(!b.text.includes('地:'));
 });
+
+test('精简模式：在场只给名字，不带好感', () => {
+    const b = composeSceneBlock({
+        pack, state: { t }, placePath: '雁回县',
+        onstage: [{ name: '沈知微', aff: -30, address: '王爷' }],
+        lean: true,
+        motive: '沈知微 -30 屈从',
+        auth: ['知微 账目（查看）'],
+        budget: 999,
+    });
+    assert.match(b.text, /在场:沈知微/);
+    assert.ok(!b.text.includes('-30'), '精简模式不该出现好感数值');
+    assert.ok(!b.text.includes('动机'), '精简模式不该出现动机');
+    assert.ok(!b.text.includes('权:'), '精简模式不该出现职权');
+});
+
+test('完整模式：仍然带好感', () => {
+    const b = composeSceneBlock({
+        pack, state: { t }, placePath: '雁回县',
+        onstage: [{ name: '沈知微', aff: -30, address: '王爷' }],
+        lean: false,
+        budget: 999,
+    });
+    assert.match(b.text, /在场:沈知微\(-30\/怕/);
+});

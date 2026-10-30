@@ -36,6 +36,7 @@ const S = {
     aff: null,
     onstageEdit: false,
     hudCollapsed: false,
+    stateDetail: 'lean',
     hudOn: true,
     directMsg: '',
     profileMsg: '',
@@ -51,6 +52,7 @@ let listHandler = null;
 let settleNowHandler = null;
 let diagHandler = null;
 let onstageHandler = null;
+let detailHandler = null;
 
 try {
     const saved = localStorage.getItem('storyLedger.hud');
@@ -95,6 +97,10 @@ export function onExportDiag(fn) {
 
 export function onOnstageChange(fn) {
     onstageHandler = fn;
+}
+
+export function onStateDetailChange(fn) {
+    detailHandler = fn;
 }
 
 function el(tag, cls, text) {

@@ -9,6 +9,12 @@ export function estimateTokens(text) {
     return Math.ceil(String(text).length / 1.4);
 }
 
+/** 精简模式：只给名字，不带任何好感信息 */
+function onstageNamesOnly(onstage = []) {
+    const names = onstage.slice(0, 6).map(a => a.name).filter(Boolean);
+    return names.length ? `在场:${names.join('、')}` : '';
+}
+
 function onstageLine(pack, onstage = [], showNumbers = true) {
     const parts = onstage.slice(0, 6).map(a => {
         const aff = a.aff ?? 0;
@@ -45,14 +51,18 @@ export function composeSceneBlock(o = {}) {
     if (o.weather) parts.push({ key: 'weather', text: `天:${o.weather}` });
     if (o.festival) parts.push({ key: 'festival', text: `节:${o.festival}` });
 
-    const on = onstageLine(pack, o.onstage ?? [], o.showAffNumbers !== false);
+    // lean=true：不把任何好感/账本信息交给写作模型，只留「谁在场」
+    const lean = o.lean === true;
+    const on = lean
+        ? onstageNamesOnly(o.onstage ?? [])
+        : onstageLine(pack, o.onstage ?? [], o.showAffNumbers !== false);
     if (on) parts.push({ key: 'onstage', text: on, locked: true });
 
-    if (o.motive) parts.push({ key: 'motive', text: `动机:${o.motive}` });
-    if (o.exp) parts.push({ key: 'exp', text: o.exp });
-    for (const a of o.auth ?? []) parts.push({ key: 'auth', text: `权:${a}` });
+    if (!lean && o.motive) parts.push({ key: 'motive', text: `动机:${o.motive}` });
+    if (!lean && o.exp) parts.push({ key: 'exp', text: o.exp });
+    if (!lean) for (const a of o.auth ?? []) parts.push({ key: 'auth', text: `权:${a}` });
     if (o.events) parts.push({ key: 'events', text: `事件:${o.events}` });
-    for (const t of o.tables ?? []) parts.push({ key: t.key, text: t.text });
+    if (!lean) for (const t of o.tables ?? []) parts.push({ key: t.key, text: t.text });
     if (o.props) parts.push({ key: 'props', text: o.props });
     if (o.items) parts.push({ key: 'items', text: o.items });
 

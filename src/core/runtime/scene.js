@@ -49,7 +49,7 @@ export function onstageOf(pack, state, meta = {}) {
 /**
  * 组装这一轮的 [状态] 块
  */
-export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta = {}, budget = 220, showAffNumbers }) {
+export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta = {}, budget = 220, showAffNumbers, lean = false }) {
     const placeId = state.place;
     const node = placeId && tree ? tree.nodes?.[placeId] : null;
     const placePath = node ? pathLabel(tree, placeId) : (meta.placeName ?? '');
@@ -57,7 +57,7 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     const onstage = onstageOf(pack, state, meta);
     // 动机与经验只对「情爱向」的角色有意义；臣属/亲族用 bond 区分，不走这条线
     const focus = onstage.find(o => (o.bond ?? 'love') === 'love');
-    const motive = focus ? `${focus.name} ${motiveLine(pack, focus.aff, { hasRank: !!focus.rank })}` : '';
+    const motive = (!lean && focus) ? `${focus.name} ${motiveLine(pack, focus.aff, { hasRank: !!focus.rank })}` : '';
 
     const w = node ? weatherFor({ pack, placeNode: node, t: state.t ?? 0, chatSeed }) : null;
     const weather = w?.word ? renderWeather(w) : '';
@@ -95,7 +95,7 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
 
     return composeSceneBlock({
         pack, state, placePath, weather, festival,
-        onstage, showAffNumbers, motive, exp, auth, events, tables, props, items, budget,
+        onstage, showAffNumbers, lean, motive, exp, auth, events, tables, props, items, budget,
     });
 }
 

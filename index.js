@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange, onStateDetailChange } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -28,7 +28,7 @@ import { reviewText, summarize } from './src/core/review/review.js';
 
 const MENU_CLASS = 'story-ledger-menu-item';
 const registry = createRegistry();
-const settings = { profileId: '', depth: 1, enabled: true, showAffNumbers: true, direct: { baseUrl: '', apiKey: '', model: '' } };
+const settings = { profileId: '', depth: 1, enabled: true, showAffNumbers: true, stateDetail: 'lean', direct: { baseUrl: '', apiKey: '', model: '' } };
 
 /** 最近一次结算的状态，显示在面板上——否则失败只能翻控制台 */
 const settleStatus = { at: 0, ok: null, msg: '尚未结算', events: 0 };
@@ -809,6 +809,13 @@ function boot() {
         } catch { /* noop */ }
         refreshPanel({ ...panelBase(), profileId: id });
         log('副模型已保存', id || '（关闭）');
+    });
+
+    onStateDetailChange(v => {
+        settings.stateDetail = v;
+        try { globalThis.localStorage?.setItem('storyLedger.stateDetail', v); } catch { /* noop */ }
+        composeAndInject();
+        log('状态块详细度', v);
     });
 
     onOnstageChange((id, on) => {
