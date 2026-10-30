@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizePack } from '../src/core/pack/registry.js';
 import { createQueue } from '../src/llm/queue.js';
-import { normalizeSettle, KINDS } from '../src/llm/schema.js';
+import { normalizeSettle, extractJson } from '../src/llm/schema.js';
 import { toEvents } from '../src/llm/settle.js';
 import { reviewText, echoOfUser, summarize } from '../src/core/review/review.js';
 
@@ -135,4 +135,24 @@ test('审稿：复述玩家原话', () => {
 test('审稿：汇总', () => {
     assert.equal(summarize([]), '无异常');
     assert.match(summarize([{ level: 'error' }, { level: 'warn' }]), /1 错 \/ 1 警/);
+});
+
+test('协议：模型先输出思维链也能解析', () => {
+    const r = normalizeSettle('我先想想……好的：\n{"results":[{"actor":"zhiwei","kind":"C"}]}', {
+        actorIds: new Set(['zhiwei']),
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.data.results.length, 1);
+});
+
+test('协议：字符串里的花括号不会切断解析', () => {
+    const r = normalizeSettle('思考。{"results":[{"actor":"zhiwei","kind":"B","note":"她说{好}"}]}', {
+        actorIds: new Set(['zhiwei']),
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.data.results[0].note, '她说{好}');
+});
+
+test('extractJson：没有对象时返回 null', () => {
+    assert.equal(extractJson('这一轮没什么事'), null);
 });

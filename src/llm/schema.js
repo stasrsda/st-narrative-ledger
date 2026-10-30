@@ -18,7 +18,9 @@ export function normalizeSettle(raw, { actorIds = null, text = '' } = {}) {
         try {
             obj = JSON.parse(stripFence(raw));
         } catch {
-            return { ok: false, error: 'invalid_json', data: emptyPayload() };
+            const salvaged = extractJson(raw);
+            if (!salvaged) return { ok: false, error: 'invalid_json', data: emptyPayload() };
+            obj = salvaged;
         }
     }
     if (!obj || typeof obj !== 'object') return { ok: false, error: 'not_object', data: emptyPayload() };
@@ -78,4 +80,40 @@ function pickQuote(quote, text) {
     if (!q) return '';
     if (!text) return q;
     return String(text).includes(q) ? q : '';
+}
+
+/**
+ * 从任意文本里抠出第一个完整 JSON 对象。
+ * 有些模型（如 Qwen3 开思考）会先输出一段推理，再给 JSON；
+ * 直接 JSON.parse 会失败，这里按括号配平切一刀。
+ */
+export function extractJson(text) {
+    const s = String(text ?? '');
+    const start = s.indexOf('{');
+    if (start < 0) return null;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let i = start; i < s.length; i++) {
+        const ch = s[i];
+        if (inStr) {
+            if (esc) esc = false;
+            else if (ch === '\\') esc = true;
+            else if (ch === '"') inStr = false;
+            continue;
+        }
+        if (ch === '"') inStr = true;
+        else if (ch === '{') depth++;
+        else if (ch === '}') {
+            depth--;
+            if (depth === 0) {
+                try {
+                    return JSON.parse(s.slice(start, i + 1));
+                } catch {
+                    return null;
+                }
+            }
+        }
+    }
+    return null;
 }
