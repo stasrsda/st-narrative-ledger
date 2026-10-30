@@ -23,7 +23,7 @@ import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
-import { splitThinking, thinkingDominates } from './src/core/cleanup/thinking.js';
+import { splitThinking, thinkingDominates, normalizeMessage } from './src/core/cleanup/thinking.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
 import { candidatesFor } from './src/core/codes/codes.js';
 import { retrieveCodes } from './src/core/codes/retrieve.js';
@@ -556,7 +556,15 @@ function settleMessage() {
 
     const { pack, state, meta } = currentState();
     // 思考块与正文分开：时间头、在场、截断判断都只认正文
-    const { body, thinking } = splitThinking(msg.mes ?? '');
+    const norm = normalizeMessage(msg.mes ?? '');
+    const body = norm.body;
+    const thinking = norm.thinking;
+    if (norm.recovered) {
+        // 正文被塞进了思考块：提回来，并写回消息，否则用户默认折叠时看不到
+        msg.mes = body;
+        try { ctx().saveChat?.(); } catch { /* noop */ }
+        log('正文原先在思考块里，已提回正文：', `${body.length} 字`);
+    }
     if (thinkingDominates(thinking, body)) {
         log('思考块比正文长很多：', `思考 ${thinking.length} 字 / 正文 ${body.length} 字`);
     }
