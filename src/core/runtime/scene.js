@@ -10,6 +10,7 @@ import { grantLine } from '../authority/grants.js';
 import { renderProps } from '../props/prototype.js';
 import { renderItems } from '../props/items.js';
 import { expLine, expOf, shouldInjectExp } from '../actors/experience.js';
+import { tableLines } from '../tables/tables.js';
 
 /** 未结事件：软前置直接算可发生；硬前置要求全满足 */
 export function pendingEvents(pack, state, limit = 3) {
@@ -80,7 +81,6 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     const props = node ? renderProps(state.props?.[placeId] ?? [], node.name) : '';
     const items = node ? renderItems(Object.values(state.items ?? {}).filter(i => i.at === placeId), node.name) : '';
 
-    // 经验只在亲密场景或有人提起时注入，避免不分场合地暗示
     // 经验只在亲密相关时注入：亲密场景、卧室，或有人提起
     let exp = '';
     const intimateScene = meta.intimate || node?.scene === 'bedroom';
@@ -90,9 +90,12 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
         if (e.total > 0 || intimateScene) exp = expLine(pack, focus.name, e, state.t ?? 0, ph);
     }
 
+    // 表：物价/用色/月例/路程——代码有数据但不常驻，只在当轮提到时才上
+    const tables = tableLines(pack, meta.hintText ?? '');
+
     return composeSceneBlock({
         pack, state, placePath, weather, festival,
-        onstage, motive, exp, auth, events, props, items, budget,
+        onstage, motive, exp, auth, events, tables, props, items, budget,
     });
 }
 

@@ -107,7 +107,12 @@ function currentState() {
 function composeAndInject() {
     const { pack, state, meta } = currentState();
     const tree = treeOf(pack);
-    const block = buildSceneBlock({ pack, state, tree, chatSeed: chatId(), meta, budget: settings.depth === 1 ? 220 : 260 });
+    // 当轮提示文本：玩家这句话 + 上一段正文的尾巴，用来判断要不要挂物价/用色/路程
+    const msgs = messages();
+    const lastUser = [...msgs].reverse().find(m => m.is_user)?.mes ?? '';
+    const lastAi = msgs[msgs.length - 1]?.mes?.slice(-200) ?? '';
+    const hintText = lastUser + lastAi;
+    const block = buildSceneBlock({ pack, state, tree, chatSeed: chatId(), meta: { ...meta, hintText }, budget: settings.depth === 1 ? 220 : 260 });
     const ok = settings.enabled && (setStatePrompt(block.text) || setRawSlot(block.text));
 
     refreshPanel({

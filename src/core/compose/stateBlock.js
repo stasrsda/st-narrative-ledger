@@ -2,7 +2,7 @@
 import { renderDate, renderTime } from '../calendar/guofeng.js';
 import { bandOf } from '../affinity/affinity.js';
 
-const DROP_ORDER = ['items', 'props', 'auth', 'exp', 'festival', 'weather', 'motive', 'events'];
+const DROP_ORDER = ['items', 'props', 'color', 'travel', 'stipend', 'price', 'auth', 'exp', 'festival', 'weather', 'motive', 'events'];
 
 export function estimateTokens(text) {
     // 中文约 1.5 字/token，保守取 1.4
@@ -52,6 +52,7 @@ export function composeSceneBlock(o = {}) {
     if (o.exp) parts.push({ key: 'exp', text: o.exp });
     for (const a of o.auth ?? []) parts.push({ key: 'auth', text: `权:${a}` });
     if (o.events) parts.push({ key: 'events', text: `事件:${o.events}` });
+    for (const t of o.tables ?? []) parts.push({ key: t.key, text: t.text });
     if (o.props) parts.push({ key: 'props', text: o.props });
     if (o.items) parts.push({ key: 'items', text: o.items });
 
