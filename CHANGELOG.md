@@ -6,6 +6,12 @@
 
 ---
 
+## 0.4.2 — 2026-10-30
+
+- 修 400 Bad Request：ST 生成端点读的是 `request.body.model`，之前只传了 `custom_model`，
+  上游收到 `model: undefined`。现在两个都传。
+- 新增 3 条单测：校验请求体字段、模型列表去重排序、400 时异常带出地址与上游错误
+
 ## 0.4.1 — 2026-10-30
 
 - 修 404 not found：ST 会自己拼 `${apiUrl}/chat/completions`，之前我们传了完整地址

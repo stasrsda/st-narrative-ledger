@@ -82,6 +82,10 @@ export async function requestCustom({
     const payload = {
         chat_completion_source: 'custom',
         custom_url: url,
+        // ST 的 requestBody 用的是 request.body.model（chat-completions.js:2655），
+        // custom_model 只是前端习惯，服务端不读它 —— 少传 model 会变成
+        // model: undefined，上游直接 400 Bad Request。
+        model,
         custom_model: model,
         custom_include_headers: apiKey ? { Authorization: 'Bearer ' + apiKey } : {},
         custom_include_body: {
