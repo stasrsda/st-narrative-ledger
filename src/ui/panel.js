@@ -231,17 +231,26 @@ function render() {
 
         // ── 导入 ──
         const imp = card('导入世界包');
-        const file = el('input', 'sl-input');
+
+        // 手机上一律用系统文件选择器：不限制 MIME，选到再说，
+        // 因为不少安卓文件管理器会把 .json 标成 octet-stream，限制类型反而选不到。
+        const pickLabel = el('label', 'sl-btn sl-file-btn', '选择 JSON 文件');
+        pickLabel.setAttribute('for', 'story-ledger-file');
+        const file = el('input', '');
         file.type = 'file';
-        file.accept = '.json,application/json';
-        imp.append(file);
+        file.id = 'story-ledger-file';
+        file.accept = '*/*';
+        file.style.display = 'none';
+        imp.append(pickLabel, file);
+
+        imp.append(el('div', 'sl-note', '手机上点上面按钮 → 系统文件选择器 → 找到下载/微信里的 .json'));
 
         const ta = el('textarea', 'sl-input sl-textarea');
-        ta.placeholder = '或把世界包 JSON 粘到这里';
-        ta.rows = 4;
+        ta.placeholder = '电脑上也可以直接粘贴 JSON（手机不用管这个）';
+        ta.rows = 3;
         imp.append(ta);
 
-        const ibtn = el('button', 'sl-btn', '导入');
+        const ibtn = el('button', 'sl-btn', '粘贴内容导入');
         ibtn.type = 'button';
         imp.append(ibtn);
 
@@ -249,6 +258,10 @@ function render() {
         imp.append(istat);
 
         const doImport = async text => {
+            if (!text || !String(text).trim()) {
+                istat.textContent = '文件是空的';
+                return;
+            }
             istat.textContent = '导入中…';
             try {
                 const r = await importHandler?.(text);
@@ -266,19 +279,51 @@ function render() {
         file.addEventListener('change', async () => {
             const f = file.files?.[0];
             if (!f) return;
-            const text = await f.text();
-            ta.value = text.length > 3000
-                ? text.slice(0, 3000) + ' …（已读入全文，仅显示前 3000 字）'
-                : text;
+            istat.textContent = `读取 ${f.name}（${Math.round(f.size / 1024)} KB）…`;
+            try {
+                const text = await f.text();
+                await doImport(text);
+            } catch (e) {
+                istat.textContent = '读取文件失败：' + (e?.message ?? e);
+            } finally {
+                file.value = '';
+            }
+        });
+
+        pickLabel.addEventListener('click', ev => {
+            // 有些移动端 WebView 里 label+for 不触发，手动点一次
+            if (ev.target === pickLabel) {
+                ev.preventDefault();
+                file.click();
+            }
         });
 
         ibtn.addEventListener('click', () => {
             const text = ta.value.trim();
             if (!text) {
-                istat.textContent = '先选文件或粘贴 JSON';
+                istat.textContent = '先把 JSON 粘到上面的框里';
                 return;
             }
             void doImport(text);
+        });
+
+        // 桌面：拖进这块也能导入
+        imp.addEventListener('dragover', ev => {
+            ev.preventDefault();
+            imp.classList.add('sl-drag');
+        });
+        imp.addEventListener('dragleave', () => imp.classList.remove('sl-drag'));
+        imp.addEventListener('drop', async ev => {
+            ev.preventDefault();
+            imp.classList.remove('sl-drag');
+            const f = ev.dataTransfer?.files?.[0];
+            if (!f) return;
+            istat.textContent = `读取 ${f.name}…`;
+            try {
+                await doImport(await f.text());
+            } catch (e) {
+                istat.textContent = '读取失败：' + (e?.message ?? e);
+            }
         });
 
         body.append(imp);

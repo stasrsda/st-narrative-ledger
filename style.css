@@ -368,3 +368,30 @@ body.story-ledger-locked {
     border: 1px solid var(--SmartThemeBorderColor, #444);
     border-radius: 6px;
 }
+
+/* 文件选择按钮：做成可点的大按钮，手机好按 */
+.sl-file-btn {
+    display: block;
+    text-align: center;
+    padding: 12px 10px;
+    font-size: 14px;
+    line-height: 1.2;
+    border-radius: 8px;
+    border: 1px dashed var(--SmartThemeBorderColor, #555);
+    background: var(--SmartThemeInputColor, #2a2a2f);
+    color: inherit;
+    cursor: pointer;
+    user-select: none;
+    margin: 4px 0 6px;
+}
+
+.sl-file-btn:hover,
+.sl-file-btn:active {
+    border-color: var(--SmartThemeQuoteColor, #8ab4f8);
+}
+
+.story-ledger-settings.sl-drag,
+.sl-card.sl-drag {
+    outline: 2px dashed var(--SmartThemeQuoteColor, #8ab4f8);
+    outline-offset: 2px;
+}
