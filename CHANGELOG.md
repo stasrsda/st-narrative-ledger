@@ -6,6 +6,13 @@
 
 ---
 
+## 0.9.24 — 2026-10-30
+
+- 世界包页「显示」新增按钮：让 ST 认识思考标记（DeepSeek）
+  - 把 ST 的 reasoning 前缀/后缀设成 `<｜begin▁of▁thinking｜>` / `<｜end▁of▁thinking｜>`
+  - 并勾上 Auto-Parse
+  - 只影响新消息；旧楼不回填
+
 ## 0.9.23 — 2026-10-30
 
 - 识别 DeepSeek 原样吐出的思考标记 `<｜begin▁of▁thinking｜>…<｜end▁of▁thinking｜>`
