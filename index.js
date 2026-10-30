@@ -18,6 +18,7 @@ import { openingMeta, openingLabel } from './src/core/runtime/opening.js';
 import { createTree, putNode } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
+import { renderHeader } from './src/core/calendar/guofeng.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { candidatesFor } from './src/core/codes/codes.js';
@@ -477,9 +478,18 @@ function settleMessage() {
     if (!msg || msg.is_user) return;
 
     const { pack, state, meta } = currentState();
-    const parsed = parseHeader(msg.mes ?? '', pack.calendar);
+    let parsed = parseHeader(msg.mes ?? '', pack.calendar);
     if (!parsed) {
-        log('本楼没有可解析的时间头，可能被截断或模型没按格式写');
+        // 模型没写或写坏了：用当前状态补一行，保证时地永远在
+        const treeNow = treeOf(pack);
+        const node = meta.placeId || state.place ? treeNow.nodes?.[meta.placeId ?? state.place] : null;
+        const placeName = meta.placeName || node?.name || '';
+        const header = renderHeader(state.t ?? 0, placeName, pack.calendar);
+        msg.mes = header + '\n\n' + String(msg.mes ?? '').trim();
+        parsed = parseHeader(msg.mes, pack.calendar);
+        log('模型没写时间头，已补：', header);
+        try { ctx().saveChat?.(); } catch { /* noop */ }
+        refreshPanel({ headerFixed: true });
     }
 
     // 先清掉正文里的状态残留（<好感> 块、旧【在场】行等），避免它们跟着历史进上下文
