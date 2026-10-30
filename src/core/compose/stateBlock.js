@@ -2,7 +2,7 @@
 import { renderDate, renderTime } from '../calendar/guofeng.js';
 import { bandOf } from '../affinity/affinity.js';
 
-const DROP_ORDER = ['items', 'props', 'color', 'travel', 'stipend', 'price', 'auth', 'exp', 'festival', 'weather', 'motive', 'events'];
+const DROP_ORDER = ['items', 'props', 'color', 'travel', 'stipend', 'price', 'nearby', 'auth', 'exp', 'festival', 'weather', 'reaction', 'recent', 'motive', 'events'];
 
 export function estimateTokens(text) {
     // 中文约 1.5 字/token，保守取 1.4
@@ -42,27 +42,32 @@ function onstageLine(pack, onstage = [], showNumbers = true) {
  */
 export function composeSceneBlock(o = {}) {
     const { pack, state = {}, budget = 220 } = o;
+    // lean=true：不把任何好感/账本信息交给写作模型，只留「谁在场」
+    const lean = o.lean === true;
     const parts = [];
     const t = state.t ?? 0;
 
-    const head = `时:${renderDate(t)}·${renderTime(t)}${o.placePath ? ` | 地:${o.placePath}` : ''}`;
+    const placeTail = o.placeTag ? `[${o.placeTag}]` : '';
+    const head = `时:${renderDate(t)}·${renderTime(t)}${o.placePath ? ` | 地:${o.placePath}${placeTail}` : ''}`;
     parts.push({ key: 'header', text: head, locked: true });
 
     if (o.weather) parts.push({ key: 'weather', text: `天:${o.weather}` });
+    if (!lean && o.recent) parts.push({ key: 'recent', text: `近事:${o.recent}` });
     if (o.festival) parts.push({ key: 'festival', text: `节:${o.festival}` });
 
-    // lean=true：不把任何好感/账本信息交给写作模型，只留「谁在场」
-    const lean = o.lean === true;
     const on = lean
         ? onstageNamesOnly(o.onstage ?? [])
         : onstageLine(pack, o.onstage ?? [], o.showAffNumbers !== false);
     if (on) parts.push({ key: 'onstage', text: on, locked: true });
 
     if (!lean && o.motive) parts.push({ key: 'motive', text: `动机:${o.motive}` });
+    if (!lean && o.reaction) parts.push({ key: 'reaction', text: `反应:${o.reaction}` });
+    if (!lean && o.codes) parts.push({ key: 'codes', text: o.codes });
     if (!lean && o.exp) parts.push({ key: 'exp', text: o.exp });
     if (!lean) for (const a of o.auth ?? []) parts.push({ key: 'auth', text: `权:${a}` });
     if (o.events) parts.push({ key: 'events', text: `事件:${o.events}` });
     if (!lean) for (const t of o.tables ?? []) parts.push({ key: t.key, text: t.text });
+    if (!lean && o.nearby) parts.push({ key: 'nearby', text: o.nearby });
     if (o.props) parts.push({ key: 'props', text: o.props });
     if (o.items) parts.push({ key: 'items', text: o.items });
 

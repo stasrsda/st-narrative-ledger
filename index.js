@@ -9,7 +9,7 @@ import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
 } from './src/adapters/st/context.js';
-import { setStatePrompt, clearStatePrompt, setRawSlot, configurePrompt } from './src/adapters/st/prompt.js';
+import { setStatePrompt, clearStatePrompt, setRawSlot, configurePrompt, PROMPT_KEY_ADDR } from './src/adapters/st/prompt.js';
 import { transportAvailable, requestCompletion, requestCustom, probeModel, listModels } from './src/adapters/st/llm.js';
 import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.js';
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
@@ -19,6 +19,7 @@ import { createTree, putNode } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
 import { renderHeader } from './src/core/calendar/guofeng.js';
+import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
@@ -457,6 +458,25 @@ function composeAndInject() {
     const varCount = syncChatVariables(state);
     const block = buildSceneBlock({ pack, state, tree, chatSeed: chatId(), meta: { ...meta, hintText }, budget: settings.depth === 1 ? 220 : 260 });
     const ok = settings.enabled && (setStatePrompt(block.text) || setRawSlot(block.text));
+
+    // 称谓块：只有两个以上在场者才需要（§5.2）
+    let addrText = '';
+    try {
+        const onstageView = onstageOf(pack, state, meta);
+        const r = composeAddressBlock({
+            onstage: onstageView.map(o => ({
+                name: o.name,
+                address: o.address,
+                aff: o.aff,
+            })),
+            titlesMatrix: pack.titles?.matrix ?? {},
+            userName: '白景昭',
+        });
+        addrText = r.text;
+        setStatePrompt(addrText, { depth: 2, key: PROMPT_KEY_ADDR });
+    } catch (e) {
+        log('称谓块失败', e?.message ?? e);
+    }
 
     refreshPanel({
         ...panelBase(),

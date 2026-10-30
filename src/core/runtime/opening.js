@@ -62,7 +62,7 @@ export function openingSeed(pack, overrides = {}) {
         done: [...(overrides.done ?? o.done)],
         emergent: [],
         traces: [],
-        grants: [],
+        grants: [...(pack?.authority?.seed ?? [])],
         items: {},
         props: {},
         rep: 0,
