@@ -40,6 +40,7 @@ let packHandler = null;
 let saveHandler = null;
 let testHandler = null;
 let importHandler = null;
+let listHandler = null;
 
 export function onProfileChange(fn) {
     profileHandler = fn;
@@ -63,6 +64,10 @@ export function onTestModel(fn) {
 
 export function onImportPack(fn) {
     importHandler = fn;
+}
+
+export function onListModels(fn) {
+    listHandler = fn;
 }
 
 function el(tag, cls, text) {
@@ -370,6 +375,73 @@ function render() {
         const dUrl = mk('Base URL', 'baseUrl', 'https://api.siliconflow.cn/v1');
         const dKey = mk('API Key', 'apiKey', 'sk-...', 'password');
         const dModel = mk('模型', 'model', 'Qwen/Qwen2.5-7B-Instruct');
+
+        const fetchRow = el('div', 'sl-btn-row');
+        const fetchBtn = el('button', 'sl-btn', '拉取模型列表');
+        fetchBtn.type = 'button';
+        fetchRow.append(fetchBtn);
+        d.append(fetchRow);
+
+        const filterIn = el('input', 'sl-input');
+        filterIn.type = 'text';
+        filterIn.placeholder = '过滤模型名（如 qwen / glm / free）';
+        d.append(filterIn);
+
+        const modelSel = el('select', 'sl-input sl-select');
+        modelSel.style.display = 'none';
+        d.append(modelSel);
+
+        let allModels = [];
+
+        const rebuildOptions = () => {
+            const kw = String(filterIn.value ?? '').trim().toLowerCase();
+            const list = kw ? allModels.filter(id => id.toLowerCase().includes(kw)) : allModels;
+            modelSel.replaceChildren();
+            const head = el('option', null, list.length ? `共 ${list.length} 个，选一个` : '没有匹配的模型');
+            head.value = '';
+            modelSel.append(head);
+            for (const id of list) {
+                const o = el('option', null, id);
+                o.value = id;
+                if (id === dModel.value) o.selected = true;
+                modelSel.append(o);
+            }
+            modelSel.style.display = list.length ? '' : 'none';
+        };
+
+        filterIn.addEventListener('input', rebuildOptions);
+
+        modelSel.addEventListener('change', () => {
+            if (modelSel.value) dModel.value = modelSel.value;
+        });
+
+        fetchBtn.addEventListener('click', async () => {
+            fetchBtn.disabled = true;
+            const old = fetchBtn.textContent;
+            fetchBtn.textContent = '拉取中…';
+            try {
+                const r = await listHandler?.(readDirectForList());
+                if (r?.ok) {
+                    allModels = r.models ?? [];
+                    rebuildOptions();
+                    fetchBtn.textContent = `已取到 ${allModels.length} 个`;
+                } else {
+                    fetchBtn.textContent = '拉取失败';
+                    dStat.textContent = '拉取失败：' + (r?.msg ?? '未知错误');
+                }
+            } catch (e) {
+                fetchBtn.textContent = '拉取失败';
+                dStat.textContent = '拉取失败：' + (e?.message ?? e);
+            } finally {
+                fetchBtn.disabled = false;
+                setTimeout(() => { fetchBtn.textContent = old; }, 2500);
+            }
+        });
+
+        const readDirectForList = () => ({
+            baseUrl: String(dUrl.value ?? '').trim(),
+            apiKey: String(dKey.value ?? '').trim(),
+        });
 
         const dRow = el('div', 'sl-btn-row');
         const dSave = el('button', 'sl-btn', '保存');

@@ -4,13 +4,13 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
 } from './src/adapters/st/context.js';
 import { setStatePrompt, clearStatePrompt, setRawSlot } from './src/adapters/st/prompt.js';
-import { transportAvailable, requestCompletion, requestCustom, probeModel } from './src/adapters/st/llm.js';
+import { transportAvailable, requestCompletion, requestCustom, probeModel, listModels } from './src/adapters/st/llm.js';
 import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.js';
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
 import { fold } from './src/core/ledger/ledger.js';
@@ -495,6 +495,15 @@ function boot() {
         } catch { /* noop */ }
         refreshPanel({ profileId: id, transport: transportAvailable() ? (id ? '就绪' : '缺连接配置') : '不可用' });
         log('副模型已保存', id || '（关闭）');
+    });
+
+    onListModels(async direct => {
+        try {
+            const ids = await listModels({ baseUrl: direct?.baseUrl, apiKey: direct?.apiKey });
+            return { ok: true, models: ids };
+        } catch (e) {
+            return { ok: false, msg: e?.message ?? String(e) };
+        }
     });
 
     onTestModel(async (id, direct) => {

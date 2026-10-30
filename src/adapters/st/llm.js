@@ -129,3 +129,45 @@ export async function probeModel(cfg, { timeoutMs = 20000 } = {}) {
         return { ok: false, msg: e?.message ?? String(e) };
     }
 }
+
+/**
+ * 拉取该端点可用的模型列表。
+ * 走 ST 的 /api/backends/chat-completions/status，它会去 GET {baseUrl}/models。
+ * @returns {Promise<string[]>}
+ */
+export async function listModels({ baseUrl, apiKey } = {}) {
+    const ctx = c();
+    const url = String(baseUrl ?? '').trim().replace(/\/+$/, '');
+    if (!url) throw new Error('no-base-url');
+
+    const headers = typeof ctx.getRequestHeaders === 'function'
+        ? { ...ctx.getRequestHeaders() }
+        : { 'Content-Type': 'application/json' };
+    headers['Content-Type'] = 'application/json';
+
+    const res = await fetch('/api/backends/chat-completions/status', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            chat_completion_source: 'custom',
+            custom_url: url,
+            custom_include_headers: apiKey ? { Authorization: 'Bearer ' + apiKey } : {},
+        }),
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+        const brief = text.slice(0, 160).replace(/\s+/g, ' ');
+        throw new Error('HTTP ' + res.status + (brief ? ' · ' + brief : ''));
+    }
+    let json;
+    try {
+        json = JSON.parse(text);
+    } catch {
+        throw new Error('返回不是 JSON');
+    }
+    const arr = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+    const ids = arr.map(x => (typeof x === 'string' ? x : x?.id)).filter(Boolean);
+    if (!ids.length) throw new Error('端点没有返回任何模型');
+    return [...new Set(ids)].sort((a, b) => a.localeCompare(b));
+}
