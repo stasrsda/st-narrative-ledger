@@ -7,7 +7,7 @@ import { rankOf } from '../actors/rank.js';
 import { motiveLine } from '../actors/motive.js';
 import { bandOf } from '../affinity/affinity.js';
 import { grantLine } from '../authority/grants.js';
-import { renderProps, instantiateProps } from '../props/prototype.js';
+import { renderProps, instantiateProps, condFromIdleYears } from '../props/prototype.js';
 import { renderItems } from '../props/items.js';
 import { expLine, expOf, shouldInjectExp } from '../actors/experience.js';
 import { tableLines } from '../tables/tables.js';
@@ -153,10 +153,16 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
 
     let propList = state.props?.[placeId];
     if (!propList && node) {
-        // 第一次到这个地点：按原型实例化（确定性，同一地点永远同一批）
-        propList = instantiateProps(pack, {
-            placeNode: node, placeId, seed: chatSeed, count: 6, since: state.t ?? 0,
-        });
+        if (Array.isArray(node.props) && node.props.length) {
+            // 包里写死的陈设：王府各屋是固定的，不随机
+            const cond = condFromIdleYears(pack, node.idleYears ?? 0);
+            propList = node.props.map(name => ({ name, cond, note: '', since: state.t ?? 0 }));
+        } else {
+            // 没写死的按场景原型抽（确定性，同一地点永远同一批）
+            propList = instantiateProps(pack, {
+                placeNode: node, placeId, seed: chatSeed, count: 6, since: state.t ?? 0,
+            });
+        }
     }
     const props = node ? renderProps(propList ?? [], node.name) : '';
     const items = node ? renderItems(Object.values(state.items ?? {}).filter(i => i.at === placeId), node.name) : '';

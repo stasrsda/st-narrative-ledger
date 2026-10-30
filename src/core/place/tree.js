@@ -32,6 +32,8 @@ export function putNode(tree, node) {
         tags: Array.isArray(node.tags) ? [...node.tags] : [],
         neighbors: Array.isArray(node.neighbors) ? [...node.neighbors] : [],
         idleYears: node.idleYears ?? 0,
+        // 包里写死的陈设，必须带过来，否则会被原型抽样顶替
+        props: Array.isArray(node.props) ? [...node.props] : null,
     };
     return tree;
 }

@@ -10,9 +10,7 @@
     "characters": [
       "北凉_叙事卡_v2",
       "沈知微",
-      "白景昭",
-      "北凉 v3",
-      "北凉 v2"
+      "白景昭"
     ]
   },
   "calendar": {
@@ -1671,7 +1669,14 @@
         "议事",
         "正殿"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "银安殿匾",
+        "十二扇屏",
+        "铜鹤烛台",
+        "金砖地",
+        "设座三张"
+      ]
     },
     {
       "id": "p_wf_qindian",
@@ -1683,7 +1688,14 @@
       "tags": [
         "正寝"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "架子床",
+        "双层帐",
+        "脚炉",
+        "铜镜台",
+        "衣桁"
+      ]
     },
     {
       "id": "p_wf_zheng",
@@ -1695,7 +1707,14 @@
       "tags": [
         "正妃居所"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "正位榻",
+        "条案",
+        "香炉",
+        "六扇屏",
+        "绣墩"
+      ]
     },
     {
       "id": "p_wf_dong",
@@ -1707,7 +1726,14 @@
       "tags": [
         "侧妃居所"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "架子床",
+        "帐",
+        "妆奁",
+        "绣墩",
+        "炭盆"
+      ]
     },
     {
       "id": "p_wf_xi",
@@ -1720,7 +1746,14 @@
         "沈家居所",
         "客房"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "榻",
+        "书案",
+        "药罐",
+        "炭盆",
+        "灯"
+      ]
     },
     {
       "id": "p_wf_shufang",
@@ -1733,7 +1766,15 @@
         "批条子",
         "账册"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "大案",
+        "笔架",
+        "砚",
+        "书架",
+        "灯",
+        "舆图架"
+      ]
     },
     {
       "id": "p_wf_kufang",
@@ -1746,7 +1787,14 @@
         "双锁",
         "账房"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "货架",
+        "木箱",
+        "铜锁",
+        "账册架",
+        "梯"
+      ]
     },
     {
       "id": "p_wf_majiu",
@@ -1759,7 +1807,13 @@
         "驿马",
         "战马"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "马槽",
+        "草料堆",
+        "鞍架",
+        "井"
+      ]
     },
     {
       "id": "p_wf_junyi",
@@ -1772,7 +1826,14 @@
         "幕府",
         "沙盘"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "军议长案",
+        "沙盘",
+        "旗架",
+        "鼓",
+        "屏"
+      ]
     },
     {
       "id": "p_wf_qinbing",
@@ -1785,7 +1846,13 @@
         "亲卫",
         "值夜"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "枪架",
+        "草铺",
+        "火盆",
+        "水缸"
+      ]
     },
     {
       "id": "p_wf_ermen",
@@ -1797,7 +1864,13 @@
       "tags": [
         "内外之界"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "门房",
+        "影壁",
+        "拴马桩",
+        "灯笼"
+      ]
     },
     {
       "id": "p_wf_houzhao",
@@ -1810,7 +1883,13 @@
         "秀女",
         "库房"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "织机",
+        "衣箱",
+        "晒架",
+        "炭盆"
+      ]
     },
     {
       "id": "p_wf_xiaren",
@@ -1823,7 +1902,14 @@
         "厨房",
         "粗使"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "灶台",
+        "水缸",
+        "案板",
+        "柴堆",
+        "吊锅"
+      ]
     },
     {
       "id": "p_wf_huayuan",
@@ -1836,7 +1922,14 @@
         "后院",
         "私会常在此"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "太湖石",
+        "老槐",
+        "石桌",
+        "井",
+        "回廊"
+      ]
     },
     {
       "id": "p_wf_cimiao",
@@ -1849,7 +1942,13 @@
         "祭祖",
         "朔望"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "props": [
+        "牌位",
+        "供桌",
+        "香炉",
+        "蒲团"
+      ]
     },
     {
       "id": "p_beiying",
@@ -1941,7 +2040,14 @@
         "三个老仆",
         "家具盖布"
       ],
-      "idleYears": 15
+      "idleYears": 15,
+      "props": [
+        "影壁",
+        "抄手游廊",
+        "老树",
+        "井台",
+        "空院"
+      ]
     },
     {
       "id": "p_jw_zheng",
@@ -3145,7 +3251,7 @@
     }
   ],
   "props": {
-    "note": "原型层：只描述「这类房间通常有什么」，不描述「这间屋现在有什么」。首次进入地点时由插件按 scene 抽取实例化，之后以实例为准。",
+    "note": "by_scene 只是原型：没有显式 props 的地点按场景类型抽一批（确定性）。两座王府的主要房间已写死 props，不随机。",
     "by_scene": {
       "inner_court": [
         "紫檀榻",
@@ -4003,12 +4109,31 @@
     "rule": "处置前先问：这件事归谁办？有职权的人办，没有的人请示。职权低于位份，是常态；职权高于位份，不犯礼，但伤人情。",
     "seed": [
       {
+        "holder": "baijingzhao",
+        "scope": "*",
+        "rights": [
+          "view",
+          "act",
+          "delegate"
+        ],
+        "source": "封号"
+      },
+      {
         "holder": "huozhen",
         "scope": "army",
         "rights": [
+          "view",
           "act"
         ],
-        "source": "appoint"
+        "source": "副将"
+      },
+      {
+        "holder": "huozhen",
+        "scope": "darkguard",
+        "rights": [
+          "view"
+        ],
+        "source": "副将"
       },
       {
         "holder": "song",
@@ -4017,7 +4142,25 @@
           "view",
           "act"
         ],
-        "source": "appoint"
+        "source": "掌文书"
+      },
+      {
+        "holder": "zhaobo",
+        "scope": "household",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "总管"
+      },
+      {
+        "holder": "zhaobo",
+        "scope": "staff",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "总管"
       },
       {
         "holder": "zhaobo",
@@ -4025,9 +4168,60 @@
         "rights": [
           "view"
         ],
-        "source": "appoint"
+        "source": "总管"
+      },
+      {
+        "holder": "xie",
+        "scope": "household",
+        "rights": [
+          "view"
+        ],
+        "source": "正妃（未过门·暂看）"
+      },
+      {
+        "holder": "qingyun",
+        "scope": "p_wf_dong",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "东跨院"
+      },
+      {
+        "holder": "qixia",
+        "scope": "p_wf_dong",
+        "rights": [
+          "view"
+        ],
+        "source": "东跨院"
+      },
+      {
+        "holder": "biya",
+        "scope": "p_wf_dong",
+        "rights": [
+          "view"
+        ],
+        "source": "东跨院"
+      },
+      {
+        "holder": "huixiang",
+        "scope": "p_wf_shufang",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "管书房"
+      },
+      {
+        "holder": "huangxiong",
+        "scope": "*",
+        "rights": [
+          "view"
+        ],
+        "source": "君"
       }
-    ]
+    ],
+    "seedNote": "开局分配。账目一职故意空着——知微是后来才接手的。改动用 grant/revoke 事件，不改这里。"
   },
   "events": [
     {
