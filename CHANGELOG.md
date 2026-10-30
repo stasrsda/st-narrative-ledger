@@ -6,6 +6,12 @@
 
 ---
 
+## 0.4.1 — 2026-10-30
+
+- 修 404 not found：ST 会自己拼 `${apiUrl}/chat/completions`，之前我们传了完整地址
+- 现在只传 base（自动剥掉 /chat/completions 与 /completions）
+- 报错信息里带上实际请求的完整 URL，便于排查
+
 ## 0.4.0 — 2026-10-30
 
 - 直连区新增「拉取模型列表」：从端点 GET /models，下拉可选，带关键字过滤

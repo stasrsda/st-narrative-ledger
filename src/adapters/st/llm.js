@@ -22,12 +22,23 @@ export async function requestCompletion(messages, { profileId = '', maxTokens = 
     return typeof res === 'string' ? res : (res?.content ?? '');
 }
 
-/** 把用户填的 base 补成完整的 chat/completions 地址 */
-export function normalizeUrl(baseUrl) {
-    const b = String(baseUrl ?? '').trim().replace(/\/+$/, '');
+/**
+ * 归一成「base」地址。
+ * 注意：ST 的生成端点会自己拼 `${apiUrl}/chat/completions`（见
+ * src/endpoints/backends/chat-completions.js），所以这里必须剥掉，
+ * 否则会变成 .../chat/completions/chat/completions → 404。
+ */
+export function normalizeBase(baseUrl) {
+    let b = String(baseUrl ?? '').trim().replace(/\/+$/, '');
     if (!b) return '';
-    if (/\/chat\/completions$/.test(b)) return b;
-    return b + '/chat/completions';
+    b = b.replace(/\/chat\/completions$/i, '');
+    b = b.replace(/\/completions$/i, '');
+    return b.replace(/\/+$/, '');
+}
+
+/** 兼容旧名：现在返回的也是 base，不再是完整地址 */
+export function normalizeUrl(baseUrl) {
+    return normalizeBase(baseUrl);
 }
 
 /** 从上游返回里挖出文本（OpenAI 兼容的几种形状都试） */
@@ -59,7 +70,7 @@ export async function requestCustom({
     maxTokens = 320, temperature = 0.3, extraBody = null,
 } = {}) {
     const ctx = c();
-    const url = normalizeUrl(baseUrl);
+    const url = normalizeBase(baseUrl);
     if (!url) throw new Error('no-base-url');
     if (!model) throw new Error('no-model');
 
@@ -91,8 +102,11 @@ export async function requestCustom({
 
     const text = await res.text();
     if (!res.ok) {
-        const brief = text.slice(0, 160).replace(/\s+/g, ' ');
-        throw new Error('HTTP ' + res.status + (brief ? ' · ' + brief : ''));
+        const brief = text.slice(0, 240).replace(/\s+/g, ' ');
+        throw new Error(
+            'HTTP ' + res.status + ' · ' + url + '/chat/completions' +
+            (brief ? ' · ' + brief : '')
+        );
     }
     let json;
     try {
@@ -137,7 +151,7 @@ export async function probeModel(cfg, { timeoutMs = 20000 } = {}) {
  */
 export async function listModels({ baseUrl, apiKey } = {}) {
     const ctx = c();
-    const url = String(baseUrl ?? '').trim().replace(/\/+$/, '');
+    const url = normalizeBase(baseUrl);
     if (!url) throw new Error('no-base-url');
 
     const headers = typeof ctx.getRequestHeaders === 'function'
@@ -157,8 +171,8 @@ export async function listModels({ baseUrl, apiKey } = {}) {
 
     const text = await res.text();
     if (!res.ok) {
-        const brief = text.slice(0, 160).replace(/\s+/g, ' ');
-        throw new Error('HTTP ' + res.status + (brief ? ' · ' + brief : ''));
+        const brief = text.slice(0, 240).replace(/\s+/g, ' ');
+        throw new Error('HTTP ' + res.status + ' · ' + url + '/models' + (brief ? ' · ' + brief : ''));
     }
     let json;
     try {
