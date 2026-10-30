@@ -309,8 +309,23 @@ function affinityView(pack, state, meta) {
         const aff = state.aff?.[id] ?? a.aff ?? 0;
         return { id, name: a.name, aff, bond: a.bond ?? 'love', band: bandOf(aff, a.bond ?? 'love') };
     };
+    // 兜底：一个在场者都没认出来（比如正文被截断到没有名字）时，
+    // 按好感绝对值给前三个，免得底部条空着让人以为插件坏了
+    let barIds = onstageIds.filter(id => !pack.index.actor[id]?.isUser);
+    let fallback = false;
+    if (!barIds.length) {
+        barIds = Object.keys(pack.index?.actor ?? {})
+            .filter(id => !pack.index.actor[id]?.isUser)
+            .map(id => ({ id, v: Math.abs(state.aff?.[id] ?? pack.index.actor[id].aff ?? 0) }))
+            .sort((a, b) => b.v - a.v)
+            .slice(0, 3)
+            .map(x => x.id);
+        fallback = true;
+    }
+
     return {
-        bar: onstageIds.map(row),
+        fallback,
+        bar: barIds.map(row),
         all: Object.keys(pack.index?.actor ?? {})
             .filter(id => !pack.index.actor[id]?.isUser)
             .map(row)

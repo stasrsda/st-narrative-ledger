@@ -1,6 +1,12 @@
 // 审稿人（纯规则，不调模型）
 const VAGUE = ['仿佛', '好像', '如同', '似乎', '近乎', '一丝'];
 
+// 模型在正文里自言自语（不是剧情）
+const META_TALK = [
+    /被截断/g, /字数不够/g, /字数不足/g, /我需要继续/g, /接下来该写/g,
+    /这段太短/g, /重新生成/g, /我需要写\d+/g,
+];
+
 const END_OK = /[。！？…”」』）】\.!?"')]$/;
 const END_BAD = /[，、；：,;:—…「『（【]$/;
 
@@ -36,6 +42,19 @@ export function reviewText({ text, userInput = '', pack = null, state = null }) 
             break;
         }
     }
+    for (const re of META_TALK) {
+        const m = s.match(re);
+        if (m) {
+            out.push({
+                code: 'meta_talk',
+                level: 'warn',
+                msg: '正文里出现了模型的自我叙述（不是剧情）',
+                quote: m[0],
+            });
+            break;
+        }
+    }
+
     if (looksTruncated(s)) {
         out.push({
             code: 'truncated',
