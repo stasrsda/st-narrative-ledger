@@ -1,3 +1,5 @@
+import { ancestors } from '../place/tree.js';
+
 // 在场行解析：主模型在正文前写【在场】名字、名字
 export const PRESENCE_MARK = '【在场】';
 
@@ -70,15 +72,32 @@ function aliasesOf(actor) {
  * 不要求 AI 写任何标记行，也就不会往历史里留垃圾。
  * @returns {string[]} 角色 id（最多 limit 个）
  */
-export function inferPresence(pack, text, { limit = 6 } = {}) {
+export function inferPresence(pack, text, { limit = 6, placeId = null, tree = null } = {}) {
     const t = String(text ?? '');
     if (!t) return [];
     const hits = [];
     for (const actor of Object.values(pack?.index?.actor ?? {})) {
+        // 只要不在自己够得着的地方，被提到也不算在场
+        if (!canBePresent(actor, { placeId, tree })) continue;
         const alias = aliasesOf(actor);
         // 用最长的别称判断，避免「知微」误命中别人的名字
         const found = alias.some(a => a.length >= 2 && t.includes(a));
         if (found && !hits.includes(actor.id)) hits.push(actor.id);
     }
     return hits.slice(0, limit);
+}
+
+/**
+ * 这个人此刻「够得着」吗。
+ * 规则：随行的（travels）随便在哪都算；不随行的必须在自家驻地或其下辖地点。
+ * 驻地为空（如皇兄在京城）→ 只能靠剧情/手动名单带进来。
+ */
+export function canBePresent(actor, { placeId = null, tree = null } = {}) {
+    if (!actor) return false;
+    if (actor.travels) return true;
+    const home = actor.home;
+    if (!home) return false;
+    if (!placeId || !tree) return true;      // 没有位置信息时不拦
+    if (home === placeId) return true;
+    return ancestors(tree, placeId).includes(home);
 }

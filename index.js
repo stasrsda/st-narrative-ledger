@@ -637,7 +637,7 @@ function settleMessage() {
     } else if (declared && declared.length === 0) {
         onIds = [];
     } else {
-        onIds = inferPresence(pack, body);
+        onIds = inferPresence(pack, body, { placeId: meta.placeId ?? state.place ?? null, tree: treeOf(pack) });
         if (!onIds.length) {
             // 这一楼没提到任何人（或被截断）→ 不要清空名单，沿用上一轮
             onIds = null;

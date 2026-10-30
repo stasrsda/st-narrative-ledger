@@ -2,10 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizePack } from '../src/core/pack/registry.js';
-import { parsePresence, stripPresence, resolveActors, renderPresence, inferPresence } from '../src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, renderPresence, inferPresence, canBePresent } from '../src/core/clock/presence.js';
+import { createTree, putNode } from '../src/core/place/tree.js';
 
 const raw = JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8'));
 const pack = normalizePack(raw);
+const tree = createTree();
+for (const p of pack.places) putNode(tree, p);
 
 test('解析：中文顿号与逗号都行', () => {
     assert.deepEqual(parsePresence('前半\n【在场】霍振、沈知微\n正文'), ['霍振', '沈知微']);
@@ -71,4 +74,41 @@ test('空推断不覆盖已有名单（保留上一轮）', async () => {
 test('推断到人时才替换名单', () => {
     const inferred = inferPresence(pack, '霍振抱拳退下。');
     assert.deepEqual(inferred, ['huozhen']);
+});
+
+test('驻地：不随行的人不会在前线被算作在场', () => {
+    const text = '霍振说县衙有动静。孙账房那边的账还没报，宋衍之在幕府拟条子。';
+    const atFront = inferPresence(pack, text, { placeId: 'p_wuli', tree });
+    assert.ok(atFront.includes('huozhen'), '霍振随行，应当在场');
+    assert.ok(!atFront.includes('sunzhangfang'), '孙账房只管府里的账，不该出现在前线');
+    assert.ok(!atFront.includes('song'), '宋衍之是文官，不该出现在前线');
+});
+
+test('驻地：在王府里就该算得上', () => {
+    const text = '孙账房把账簿呈上来，宋衍之在旁边拟条子。';
+    const atHall = inferPresence(pack, text, { placeId: 'p_wf_yinan', tree });
+    assert.ok(atHall.includes('sunzhangfang'));
+    assert.ok(atHall.includes('song'));
+});
+
+test('驻地：随行的人哪里都算', () => {
+    const huozhen = pack.index.actor.huozhen;
+    assert.equal(canBePresent(huozhen, { placeId: 'p_wuli', tree }), true);
+    assert.equal(huozhen.travels, true);
+});
+
+test('驻地：京城老仆不会跑到北凉', () => {
+    const text = '钱伯在门房里记了一笔。';
+    const atBei = inferPresence(pack, text, { placeId: 'p_wuli', tree });
+    assert.ok(!atBei.includes('qianbo'));
+    const atJing = inferPresence(pack, text, { placeId: 'p_jing_wangfu', tree });
+    assert.ok(atJing.includes('qianbo'));
+});
+
+test('驻地：后宅女眷不出内院', () => {
+    const text = '绮霞端着茶过来，碧芽在后面跟着。';
+    const atCourt = inferPresence(pack, text, { placeId: 'p_wf_yinan', tree });
+    assert.ok(!atCourt.includes('qixia'), '东跨院的人不该出现在银安殿');
+    const atDong = inferPresence(pack, text, { placeId: 'p_wf_dong', tree });
+    assert.ok(atDong.includes('qixia'));
 });
