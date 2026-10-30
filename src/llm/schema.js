@@ -2,7 +2,7 @@
 export const KINDS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 export function emptyPayload() {
-    return { results: [], motives: [], beats: [], codeHits: [], happened: [], knows: [] };
+    return { results: [], motives: [], beats: [], codeHits: [], happened: [], knows: [], intimate: [] };
 }
 
 /**
@@ -46,6 +46,11 @@ export function normalizeSettle(raw, { actorIds = null, text = '' } = {}) {
     for (const k of asArray(obj.knows)) {
         if (!k?.actor || !k.fact) continue;
         data.knows.push({ actor: k.actor, fact: String(k.fact) });
+    }
+    for (const it of asArray(obj.intimate).slice(0, 1)) {
+        if (!it?.actor) continue;
+        if (actorIds && !actorIds.has(it.actor)) continue;
+        data.intimate.push({ actor: it.actor });
     }
     for (const m of asArray(obj.motives)) {
         if (!m?.actor || !m.id) continue;

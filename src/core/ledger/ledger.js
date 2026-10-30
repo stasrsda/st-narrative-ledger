@@ -5,6 +5,7 @@ export function emptyState() {
         place: null,
         aff: {},
         rank: {},
+        exp: {},
         know: {},
         done: [],
         emergent: [],
@@ -24,6 +25,7 @@ function clone(s) {
         ...s,
         aff: { ...s.aff },
         rank: { ...s.rank },
+        exp: { ...s.exp },
         know: { ...s.know },
         done: [...s.done],
         emergent: [...s.emergent],
@@ -62,6 +64,16 @@ export function applyEvent(state, ev, opts = {}) {
         case 'know':
             if (ev.actor && ev.fact) s.know[ev.actor] = { ...(s.know[ev.actor] || {}), [ev.fact]: ev.state ?? 'know' };
             break;
+        case 'exp': {
+            if (!ev.actor) break;
+            const cur = s.exp[ev.actor] ?? { total: 0, withUser: 0, lastT: null };
+            s.exp[ev.actor] = {
+                total: cur.total + 1,
+                withUser: cur.withUser + 1,
+                lastT: Number.isFinite(ev.t) ? ev.t : s.t,
+            };
+            break;
+        }
         case 'event':
             if (ev.id && !s.done.includes(ev.id)) s.done.push(ev.id);
             break;

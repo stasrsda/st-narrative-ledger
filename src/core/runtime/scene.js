@@ -81,10 +81,12 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     const items = node ? renderItems(Object.values(state.items ?? {}).filter(i => i.at === placeId), node.name) : '';
 
     // 经验只在亲密场景或有人提起时注入，避免不分场合地暗示
+    // 经验只在亲密相关时注入：亲密场景、卧室，或有人提起
     let exp = '';
-    if (focus && shouldInjectExp({ intimate: meta.intimate, mentioned: meta.expMentioned })) {
+    const intimateScene = meta.intimate || node?.scene === 'bedroom';
+    if (focus && shouldInjectExp({ intimate: intimateScene, mentioned: meta.expMentioned })) {
         const e = state.exp?.[focus.id] ?? expOf(state, focus.id);
-        if (e.total > 0 || meta.intimate) exp = expLine(pack, focus.name, e);
+        if (e.total > 0 || intimateScene) exp = expLine(pack, focus.name, e, state.t ?? 0);
     }
 
     return composeSceneBlock({

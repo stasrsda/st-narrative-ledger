@@ -40,6 +40,11 @@ export function toEvents(pack, state, data = {}) {
         events.push({ k: 'emergent', name: h.name, quote: h.quote ?? '' });
     }
 
+    for (const it of data.intimate ?? []) {
+        if (!actorIds.has(it.actor)) continue;
+        events.push({ k: 'exp', actor: it.actor });
+    }
+
     for (const k of data.knows ?? []) {
         if (!actorIds.has(k.actor)) continue;
         events.push({ k: 'know', actor: k.actor, fact: k.fact, state: 'know' });

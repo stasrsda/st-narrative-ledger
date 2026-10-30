@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizePack } from '../src/core/pack/registry.js';
-import { levelOf, bondOf, blankExp, bumpExp, expOf, expLine, shouldInjectExp } from '../src/core/actors/experience.js';
+import { levelOf, bondOf, blankExp, bumpExp, expOf, expLine, shouldInjectExp, physicalOf, recentOf } from '../src/core/actors/experience.js';
 import { openingSeed, openingMeta, OPENING_ONSTAGE } from '../src/core/runtime/opening.js';
 import { renderDate, renderTime } from '../src/core/calendar/guofeng.js';
 
@@ -34,6 +34,53 @@ test('经验行：初次没有次数', () => {
     assert.match(expLine(pack, '知微', { total: 0, withUser: 0 }), /未经/);
     assert.match(expLine(pack, '知微', { total: 1, withUser: 1 }), /初经/);
     assert.match(expLine(pack, '知微', { total: 1, withUser: 1 }), /与你:1 次/);
+});
+
+test('器官状态：随累计次数变', () => {
+    assert.match(physicalOf(pack, 0), /未舒展/);
+    assert.match(physicalOf(pack, 2), /仍紧/);
+    assert.match(physicalOf(pack, 10), /从容/);
+    assert.match(physicalOf(pack, 40), /松弛/);
+});
+
+test('间隔：久疏会把状态拉回去', () => {
+    const t = 100 * 1440;
+    assert.equal(recentOf(pack, { lastT: t - 1440 }, t).label, '频繁');
+    assert.equal(recentOf(pack, { lastT: t - 5 * 1440 }, t).label, '如常');
+    assert.equal(recentOf(pack, { lastT: t - 20 * 1440 }, t).label, '疏了');
+    assert.equal(recentOf(pack, { lastT: t - 200 * 1440 }, t).label, '久疏');
+    assert.equal(recentOf(pack, { lastT: t - 200 * 1440 }, t).days, 200);
+});
+
+test('经验行包含器官状态与间隔', () => {
+    const t = 100 * 1440;
+    const line = expLine(pack, '知微', { total: 2, withUser: 2, lastT: t - 20 * 1440 }, t);
+    assert.match(line, /身体:/);
+    assert.match(line, /疏了（20 日）/);
+});
+
+test('从没做过时不给间隔', () => {
+    assert.equal(recentOf(pack, { lastT: null }, 999).days, null);
+});
+
+test('账本：exp 事件累加并记时刻', async () => {
+    const { applyEvent, emptyState } = await import('../src/core/ledger/ledger.js');
+    let s = applyEvent(emptyState(), { k: 'clock', t: 5000 });
+    s = applyEvent(s, { k: 'exp', actor: 'zhiwei' });
+    s = applyEvent(s, { k: 'exp', actor: 'zhiwei', t: 6000 });
+    assert.equal(s.exp.zhiwei.total, 2);
+    assert.equal(s.exp.zhiwei.withUser, 2);
+    assert.equal(s.exp.zhiwei.lastT, 6000);
+});
+
+test('结算：intimate 产出 exp 事件', async () => {
+    const { normalizeSettle } = await import('../src/llm/schema.js');
+    const { toEvents } = await import('../src/llm/settle.js');
+    const data = normalizeSettle({ intimate: [{ actor: 'zhiwei' }, { actor: '路人' }] },
+        { actorIds: new Set(['zhiwei']) }).data;
+    assert.equal(data.intimate.length, 1);
+    const ev = toEvents(pack, { done: [], emergent: [] }, data);
+    assert.ok(ev.some(e => e.k === 'exp' && e.actor === 'zhiwei'));
 });
 
 test('注入条件：只在亲密或有人提起时', () => {
