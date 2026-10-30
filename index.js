@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -120,6 +120,15 @@ function ensurePack() {
     });
 }
 
+/** 下拉框用的世界包列表 */
+function packChoices() {
+    if (!registry.order.length) addPack(registry, BUILTIN_PACK);
+    return registry.order.map(id => ({
+        id,
+        name: registry.packs[id]?.name ?? id,
+    }));
+}
+
 function treeOf(pack) {
     const tree = createTree();
     for (const p of pack.places ?? []) putNode(tree, p);
@@ -155,6 +164,7 @@ function composeAndInject() {
     refreshPanel({
         packId: pack.id,
         packName: pack.name,
+        packs: packChoices(),
         injected: Boolean(ok),
         tokens: block.tokens,
         dropped: block.dropped,
@@ -380,6 +390,12 @@ function boot() {
         }
         composeAndInject();
         log('已重置到开局', meta.placeName);
+    });
+    onPackChange(id => {
+        if (!registry.packs[id]) return;
+        writeMeta({ packId: id });
+        composeAndInject();
+        log('已切换世界包', id);
     });
     refreshPanel({ chatId: chatId(), messageCount: messages().length, profileId: settings.profileId, env: envInfo() });
     if (typeof eventSource?.on !== 'function') { log('事件源不可用，扩展只会显示面板'); refreshPanel({ env: envInfo() }); return; }

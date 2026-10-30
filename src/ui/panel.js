@@ -25,10 +25,12 @@ const S = {
     transport: '未接',
     profileId: '',
     env: null,
+    packs: [],
 };
 
 let profileHandler = null;
 let resetHandler = null;
+let packHandler = null;
 
 export function onProfileChange(fn) {
     profileHandler = fn;
@@ -36,6 +38,10 @@ export function onProfileChange(fn) {
 
 export function onReset(fn) {
     resetHandler = fn;
+}
+
+export function onPackChange(fn) {
+    packHandler = fn;
 }
 
 function el(tag, cls, text) {
@@ -168,8 +174,29 @@ function render() {
 
     if (S.tab === 'pack') {
         const c = card('世界包');
-        c.append(row('id', S.packId));
-        c.append(row('名称', S.packName));
+        c.append(row('当前', `${S.packName || '—'}（${S.packId}）`));
+        if ((S.packs ?? []).length > 1) {
+            const sel = el('select', 'sl-input sl-select');
+            for (const p of S.packs) {
+                const o = el('option', null, `${p.name}（${p.id}）`);
+                o.value = p.id;
+                if (p.id === S.packId) o.selected = true;
+                sel.append(o);
+            }
+            sel.addEventListener('change', () => {
+                const id = sel.value;
+                S.packId = id;
+                try {
+                    packHandler?.(id);
+                } catch (e) {
+                    console.warn('[叙事账本] switch pack failed', e);
+                }
+            });
+            c.append(sel);
+            c.append(el('div', 'sl-note', '切换只影响当前聊天；想全局默认，改世界书的角色卡名匹配即可。'));
+        } else {
+            c.append(el('div', 'sl-note', '只加载到一个世界包。把别的包放进 packs/ 目录就会出现在这里。'));
+        }
         body.append(c);
 
         const s = card('副模型');
