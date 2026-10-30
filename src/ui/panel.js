@@ -27,11 +27,16 @@ const S = {
     env: null,
     packs: [],
     openingLabel: '',
+    profiles: [],
+    packError: '',
+    testResult: null,
 };
 
 let profileHandler = null;
 let resetHandler = null;
 let packHandler = null;
+let saveHandler = null;
+let testHandler = null;
 
 export function onProfileChange(fn) {
     profileHandler = fn;
@@ -43,6 +48,14 @@ export function onReset(fn) {
 
 export function onPackChange(fn) {
     packHandler = fn;
+}
+
+export function onSaveProfile(fn) {
+    saveHandler = fn;
+}
+
+export function onTestModel(fn) {
+    testHandler = fn;
 }
 
 function el(tag, cls, text) {
@@ -176,9 +189,12 @@ function render() {
     if (S.tab === 'pack') {
         const c = card('世界包');
         c.append(row('当前', `${S.packName || '—'}（${S.packId}）`));
-        if ((S.packs ?? []).length > 1) {
+        const list = S.packs ?? [];
+        c.append(row('已加载', list.length ? `${list.length} 个` : '无'));
+
+        if (list.length) {
             const sel = el('select', 'sl-input sl-select');
-            for (const p of S.packs) {
+            for (const p of list) {
                 const o = el('option', null, `${p.name}（${p.id}）`);
                 o.value = p.id;
                 if (p.id === S.packId) o.selected = true;
@@ -194,28 +210,85 @@ function render() {
                 }
             });
             c.append(sel);
-            c.append(el('div', 'sl-note', '切换只影响当前聊天；想全局默认，改世界书的角色卡名匹配即可。'));
+            c.append(el('div', 'sl-note', '切换只影响当前聊天。'));
         } else {
-            c.append(el('div', 'sl-note', '只加载到一个世界包。把别的包放进 packs/ 目录就会出现在这里。'));
+            c.append(el('div', 'sl-note', '没有加载到任何世界包，正在用内置兜底包。'));
         }
+        if (S.packError) c.append(el('div', 'sl-note', '载入问题：' + S.packError));
         body.append(c);
 
         const s = card('副模型');
         s.append(row('状态', S.transport));
-        const input = el('input', 'sl-input');
-        input.type = 'text';
-        input.placeholder = 'ST 连接配置名（如 北凉·记账）';
-        input.value = S.profileId ?? '';
-        input.addEventListener('change', () => {
-            S.profileId = input.value.trim();
+
+        // 有连接配置就列出来，没有就让用户手填
+        const names = S.profiles ?? [];
+        let picker;
+        if (names.length) {
+            picker = el('select', 'sl-input sl-select');
+            const empty = el('option', null, '（不启用副模型）');
+            empty.value = '';
+            picker.append(empty);
+            for (const n of names) {
+                const o = el('option', null, n);
+                o.value = n;
+                if (n === S.profileId) o.selected = true;
+                picker.append(o);
+            }
+        } else {
+            picker = el('input', 'sl-input');
+            picker.type = 'text';
+            picker.placeholder = 'ST 连接配置名（如 北凉·记账）';
+            picker.value = S.profileId ?? '';
+        }
+        s.append(picker);
+
+        const btns = el('div', 'sl-btn-row');
+        const saveBtn = el('button', 'sl-btn', '保存');
+        saveBtn.type = 'button';
+        const testBtn = el('button', 'sl-btn', '测试');
+        testBtn.type = 'button';
+        btns.append(saveBtn, testBtn);
+        s.append(btns);
+
+        const status = el('div', 'sl-note', S.testResult ? S.testResult : '');
+        s.append(status);
+
+        saveBtn.addEventListener('click', () => {
+            const id = String(picker.value ?? '').trim();
+            S.profileId = id;
             try {
-                profileHandler?.(S.profileId);
-            } catch {
-                /* noop */
+                saveHandler?.(id);
+                status.textContent = id ? `已保存：${id}` : '已保存：已关闭副模型';
+                S.testResult = status.textContent;
+            } catch (e) {
+                status.textContent = '保存失败：' + (e?.message ?? e);
             }
         });
-        s.append(input);
-        s.append(el('div', 'sl-note', '留空则不做结算：状态块照常注入，但好感与礼法不会自动变化。'));
+
+        testBtn.addEventListener('click', async () => {
+            const id = String(picker.value ?? '').trim();
+            if (!id) {
+                status.textContent = '先选一个连接配置';
+                return;
+            }
+            testBtn.disabled = true;
+            status.textContent = '测试中…';
+            try {
+                const r = await testHandler?.(id);
+                if (r?.ok) {
+                    status.textContent = `连通 · ${r.ms} ms · 回复「${r.text || '空'}」`;
+                } else {
+                    status.textContent = '失败：' + (r?.msg ?? '未知错误');
+                }
+                S.testResult = status.textContent;
+            } catch (e) {
+                status.textContent = '失败：' + (e?.message ?? e);
+            } finally {
+                testBtn.disabled = false;
+            }
+        });
+
+        s.append(el('div', 'sl-note', '选 ST 里已有的连接配置。留空则不做结算：状态块照常注入，但好感与礼法不会自动变。'));
         body.append(s);
 
         const r = card('开局');

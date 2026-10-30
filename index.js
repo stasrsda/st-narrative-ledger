@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -120,6 +120,27 @@ function ensurePack() {
     });
 }
 
+/** ST 里已有的连接配置名（Connection Manager → profiles[].name） */
+function profileNames() {
+    try {
+        const cm = ctx().extensionSettings?.connectionManager;
+        const list = cm?.profiles ?? [];
+        return list.map(p => p?.name).filter(Boolean);
+    } catch {
+        return [];
+    }
+}
+
+/** 载包失败时的说明，给面板看 */
+function packErrorText() {
+    const errs = registry.errors ?? {};
+    const ids = Object.keys(errs);
+    if (!ids.length) return '';
+    const first = errs[ids[0]];
+    const one = first?.[0];
+    return `${ids[0]}：${one?.msg ?? '校验未通过'}`;
+}
+
 /** 下拉框用的世界包列表 */
 function packChoices() {
     if (!registry.order.length) addPack(registry, BUILTIN_PACK);
@@ -165,6 +186,8 @@ function composeAndInject() {
         packId: pack.id,
         packName: pack.name,
         packs: packChoices(),
+        profiles: profileNames(),
+        packError: packErrorText(),
         openingLabel: openingLabel(pack),
         injected: Boolean(ok),
         tokens: block.tokens,
@@ -398,6 +421,32 @@ function boot() {
         composeAndInject();
         log('已切换世界包', id);
     });
+    onSaveProfile(id => {
+        settings.profileId = id;
+        try {
+            const c = ctx();
+            c.extensionSettings = c.extensionSettings ?? {};
+            c.extensionSettings.storyLedger = { ...(c.extensionSettings.storyLedger ?? {}), profileId: id };
+            c.saveSettingsDebounced?.();
+        } catch { /* noop */ }
+        refreshPanel({ profileId: id, transport: transportAvailable() ? (id ? '就绪' : '缺连接配置') : '不可用' });
+        log('副模型已保存', id || '（关闭）');
+    });
+
+    onTestModel(async id => {
+        const t0 = globalThis.performance?.now?.() ?? Date.now();
+        try {
+            const text = await requestCompletion(
+                [{ role: 'user', content: '只回复两个字：收到' }],
+                { profileId: id || settings.profileId, maxTokens: 16 },
+            );
+            const ms = Math.round((globalThis.performance?.now?.() ?? Date.now()) - t0);
+            return { ok: true, ms, text: String(text ?? '').trim().slice(0, 20) };
+        } catch (e) {
+            return { ok: false, msg: e?.message ?? String(e) };
+        }
+    });
+
     refreshPanel({ chatId: chatId(), messageCount: messages().length, profileId: settings.profileId, env: envInfo() });
     if (typeof eventSource?.on !== 'function') { log('事件源不可用，扩展只会显示面板'); refreshPanel({ env: envInfo() }); return; }
     try {

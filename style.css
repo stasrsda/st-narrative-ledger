@@ -336,3 +336,19 @@ body.story-ledger-locked {
         padding-bottom: max(18px, env(safe-area-inset-bottom, 0px));
     }
 }
+
+/* 两个按钮并排（保存 / 测试） */
+.sl-btn-row {
+    display: flex;
+    gap: 8px;
+}
+
+.sl-btn-row .sl-btn {
+    flex: 1 1 0;
+    margin: 4px 0;
+}
+
+.sl-btn:disabled {
+    opacity: .5;
+    cursor: default;
+}
