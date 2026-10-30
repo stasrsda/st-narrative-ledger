@@ -477,6 +477,9 @@ function settleMessage() {
 
     const { pack, state, meta } = currentState();
     const parsed = parseHeader(msg.mes ?? '', pack.calendar);
+    if (!parsed) {
+        log('本楼没有可解析的时间头，可能被截断或模型没按格式写');
+    }
 
     // 先清掉正文里的状态残留（<好感> 块、旧【在场】行等），避免它们跟着历史进上下文
     const scrubbed = scrubText(msg.mes ?? '');
@@ -502,9 +505,15 @@ function settleMessage() {
         onIds = [];
     } else {
         onIds = inferPresence(pack, msg.mes ?? '');
-        if (onIds.length) log('从正文推断在场：', onIds.join(','));
+        if (!onIds.length) {
+            // 这一楼没提到任何人（或被截断）→ 不要清空名单，沿用上一轮
+            onIds = null;
+            log('本楼没认出在场者，沿用上一轮名单');
+        } else {
+            log('从正文推断在场：', onIds.join(','));
+        }
     }
-    if (onIds) writeMeta({ onstage: onIds, onstageSrc: 'ai' });
+    if (onIds && onIds.length) writeMeta({ onstage: onIds, onstageSrc: 'ai' });
 
     if (parsed) {
         const prev = meta.lastT ?? 0;

@@ -183,8 +183,20 @@ function renderHud() {
     const id = 'story-ledger-hud';
     let hud = document.getElementById(id);
     const bar = S.aff?.bar ?? [];
-    if (!S.hudOn || !bar.length) {
+    if (!S.hudOn) {
         hud?.remove();
+        return;
+    }
+    if (!bar.length) {
+        // 没有在场者时也留一个小胶囊，免得用户以为插件死了
+        if (!hud) {
+            hud = el('div', 'story-ledger-hud is-collapsed');
+            hud.id = id;
+            hud.addEventListener('click', () => openDrawer());
+            (document.body ?? document.documentElement).append(hud);
+        }
+        hud.replaceChildren();
+        hud.append(el('span', 'sl-hud-pill', S.aff?.all?.length ? '账本 · 未有在场者' : '账本 · 读取中'));
         return;
     }
     if (!hud) {

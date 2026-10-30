@@ -56,3 +56,19 @@ test('从正文推断：最多 6 个', () => {
     const long = pack.actors.map(a => a.name).join('，');
     assert.ok(inferPresence(pack, long).length <= 6);
 });
+
+test('空推断不覆盖已有名单（保留上一轮）', async () => {
+    const { fold } = await import('../src/core/ledger/ledger.js');
+    // 模拟：上一轮在场两人，这一轮正文没提到名字
+    const meta = { onstage: ['huozhen', 'zhiwei'] };
+    const inferred = inferPresence(pack, '风把烟吹过来，带着血腥味。');
+    assert.deepEqual(inferred, []);
+    // 修复后的逻辑：推断为空 → 不改名单
+    const next = inferred.length ? inferred : meta.onstage;
+    assert.deepEqual(next, ['huozhen', 'zhiwei']);
+});
+
+test('推断到人时才替换名单', () => {
+    const inferred = inferPresence(pack, '霍振抱拳退下。');
+    assert.deepEqual(inferred, ['huozhen']);
+});
