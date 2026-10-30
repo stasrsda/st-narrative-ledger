@@ -295,6 +295,7 @@ function render() {
             dg.append(row('基础好感', S.diag.sample ?? '—'));
             dg.append(row('此刻好感', S.diag.affNow ?? '—'));
             dg.append(row('在场名单', S.diag.onstage ?? '（空）'));
+            dg.append(row('在场来源', S.diag.onstageSrc === 'ai' ? '主模型写的【在场】行' : '手动/开局'));
             dg.append(row('事件数', S.diag.lastEvents ?? 0));
             dg.append(row('变量同步', (S.diag.vars ?? 0) + ' 个'));
             const books = S.diag.books ?? [];

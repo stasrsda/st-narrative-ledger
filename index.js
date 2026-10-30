@@ -18,6 +18,7 @@ import { openingMeta, openingLabel } from './src/core/runtime/opening.js';
 import { createTree, putNode } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
+import { parsePresence, resolveActors } from './src/core/clock/presence.js';
 import { candidatesFor } from './src/core/codes/codes.js';
 import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
@@ -328,6 +329,7 @@ function diagInfo() {
             onstage: (metaHint.onstage ?? []).join(',') || '（空）',
             lastEvents: metaHint.lastEvents ?? 0,
             affNow: metaHint.affSample || '（无）',
+            onstageSrc: readMeta()?.onstageSrc ?? 'manual',
             books: worldBookNames(),
             vars: syncChatVariables(state),
             actorList: Object.values(pack.index?.actor ?? {}).map(a => ({
@@ -448,6 +450,21 @@ function settleMessage() {
 
     const { pack, state, meta } = currentState();
     const parsed = parseHeader(msg.mes ?? '', pack.calendar);
+
+    // 主模型写的【在场】行：解析成角色 id，写进名单
+    const names = parsePresence(msg.mes ?? '');
+    if (names && names.length) {
+        const { ids, unknown } = resolveActors(pack, names);
+        if (ids.length) {
+            writeMeta({ onstage: ids, onstageSrc: 'ai' });
+            log('主模型给出在场：', ids.join(','), unknown.length ? `（未识别的：${unknown.join(',')}）` : '');
+        } else if (unknown.length) {
+            log('在场行里的人名都认不出：', unknown.join(','));
+        }
+    } else if (names && names.length === 0) {
+        writeMeta({ onstage: [], onstageSrc: 'ai' });
+        log('主模型给出空在场');
+    }
 
     if (parsed) {
         const prev = meta.lastT ?? 0;

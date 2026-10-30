@@ -1984,6 +1984,28 @@
             "useProbability": true,
             "depth": 4
           }
+        },
+        {
+          "id": 70,
+          "keys": [],
+          "secondary_keys": [],
+          "comment": "[插件] 输出格式",
+          "content": "每轮正文开头两行，格式固定：\n『年号+年 月日 · 时辰刻 · 地名』\n【在场】名字、名字\n第一行写时间地点，第二行写在场的角色名字（用设定里的正式称呼，不要写别称、不要加修饰）。\n不在场的人不要写；谁也不在就写【在场】。\n这两行之后空一行，再写正文。\n名字只从下面这些人里取：白景昭、沈知微、柳清韵、谢韫宁、绮霞、碧芽、蕙香、弄月、霓裳、霍振、宋衍之、赵伯、皇兄、太后、沈母、沈知砚。",
+          "constant": true,
+          "selective": false,
+          "insertion_order": 2,
+          "enabled": true,
+          "position": "before_char",
+          "case_sensitive": null,
+          "name": "[插件] 输出格式",
+          "priority": 10,
+          "extensions": {
+            "position": 0,
+            "exclude_recursion": false,
+            "probability": 100,
+            "useProbability": true,
+            "depth": 4
+          }
         }
       ]
     }
