@@ -232,12 +232,24 @@ function diagInfo() {
             onstage: (metaHint.onstage ?? []).join(',') || '（空）',
             lastEvents: metaHint.lastEvents ?? 0,
             affNow: metaHint.affSample || '（无）',
+            books: worldBookNames(),
             directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
             keyLen: (settings.direct?.apiKey ?? '').length,
             profileId: settings.profileId,
         };
     } catch (e) {
         return { packId: '读取失败', packName: String(e?.message ?? e), actors: 0, sample: '—' };
+    }
+}
+
+/** 当前挂载的世界书名，用来发现「旧书没关」这类冲突 */
+function worldBookNames() {
+    try {
+        const c = ctx();
+        const names = c.world_names ?? c.worldNames ?? [];
+        return Array.isArray(names) ? names : [];
+    } catch {
+        return [];
     }
 }
 

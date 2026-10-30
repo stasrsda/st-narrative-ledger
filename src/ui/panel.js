@@ -207,6 +207,11 @@ function render() {
             dg.append(row('此刻好感', S.diag.affNow ?? '—'));
             dg.append(row('在场名单', S.diag.onstage ?? '（空）'));
             dg.append(row('事件数', S.diag.lastEvents ?? 0));
+            const books = S.diag.books ?? [];
+            dg.append(row('世界书', books.length ? books.join(' / ') : '（无）'));
+            if (books.length > 1) {
+                dg.append(el('div', 'sl-note', '⚠ 挂了多本世界书：旧书若还写着「好感现状」，会盖掉插件注入。'));
+            }
             dg.append(row('直连', S.diag.directReady ? '已保存' : '未保存'));
             dg.append(row('Key 长度', S.diag.keyLen ?? 0));
             dg.append(row('连接配置', S.diag.profileId || '未填'));
