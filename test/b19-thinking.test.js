@@ -62,3 +62,29 @@ test('正文回收：正文没时间头而思考里有，把时间头并回开�
     assert.match(r.body.split('\n')[0], /承平十六年九月十四/);
     assert.match(r.body, /廊下/);
 });
+
+test('DeepSeek 标记：切出思考与正文', () => {
+    const msg = '<｜begin▁of▁thinking｜>* 灰魂吐槽\n想到一半<｜end▁of▁thinking｜>\n\n『承平十六年九月十四 · 酉初三刻 · 某地』\n\n正文开始。';
+    const r = splitThinking(msg);
+    assert.equal(r.had, true);
+    assert.equal(r.broken, false);
+    assert.match(r.body, /正文开始/);
+    assert.match(r.thinking, /灰魂吐槽/);
+    assert.ok(!r.body.includes('begin'));
+});
+
+test('DeepSeek 标记：没闭合时标 broken 且不当正文', () => {
+    const msg = '<｜begin▁of▁thinking｜>* 灰魂吐槽\n写着写着就没了';
+    const r = splitThinking(msg);
+    assert.equal(r.broken, true);
+    assert.equal(r.body, '');
+    const n = normalizeMessage(msg);
+    assert.equal(n.recovered, false, 'broken 时不该把思考当正文');
+});
+
+test('DeepSeek 标记：正常楼不受影响', () => {
+    const msg = '『承平十六年九月十四』\n\n他勒马。';
+    const r = splitThinking(msg);
+    assert.equal(r.had, false);
+    assert.equal(r.broken, false);
+});

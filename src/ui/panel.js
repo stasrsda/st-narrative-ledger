@@ -380,6 +380,10 @@ function render() {
             if (S.diag.lastThink) {
                 dg.append(row('其中思考', `${S.diag.lastThink} 字（正文 ${S.diag.lastBody ?? 0} 字）`));
             }
+            if (S.diag.lastBroken) {
+                dg.append(el('div', 'sl-note',
+                    '⚠ 上一楼的思考标记没有闭合：整楼都是思考，没有正文。换模型或关掉思考。'));
+            }
             if (S.diag.lastCut) {
                 dg.append(el('div', 'sl-note', '⚠ 末楼正文疑似被截断：结尾没有句读。多半是 max_tokens 太小，或思考吃掉了输出预算。'));
             }

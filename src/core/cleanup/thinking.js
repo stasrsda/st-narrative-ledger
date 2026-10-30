@@ -1,4 +1,8 @@
 // 分离思考块与正文：时间头、在场、截断判断都只认正文
+// DeepSeek 系列会把这些特殊标记原样写进正文
+const DEEPSEEK_BEGIN = /<[｜|]begin[▁_]of[▁_]thinking[｜|]>/g;
+const DEEPSEEK_END = /<[｜|]end[▁_]of[▁_]thinking[｜|]>/g;
+
 const PATTERNS = [
     { name: 'tag', re: /<思考>([\s\S]*?)<\/思考>/g },
     { name: 'tag2', re: /<thinking>([\s\S]*?)<\/thinking>/gi },
@@ -14,6 +18,27 @@ export function splitThinking(text) {
     let s = String(text ?? '');
     let thinking = '';
     let had = false;
+    let broken = false;
+
+    // ① DeepSeek：<｜begin▁of▁thinking｜>…<｜end▁of▁thinking｜>
+    if (DEEPSEEK_BEGIN.test(s)) {
+        DEEPSEEK_BEGIN.lastIndex = 0;
+        const endMatch = s.match(DEEPSEEK_END);
+        if (endMatch) {
+            const cut = s.indexOf(endMatch[0]);
+            const start = s.search(DEEPSEEK_BEGIN);
+            thinking += s.slice(start, cut).replace(DEEPSEEK_BEGIN, '');
+            s = s.slice(0, start) + s.slice(cut + endMatch[0].length);
+            had = true;
+        } else {
+            // 有开头没结尾：思考没闭合，正文未知
+            broken = true;
+            thinking += s.replace(DEEPSEEK_BEGIN, '');
+            s = '';
+            had = true;
+        }
+        DEEPSEEK_BEGIN.lastIndex = 0;
+    }
     for (const { re } of PATTERNS) {
         s = s.replace(re, (_, inner) => {
             thinking += inner + '\n';
@@ -28,7 +53,7 @@ export function splitThinking(text) {
         had = true;
         s = s.slice(lead[0].length);
     }
-    return { body: s.trim(), thinking: thinking.trim(), had };
+    return { body: s.trim(), thinking: thinking.trim(), had, broken };
 }
 
 /** 只看正文里有没有时间头 */
@@ -50,6 +75,8 @@ export function thinkingDominates(thinking, body) {
 export function normalizeMessage(text) {
     const r = splitThinking(text);
     if (!r.had) return { ...r, recovered: false };
+    // 思考没闭合：正文根本不存在，不要拿思考当正文
+    if (r.broken) return { ...r, recovered: false };
 
     const body = (r.body ?? '').trim();
     const thinking = (r.thinking ?? '').trim();

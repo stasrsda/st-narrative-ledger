@@ -408,6 +408,7 @@ function diagInfo() {
             lastThink: splitThinking(messages()[messages().length - 1]?.mes ?? '').thinking.length,
             lastBody: splitThinking(messages()[messages().length - 1]?.mes ?? '').body.length,
             lastCut: looksTruncated(splitThinking(messages()[messages().length - 1]?.mes ?? '').body),
+            lastBroken: Boolean(readMeta()?.lastBroken),
             advance: readMeta()?.lastAdvance ?? null,
             affSample: ['huozhen', 'zhiwei']
                 .filter(id => state.aff?.[id] != null)
@@ -559,6 +560,10 @@ function settleMessage() {
     const norm = normalizeMessage(msg.mes ?? '');
     const body = norm.body;
     const thinking = norm.thinking;
+    if (norm.broken) {
+        writeMeta({ lastBroken: { at: Date.now(), len: (msg.mes ?? '').length } });
+        log('思考标记没有闭合：这一楼只有思考，没有正文');
+    }
     if (norm.recovered) {
         // 正文被塞进了思考块：提回来，并写回消息，否则用户默认折叠时看不到
         msg.mes = body;
