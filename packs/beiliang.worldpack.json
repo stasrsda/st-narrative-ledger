@@ -491,6 +491,16 @@
       "public": "内廷",
       "after": {},
       "overnight": false
+    },
+    "客": {
+      "order": 2,
+      "address": "王爷",
+      "self": "小人",
+      "access": "discreet",
+      "overnight": false,
+      "public": "可前厅议事",
+      "after": {},
+      "note": "外客：商人、幕僚、别府来人"
     }
   },
   "motives": [
@@ -2721,6 +2731,227 @@
       ],
       "temper": "cold",
       "bond": "kin"
+    },
+    {
+      "id": "qindou",
+      "name": "秦铎",
+      "aliases": [
+        "秦统领"
+      ],
+      "rank": "臣",
+      "aff": 50,
+      "bond": "loyalty",
+      "stance": "new_follower",
+      "knows": [
+        "butcher",
+        "protects_men"
+      ],
+      "temper": "upright",
+      "lines": [
+        {
+          "id": "life",
+          "text": "他的命是白景昭从死人堆里捡回来的；要他退，得给命令",
+          "from": "北凉五年"
+        }
+      ],
+      "beats": [
+        {
+          "id": "shield",
+          "when": "aff>=45",
+          "mode": "beat",
+          "once": true,
+          "do": "有人近身三步内，他会先横过刀挡在前面，不说话"
+        }
+      ]
+    },
+    {
+      "id": "fushu",
+      "name": "福叔",
+      "aliases": [
+        "老福"
+      ],
+      "rank": "仆",
+      "aff": 65,
+      "bond": "loyalty",
+      "stance": "beiliang_old",
+      "knows": [],
+      "temper": "upright",
+      "lines": [
+        {
+          "id": "old_house",
+          "text": "府里的旧规矩他记得比谁都清，会拿它挡新规矩",
+          "from": "北凉元年 起"
+        }
+      ],
+      "beats": [
+        {
+          "id": "remember",
+          "when": "aff>=50",
+          "mode": "hint",
+          "once": false,
+          "do": "他会提起十几年前的一件小事，说完自己先笑"
+        }
+      ]
+    },
+    {
+      "id": "sunzhangfang",
+      "name": "孙账房",
+      "aliases": [
+        "孙先生",
+        "孙账房"
+      ],
+      "rank": "仆",
+      "aff": 45,
+      "bond": "loyalty",
+      "stance": "beiliang_old",
+      "knows": [],
+      "temper": "sly",
+      "lines": [
+        {
+          "id": "books",
+          "text": "账面上永远比实际少两成；他赌的是没人细看",
+          "from": "北凉九年"
+        }
+      ],
+      "beats": [
+        {
+          "id": "slip",
+          "when": "被问账目",
+          "mode": "beat",
+          "once": true,
+          "do": "他先把算盘推远半寸，再开口"
+        }
+      ]
+    },
+    {
+      "id": "qianbo",
+      "name": "钱伯",
+      "aliases": [
+        "老钱"
+      ],
+      "rank": "仆",
+      "aff": 55,
+      "bond": "loyalty",
+      "stance": "beiliang_old",
+      "knows": [],
+      "temper": "upright",
+      "lines": [
+        {
+          "id": "gate",
+          "text": "他在门房里住了十五年，谁进谁出他都记着",
+          "from": "京中旧府"
+        }
+      ],
+      "beats": []
+    },
+    {
+      "id": "wubo",
+      "name": "吴伯",
+      "aliases": [
+        "老吴"
+      ],
+      "rank": "仆",
+      "aff": 50,
+      "bond": "loyalty",
+      "stance": "beiliang_old",
+      "knows": [],
+      "temper": "timid",
+      "lines": [
+        {
+          "id": "dust",
+          "text": "屋子里盖布的家具，是他每年晒过来的",
+          "from": "京中旧府"
+        }
+      ],
+      "beats": []
+    },
+    {
+      "id": "zhengbo",
+      "name": "郑伯",
+      "aliases": [
+        "老郑"
+      ],
+      "rank": "仆",
+      "aff": 50,
+      "bond": "loyalty",
+      "stance": "beiliang_old",
+      "knows": [],
+      "temper": "cold",
+      "lines": [
+        {
+          "id": "stove",
+          "text": "厨房只烧一盆炭，是因为他只烧得起一盆",
+          "from": "京中旧府"
+        }
+      ],
+      "beats": []
+    },
+    {
+      "id": "cuizhanggui",
+      "name": "崔掌柜",
+      "aliases": [
+        "崔掌柜",
+        "大掌柜"
+      ],
+      "rank": "客",
+      "aff": 40,
+      "bond": "loyalty",
+      "stance": "capital_folk",
+      "knows": [
+        "butcher"
+      ],
+      "temper": "sly",
+      "lines": [
+        {
+          "id": "goods",
+          "text": "他只认货与契，不认情分；但货从来没误过期",
+          "from": "北凉十一年"
+        }
+      ],
+      "beats": []
+    },
+    {
+      "id": "shenmu",
+      "name": "沈母",
+      "aliases": [
+        "沈母",
+        "娘"
+      ],
+      "rank": "亲",
+      "aff": 25,
+      "bond": "kin",
+      "stance": "beiliang_folk",
+      "knows": [],
+      "temper": "timid",
+      "lines": [
+        {
+          "id": "daughter",
+          "text": "她只问女儿吃没吃饭，不问别的",
+          "from": "第1幕"
+        }
+      ],
+      "beats": []
+    },
+    {
+      "id": "shenzhiyan",
+      "name": "沈知砚",
+      "aliases": [
+        "知砚"
+      ],
+      "rank": "亲",
+      "aff": 20,
+      "bond": "kin",
+      "stance": "beiliang_folk",
+      "knows": [],
+      "temper": "timid",
+      "lines": [
+        {
+          "id": "boy",
+          "text": "他怕人，但更怕姐姐被人带走",
+          "from": "第1幕"
+        }
+      ],
+      "beats": []
     }
   ],
   "tables": {
@@ -4219,6 +4450,47 @@
           "view"
         ],
         "source": "君"
+      },
+      {
+        "holder": "qindou",
+        "scope": "army",
+        "rights": [
+          "view"
+        ],
+        "source": "亲卫统领"
+      },
+      {
+        "holder": "fushu",
+        "scope": "household",
+        "rights": [
+          "view"
+        ],
+        "source": "老仆"
+      },
+      {
+        "holder": "sunzhangfang",
+        "scope": "ledger",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "账房"
+      },
+      {
+        "holder": "qianbo",
+        "scope": "protocol",
+        "rights": [
+          "view"
+        ],
+        "source": "门房"
+      },
+      {
+        "holder": "cuizhanggui",
+        "scope": "protocol",
+        "rights": [
+          "view"
+        ],
+        "source": "商队"
       }
     ],
     "seedNote": "开局分配。账目一职故意空着——知微是后来才接手的。改动用 grant/revoke 事件，不改这里。"
@@ -5149,11 +5421,29 @@
       "song": 40,
       "zhaobo": 70,
       "xie": 0,
-      "qingyun": 0
+      "qingyun": 0,
+      "qindou": 50,
+      "fushu": 65,
+      "sunzhangfang": 45,
+      "qianbo": 55,
+      "wubo": 50,
+      "zhengbo": 50,
+      "cuizhanggui": 40,
+      "shenmu": 25,
+      "shenzhiyan": 20
     },
     "rank": {
       "zhiwei": "囚",
-      "xie": "待嫁"
+      "xie": "待嫁",
+      "qindou": "臣",
+      "fushu": "仆",
+      "sunzhangfang": "仆",
+      "qianbo": "仆",
+      "wubo": "仆",
+      "zhengbo": "仆",
+      "cuizhanggui": "客",
+      "shenmu": "亲",
+      "shenzhiyan": "亲"
     },
     "done": [
       "e_break_city"
