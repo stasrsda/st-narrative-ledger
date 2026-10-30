@@ -342,7 +342,7 @@ function panelBase() {
             : (settings.direct?.model || settings.profileId ? '就绪' : '缺连接配置'),
         direct: settings.direct,
         diag: diagInfo(),
-        aff: affView(),
+        aff: { ...affView(), isOpening: messages().filter(m => !m.is_user).length <= 1 },
         chatId: chatId(),
         messageCount: messages().length,
     };

@@ -223,6 +223,10 @@ function renderHud() {
     }
     hud.classList.remove('is-collapsed');
 
+    if (S.aff?.isOpening) {
+        hud.append(el('span', 'sl-hud-tag', '初始'));
+    }
+
     for (const p of bar) {
         const item = el('span', 'sl-hud-item');
         item.append(el('span', 'sl-hud-name', p.name));
