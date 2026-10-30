@@ -14,11 +14,22 @@
 | `packs/beiliang.worldpack.json` | **配套世界包**（历法、气候、礼法、人物、事件图、器物） |
 | `packs/guofeng.worldpack.json` | 通用古风示例包，换卡时照它抄字段 |
 | `worldbook/beiliang-v3.json` | 配套世界书 v3（70 条，已按插件改造） |
-| `card/beiliang-card.json` | 配套角色卡（**内嵌世界书已剥离**） |
+| `card/beiliang-card-v3.png` | **单文件卡（推荐）**：世界书已内嵌，导入一张就够 |
+| `card/beiliang-card.json` | 旧版卡（无内嵌世界书，需另导 `worldbook/`） |
 | `presets/GrayWill-0.45.2-账本版.json` | 配套预设（灰魂改版，见 `THIRD_PARTY.md`） |
 | `DESIGN.md` | 完整设计书（18 个数据小节 + 实现总表） |
 
-### 三位一体的用法
+### 最省事的装法（v3 单卡）
+
+```
+1. 把 card/beiliang-card-v3.png 拖进 ST —— 世界书自动跟着进来
+2. 装插件：https://github.com/stasrsda/st-narrative-ledger
+3. 面板 → 世界包 → 选「北凉 · 白朝」
+```
+
+卡里带了 70 条设定（67 条启用），插件只管状态与注入。
+
+### 分开装的用法（旧）
 
 ```
 角色卡  +  世界书 v3  +  世界包
