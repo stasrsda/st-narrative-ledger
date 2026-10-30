@@ -195,6 +195,17 @@ function render() {
             b.append(el('pre', 'sl-block', S.block));
             body.append(b);
         }
+        if (S.diag) {
+            const dg = card('诊断');
+            dg.append(row('当前包', `${S.diag.packName || '—'}（${S.diag.packId}）`));
+            dg.append(row('角色数', S.diag.actors ?? 0));
+            dg.append(row('基础好感', S.diag.sample ?? '—'));
+            dg.append(row('直连', S.diag.directReady ? '已保存' : '未保存'));
+            dg.append(row('Key 长度', S.diag.keyLen ?? 0));
+            dg.append(row('连接配置', S.diag.profileId || '未填'));
+            body.append(dg);
+        }
+
         if (S.env) {
             const e = card('环境');
             e.append(row('ST', S.env.st));

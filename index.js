@@ -200,6 +200,14 @@ function packErrorText() {
     return `${ids[0]}：${one?.msg ?? '校验未通过'}`;
 }
 
+/** 诊断用：取两个角色的基础好感，看包读没读对 */
+function sampleAffinity(pack) {
+    const a = pack.index?.actor ?? {};
+    const pick = ['huozhen', 'zhiwei'].filter(id => a[id]);
+    if (!pick.length) return '无角色';
+    return pick.map(id => `${a[id].name} ${a[id].aff}`).join(' / ');
+}
+
 /** 下拉框用的世界包列表 */
 function packChoices() {
     if (!registry.order.length) addPack(registry, BUILTIN_PACK);
@@ -259,6 +267,15 @@ function composeAndInject() {
             ? '不可用'
             : (settings.direct?.model || settings.profileId ? '就绪' : '缺连接配置'),
         direct: settings.direct,
+        diag: {
+            packId: pack.id,
+            packName: pack.name,
+            actors: Object.keys(pack.index?.actor ?? {}).length,
+            sample: sampleAffinity(pack),
+            directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
+            keyLen: (settings.direct?.apiKey ?? '').length,
+            profileId: settings.profileId,
+        },
         chatId: chatId(),
         messageCount: messages().length,
     });
@@ -548,7 +565,21 @@ function boot() {
             } catch (e) {
                 log('写 ST 设置失败（已存本地）', e?.message ?? e);
             }
-            refreshPanel({ direct: settings.direct });
+            refreshPanel({
+                direct: settings.direct,
+        diag: {
+            packId: pack.id,
+            packName: pack.name,
+            actors: Object.keys(pack.index?.actor ?? {}).length,
+            sample: sampleAffinity(pack),
+            directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
+            keyLen: (settings.direct?.apiKey ?? '').length,
+            profileId: settings.profileId,
+        },
+                transport: !transportAvailable()
+                    ? '不可用'
+                    : (settings.direct.model || settings.profileId ? '就绪' : '缺连接配置'),
+            });
             log('直连已保存', settings.direct.model || '（空）');
             return;
         }
