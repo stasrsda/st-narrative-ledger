@@ -1,0 +1,58 @@
+// 内置兜底包：没有导入任何世界包时也能跑
+export const BUILTIN_PACK = {
+    schemaVersion: 1,
+    id: 'builtin-guofeng',
+    name: '古风·通用',
+    match: { worldBooks: [], characters: [] },
+    calendar: { type: 'guofeng', era: '承平', monthDays: 30, kePerShichen: 8, weekdays: null },
+    climate: {
+        vocabulary: ['晴', '阴', '小雨', '大雨', '雪', '风沙', '雾'],
+        zones: [{
+            id: 'plain', name: '中原', places: [],
+            seasons: {
+                spring: ['晴', '阴', '小雨'],
+                summer: ['晴', '阴', '大雨'],
+                autumn: ['晴', '阴', '雾'],
+                winter: ['阴', '晴', '雪'],
+            },
+        }],
+    },
+    festivals: [
+        { month: 1, day: 1, name: '元日' },
+        { month: 1, day: 15, name: '上元' },
+        { month: 5, day: 5, name: '端午' },
+        { month: 8, day: 15, name: '中秋' },
+        { month: 12, day: 8, name: '腊八' },
+    ],
+    affinity: {
+        min: -100, max: 100, step: 10,
+        ladder: ['死敌', '仇视', '憎恨', '怨毒', '敌意', '厌恶', '戒备', '怕', '防', '冷', '无感',
+            '动摇', '感激', '信', '依赖', '动心', '爱', '深爱', '不可替代', '共生', '唯一'],
+        events: { A: 5, B: 10, C: 20, D: 30, E: -40 },
+    },
+    ranks: {
+        正妃: { order: 5, address: '王爷', self: '臣妾', access: 'free', overnight: true, public: '可并肩', after: {} },
+        侧妃: { order: 4, address: '王爷', self: '妾身', access: 'free', overnight: true, public: '可列内宴', after: {} },
+        妾: { order: 3, address: '王爷', self: '妾身', access: 'free', overnight: false, public: '可同席', after: {} },
+        通房: { order: 2, address: '王爷', self: '妾身', access: 'free', overnight: false, public: '夜入晨出', after: {} },
+        仆: { order: 1, address: '主子', self: '奴婢', access: 'discreet', overnight: false, public: '不预宴', after: {} },
+        客: { order: 1, address: '公子', self: '在下', access: 'discreet', overnight: false, public: '可同席', after: {} },
+    },
+    motives: [
+        { id: 'dread', label: '屈从', min: -100, body: '不挣不躲', voice: '不接话' },
+        { id: 'bargain', label: '交易', min: -30, body: '先说条件', voice: '每句都是条件' },
+        { id: 'debt', label: '还恩', min: 0, body: '做得仔细', voice: '只答是' },
+        { id: 'duty', label: '义务', min: 20, body: '按规矩', voice: '平铺直叙' },
+        { id: 'desire', label: '情愿', min: 60, body: '先伸手', voice: '会问' },
+    ],
+    codes: { rites: [], house: [], laws: [] },
+    places: [],
+    actors: [],
+    events: [],
+    gaze: { axes: ['respect', 'fear', 'closeness', 'contempt'], stances: [], knowledge: [], temper: [] },
+    tables: {},
+    customs: [],
+    props: { by_scene: {}, seasonal: {} },
+    titles: { matrix: {} },
+    authority: { scopes: [], rights: [], sources: [], seed: [] },
+};

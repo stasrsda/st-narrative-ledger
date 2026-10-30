@@ -1,0 +1,22 @@
+# 依赖与构建产物
+node_modules/
+dist/
+output/
+*.log
+
+# 私有数据：你的卡与设定，不进公开仓库
+packs/beiliang.worldpack.json
+packs/*.private.json
+*.bak.json
+
+# 本地杂项
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+
+# 系统/编辑器临时
+*.tmp
+*.swp

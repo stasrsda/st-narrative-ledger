@@ -1,0 +1,10 @@
+{
+  "name": "st-narrative-ledger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SillyTavern 叙事账本扩展",
+  "scripts": {
+    "test": "node --test test/"
+  }
+}
