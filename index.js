@@ -49,14 +49,21 @@ let EV = globalThis.event_types ?? {
 };
 
 async function loadSTEvents() {
-    if (typeof eventSource?.on === 'function' && EV.CHAT_CHANGED) return;
+    // 1) 优先从 SillyTavern.getContext() 取（1.19 里它直接带 eventSource / eventTypes）
     try {
-        const mod = await import('../../../script.js');
-        eventSource = mod.eventSource ?? mod.default?.eventSource ?? eventSource;
+        const c = ctx();
+        if (c?.eventSource) eventSource = c.eventSource;
+        if (c?.eventTypes) EV = { ...EV, ...c.eventTypes };
+    } catch { /* noop */ }
+    if (typeof eventSource?.on === 'function' && EV.CHAT_CHANGED) return;
+
+    // 2) 退回动态导入（public/script.js 要在扩展目录往上四层）
+    try {
+        const mod = await import('../../../../script.js');
+        eventSource = mod.eventSource ?? eventSource;
         if (mod.event_types) EV = { ...EV, ...mod.event_types };
-        if (mod.default?.eventSource) eventSource = mod.default.eventSource;
     } catch (e) {
-        log('script.js 取不到，用字符串常量', e?.message ?? e);
+        log('script.js 取不到，用上下文或字符串常量', e?.message ?? e);
     }
 }
 
