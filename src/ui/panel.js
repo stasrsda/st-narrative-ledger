@@ -33,6 +33,8 @@ const S = {
     importStatus: '',
     direct: {},
     settle: null,
+    directMsg: '',
+    profileMsg: '',
 };
 
 let profileHandler = null;
@@ -153,6 +155,8 @@ function render() {
     }
     const body = document.getElementById('sl-body');
     if (!body) return;
+    // 记住滚动位置：重渲染不该把用户弹回顶部
+    const keepTop = body.scrollTop;
     body.replaceChildren();
 
     if (S.tab === 'state') {
@@ -401,7 +405,7 @@ function render() {
         btns.append(saveBtn, testBtn);
         s.append(btns);
 
-        const status = el('div', 'sl-note', S.testResult ? S.testResult : '');
+        const status = el('div', 'sl-note', S.profileMsg || S.testResult || '');
         s.append(status);
 
         saveBtn.addEventListener('click', () => {
@@ -409,33 +413,33 @@ function render() {
             S.profileId = id;
             try {
                 saveHandler?.(id);
-                status.textContent = id ? `已保存：${id}` : '已保存：已关闭副模型';
-                S.testResult = status.textContent;
+                S.profileMsg = id ? `已保存：${id}` : '已保存：已关闭副模型';
             } catch (e) {
-                status.textContent = '保存失败：' + (e?.message ?? e);
+                S.profileMsg = '保存失败：' + (e?.message ?? e);
             }
+            render();
         });
 
         testBtn.addEventListener('click', async () => {
             const id = String(picker.value ?? '').trim();
             if (!id) {
-                status.textContent = '先选一个连接配置';
+                S.profileMsg = '先选一个连接配置';
+                render();
                 return;
             }
             testBtn.disabled = true;
-            status.textContent = '测试中…';
+            S.profileMsg = '测试中…';
+            render();
             try {
                 const r = await testHandler?.(id);
-                if (r?.ok) {
-                    status.textContent = `连通 · ${r.ms} ms · 回复「${r.text || '空'}」`;
-                } else {
-                    status.textContent = '失败：' + (r?.msg ?? '未知错误');
-                }
-                S.testResult = status.textContent;
+                S.profileMsg = r?.ok
+                    ? `连通 · ${r.ms} ms · 回复「${r.text || '空'}」`
+                    : '失败：' + (r?.msg ?? '未知错误');
             } catch (e) {
-                status.textContent = '失败：' + (e?.message ?? e);
+                S.profileMsg = '失败：' + (e?.message ?? e);
             } finally {
                 testBtn.disabled = false;
+                render();
             }
         });
 
@@ -512,11 +516,13 @@ function render() {
                     fetchBtn.textContent = `已取到 ${allModels.length} 个`;
                 } else {
                     fetchBtn.textContent = '拉取失败';
-                    dStat.textContent = '拉取失败：' + (r?.msg ?? '未知错误');
+                    S.directMsg = '拉取失败：' + (r?.msg ?? '未知错误');
+                    render();
                 }
             } catch (e) {
                 fetchBtn.textContent = '拉取失败';
-                dStat.textContent = '拉取失败：' + (e?.message ?? e);
+                S.directMsg = '拉取失败：' + (e?.message ?? e);
+                render();
             } finally {
                 fetchBtn.disabled = false;
                 setTimeout(() => { fetchBtn.textContent = old; }, 2500);
@@ -536,7 +542,7 @@ function render() {
         dRow.append(dSave, dTest);
         d.append(dRow);
 
-        const dStat = el('div', 'sl-note', '');
+        const dStat = el('div', 'sl-note', S.directMsg || '');
         d.append(dStat);
 
         const readDirect = () => ({
@@ -550,29 +556,33 @@ function render() {
             S.direct = cfg;
             try {
                 saveHandler?.(null, cfg);
-                dStat.textContent = cfg.model ? `已保存直连：${cfg.model}` : '已保存（直连为空）';
+                S.directMsg = cfg.model ? `已保存直连：${cfg.model}` : '已保存（直连为空）';
             } catch (e) {
-                dStat.textContent = '保存失败：' + (e?.message ?? e);
+                S.directMsg = '保存失败：' + (e?.message ?? e);
             }
+            render();
         });
 
         dTest.addEventListener('click', async () => {
             const cfg = readDirect();
             if (!cfg.baseUrl || !cfg.model) {
-                dStat.textContent = 'Base URL 和模型都要填';
+                S.directMsg = 'Base URL 和模型都要填';
+                render();
                 return;
             }
             dTest.disabled = true;
-            dStat.textContent = '测试中…';
+            S.directMsg = '测试中…';
+            render();
             try {
                 const r = await testHandler?.(null, cfg);
-                dStat.textContent = r?.ok
+                S.directMsg = r?.ok
                     ? `连通 · ${r.ms} ms · 回复「${r.text || '空'}」`
                     : '失败：' + (r?.msg ?? '未知错误');
             } catch (e) {
-                dStat.textContent = '失败：' + (e?.message ?? e);
+                S.directMsg = '失败：' + (e?.message ?? e);
             } finally {
                 dTest.disabled = false;
+                render();
             }
         });
 
@@ -602,6 +612,8 @@ function render() {
         }
         body.append(c);
     }
+
+    body.scrollTop = keepTop;
 }
 
 export function refreshPanel(patch = {}) {
