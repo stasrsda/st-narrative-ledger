@@ -469,3 +469,24 @@ body.story-ledger-locked {
 }
 
 .sl-check-name { flex: 1 1 auto; }
+
+.sl-hud-fold {
+    margin-left: 8px;
+    padding: 0 6px;
+    opacity: .5;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.sl-hud-fold:hover { opacity: 1; }
+
+.story-ledger-hud.is-collapsed {
+    padding: 4px 12px;
+}
+
+.sl-hud-pill {
+    cursor: pointer;
+    opacity: .8;
+}
+
+.sl-hud-pill:hover { opacity: 1; }

@@ -49,7 +49,7 @@ export function onstageOf(pack, state, meta = {}) {
 /**
  * 组装这一轮的 [状态] 块
  */
-export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta = {}, budget = 220 }) {
+export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta = {}, budget = 220, showAffNumbers }) {
     const placeId = state.place;
     const node = placeId && tree ? tree.nodes?.[placeId] : null;
     const placePath = node ? pathLabel(tree, placeId) : (meta.placeName ?? '');
@@ -95,7 +95,7 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
 
     return composeSceneBlock({
         pack, state, placePath, weather, festival,
-        onstage, motive, exp, auth, events, tables, props, items, budget,
+        onstage, showAffNumbers, motive, exp, auth, events, tables, props, items, budget,
     });
 }
 

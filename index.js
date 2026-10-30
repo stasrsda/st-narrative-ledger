@@ -28,7 +28,7 @@ import { reviewText, summarize } from './src/core/review/review.js';
 
 const MENU_CLASS = 'story-ledger-menu-item';
 const registry = createRegistry();
-const settings = { profileId: '', depth: 1, enabled: true, direct: { baseUrl: '', apiKey: '', model: '' } };
+const settings = { profileId: '', depth: 1, enabled: true, showAffNumbers: true, direct: { baseUrl: '', apiKey: '', model: '' } };
 
 /** 最近一次结算的状态，显示在面板上——否则失败只能翻控制台 */
 const settleStatus = { at: 0, ok: null, msg: '尚未结算', events: 0 };

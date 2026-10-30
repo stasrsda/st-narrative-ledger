@@ -35,6 +35,7 @@ const S = {
     settle: null,
     aff: null,
     onstageEdit: false,
+    hudCollapsed: false,
     hudOn: true,
     directMsg: '',
     profileMsg: '',
@@ -182,13 +183,43 @@ function renderHud() {
         (document.body ?? document.documentElement).append(hud);
     }
     hud.replaceChildren();
+
+    // 折叠态：只留一个小胶囊
+    if (S.hudCollapsed) {
+        hud.classList.add('is-collapsed');
+        const pill = el('span', 'sl-hud-pill', `账本 · ${bar.length} 人`);
+        pill.addEventListener('click', ev => {
+            ev.stopPropagation();
+            S.hudCollapsed = false;
+            localStorage.setItem('storyLedger.hudCollapsed', '0');
+            render();
+        });
+        hud.append(pill);
+        return;
+    }
+    hud.classList.remove('is-collapsed');
+
     for (const p of bar) {
         const item = el('span', 'sl-hud-item');
         item.append(el('span', 'sl-hud-name', p.name));
         item.append(el('span', 'sl-hud-aff' + (p.aff < 0 ? ' is-neg' : p.aff > 0 ? ' is-pos' : ''), String(p.aff)));
         item.append(el('span', 'sl-hud-band', p.band));
+        item.addEventListener('click', ev => {
+            ev.stopPropagation();
+            openDrawer();
+        });
         hud.append(item);
     }
+
+    const fold = el('span', 'sl-hud-fold', '−');
+    fold.title = '收起（不进入 AI 上下文）';
+    fold.addEventListener('click', ev => {
+        ev.stopPropagation();
+        S.hudCollapsed = true;
+        localStorage.setItem('storyLedger.hudCollapsed', '1');
+        render();
+    });
+    hud.append(fold);
 }
 
 function render() {

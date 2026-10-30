@@ -9,12 +9,12 @@ export function estimateTokens(text) {
     return Math.ceil(String(text).length / 1.4);
 }
 
-function onstageLine(pack, onstage = []) {
+function onstageLine(pack, onstage = [], showNumbers = true) {
     const parts = onstage.slice(0, 6).map(a => {
         const aff = a.aff ?? 0;
         const band = bandOf(pack, aff, a.bond ?? 'love').name;
         const addr = a.address ? `/称"${a.address}"` : '';
-        return `${a.name}(${aff}/${band}${addr})`;
+        return showNumbers ? `${a.name}(${aff}/${band}${addr})` : `${a.name}(${band}${addr})`;
     });
     return parts.length ? `在场:${parts.join(' ')}` : '';
 }
@@ -45,7 +45,7 @@ export function composeSceneBlock(o = {}) {
     if (o.weather) parts.push({ key: 'weather', text: `天:${o.weather}` });
     if (o.festival) parts.push({ key: 'festival', text: `节:${o.festival}` });
 
-    const on = onstageLine(pack, o.onstage ?? []);
+    const on = onstageLine(pack, o.onstage ?? [], o.showAffNumbers !== false);
     if (on) parts.push({ key: 'onstage', text: on, locked: true });
 
     if (o.motive) parts.push({ key: 'motive', text: `动机:${o.motive}` });
