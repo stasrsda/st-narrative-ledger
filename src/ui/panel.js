@@ -58,10 +58,19 @@ function card(title) {
     return c;
 }
 
-function buildDrawer() {
-    const d = el('div', 'story-ledger-drawer');
-    d.id = PANEL_ID;
-    d.setAttribute('aria-hidden', 'true');
+/** 弹窗结构：遮罩 + 居中对话框 */
+function buildModal() {
+    const modal = el('div', 'story-ledger-modal');
+    modal.id = PANEL_ID;
+    modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-label', '叙事账本');
+
+    const backdrop = el('div', 'sl-backdrop');
+    backdrop.addEventListener('click', closeDrawer);
+
+    const dialog = el('div', 'sl-dialog');
+
     const head = el('div', 'sl-head');
     head.append(el('span', 'sl-title', '叙事账本'));
     const ver = el('span', 'sl-version', 'v' + VERSION);
@@ -69,6 +78,7 @@ function buildDrawer() {
     head.append(ver);
     const close = el('button', 'sl-close', '×');
     close.type = 'button';
+    close.setAttribute('aria-label', '关闭');
     close.addEventListener('click', closeDrawer);
     head.append(close);
 
@@ -87,21 +97,24 @@ function buildDrawer() {
     const body = el('div', 'sl-body');
     body.id = 'sl-body';
 
-    d.append(head, tabs, body);
-    document.body.append(d);
-    return d;
+    dialog.append(head, tabs, body);
+    modal.append(backdrop, dialog);
+    document.body.append(modal);
+    return modal;
 }
 
-function ensure() {
-    return document.getElementById(PANEL_ID) ?? buildDrawer();
+function ensureModal() {
+    return document.getElementById(PANEL_ID) ?? buildModal();
 }
 
 function render() {
-    const body = document.getElementById('sl-body');
-    if (!body) return;
-    for (const b of document.querySelectorAll('.sl-tab')) {
+    const modal = document.getElementById(PANEL_ID);
+    if (!modal) return;
+    for (const b of modal.querySelectorAll('.sl-tab')) {
         b.classList.toggle('is-active', b.dataset.tab === S.tab);
     }
+    const body = document.getElementById('sl-body');
+    if (!body) return;
     body.replaceChildren();
 
     if (S.tab === 'state') {
@@ -115,6 +128,7 @@ function render() {
         c.append(row('聊天', S.chatId));
         c.append(row('楼层', S.messageCount));
         body.append(c);
+
         if (S.block) {
             const b = card('本轮注入');
             b.append(el('pre', 'sl-block', S.block));
@@ -208,19 +222,27 @@ export function refreshPanel(patch = {}) {
 }
 
 export function openDrawer() {
-    const d = ensure();
-    d.classList.add('is-open');
-    d.setAttribute('aria-hidden', 'false');
+    const modal = ensureModal();
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body?.classList.add('story-ledger-locked');
     render();
 }
 
 export function closeDrawer() {
-    const d = document.getElementById(PANEL_ID);
-    if (!d) return;
-    d.classList.remove('is-open');
-    d.setAttribute('aria-hidden', 'true');
+    const modal = document.getElementById(PANEL_ID);
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body?.classList.remove('story-ledger-locked');
 }
 
 export function mountPanel() {
-    ensure();
+    ensureModal();
+    if (!mountPanel._esc) {
+        mountPanel._esc = true;
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeDrawer();
+        });
+    }
 }

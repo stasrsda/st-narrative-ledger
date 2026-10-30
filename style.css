@@ -1,102 +1,105 @@
-.story-ledger-drawer {
+/* 叙事账本 —— 弹窗式面板（手机上更好点） */
+
+/* ── 弹窗外壳 ── */
+.story-ledger-modal {
     position: fixed;
-    top: 0;
-    right: 0;
-    width: 320px;
-    max-width: 86vw;
-    height: 100vh;
-    background: var(--SmartThemeBlurTintColor, #1b1b1f);
-    border-left: 1px solid var(--SmartThemeBorderColor, #333);
-    transform: translateX(102%);
-    transition: transform .18s ease;
-    z-index: 4000;
+    inset: 0;
+    z-index: 40000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.story-ledger-modal.is-open {
+    display: flex;
+}
+
+.sl-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, .55);
+}
+
+.sl-dialog {
+    position: relative;
     display: flex;
     flex-direction: column;
+    width: min(560px, 94vw);
+    max-height: min(82vh, 760px);
+    background: var(--SmartThemeBlurTintColor, #1b1b1f);
     color: var(--SmartThemeBodyColor, #ddd);
+    border: 1px solid var(--SmartThemeBorderColor, #3a3a40);
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .55);
     font-size: 13px;
+    overflow: hidden;
+    animation: sl-pop .14s ease-out;
 }
 
-.story-ledger-drawer.is-open {
-    transform: translateX(0);
+@keyframes sl-pop {
+    from { transform: scale(.97); opacity: .6; }
+    to { transform: scale(1); opacity: 1; }
 }
 
+body.story-ledger-locked {
+    overflow: hidden;
+}
+
+/* ── 头部 ── */
 .sl-head {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 10px 12px;
     border-bottom: 1px solid var(--SmartThemeBorderColor, #333);
+    flex: 0 0 auto;
 }
 
 .sl-title {
     font-weight: 600;
+    font-size: 14px;
 }
 
 .sl-version {
-    opacity: .55;
     font-size: 11px;
+    opacity: .55;
+    margin-left: auto;
+    padding-right: 4px;
 }
 
 .sl-close {
-    margin-left: auto;
-    background: none;
+    width: 28px;
+    height: 28px;
+    line-height: 1;
+    font-size: 20px;
+    background: transparent;
     border: 0;
     color: inherit;
-    font-size: 18px;
-    line-height: 1;
+    opacity: .7;
     cursor: pointer;
-    opacity: .6;
+    border-radius: 6px;
 }
 
 .sl-close:hover {
     opacity: 1;
+    background: rgba(255, 255, 255, .08);
 }
 
-.sl-body {
-    padding: 10px 12px;
-    overflow-y: auto;
-    flex: 1;
-}
-
-.sl-card {
-    border: 1px solid var(--SmartThemeBorderColor, #333);
-    border-radius: 6px;
-    padding: 8px 10px;
-    margin-bottom: 10px;
-}
-
-.sl-card-title {
-    font-weight: 600;
-    margin-bottom: 6px;
-    opacity: .85;
-}
-
-.sl-row {
-    display: flex;
-    gap: 8px;
-    padding: 2px 0;
-}
-
-.sl-k {
-    opacity: .6;
-    min-width: 64px;
-}
-
-.sl-v {
-    word-break: break-all;
-}
-
-.sl-note {
-    opacity: .55;
-    line-height: 1.6;
-    font-size: 12px;
-}
-
+/* ── 页签 ── */
 .sl-tabs {
     display: flex;
-    gap: 4px;
-    padding: 8px 12px 0;
+    gap: 2px;
+    padding: 6px 8px 0;
     border-bottom: 1px solid var(--SmartThemeBorderColor, #333);
+    flex: 0 0 auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.sl-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .sl-tab {
@@ -106,8 +109,9 @@
     color: inherit;
     opacity: .55;
     font-size: 12px;
-    padding: 4px 6px;
+    padding: 6px 10px;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .sl-tab.is-active {
@@ -115,36 +119,86 @@
     border-bottom-color: var(--SmartThemeQuoteColor, #8ab4f8);
 }
 
+/* ── 内容 ── */
+.sl-body {
+    padding: 10px 12px 14px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.sl-card {
+    border: 1px solid var(--SmartThemeBorderColor, #333);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, .02);
+}
+
+.sl-card-title {
+    font-size: 12px;
+    opacity: .6;
+    margin-bottom: 6px;
+}
+
+.sl-row {
+    display: flex;
+    gap: 10px;
+    padding: 3px 0;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.sl-k {
+    flex: 0 0 auto;
+    min-width: 88px;
+    opacity: .55;
+}
+
+.sl-v {
+    flex: 1 1 auto;
+    word-break: break-word;
+}
+
+.sl-note {
+    font-size: 11px;
+    opacity: .6;
+    line-height: 1.5;
+}
+
 .sl-block {
     white-space: pre-wrap;
-    word-break: break-all;
+    word-break: break-word;
     font-size: 11px;
     line-height: 1.6;
     opacity: .85;
     margin: 0;
-    max-height: 40vh;
+    max-height: 34vh;
     overflow: auto;
+    font-family: inherit;
 }
 
 .sl-input {
     width: 100%;
+    box-sizing: border-box;
     margin: 6px 0;
-    padding: 4px 6px;
+    padding: 6px 8px;
     background: var(--SmartThemeInputColor, #222);
     color: inherit;
     border: 1px solid var(--SmartThemeBorderColor, #444);
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 12px;
 }
 
 .sl-btn {
     width: 100%;
-    margin: 6px 0 2px;
-    padding: 6px 8px;
+    margin: 4px 0;
+    padding: 8px 10px;
     background: var(--SmartThemeInputColor, #2a2a2f);
     color: inherit;
     border: 1px solid var(--SmartThemeBorderColor, #444);
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 12px;
     cursor: pointer;
 }
@@ -153,7 +207,7 @@
     border-color: var(--SmartThemeQuoteColor, #8ab4f8);
 }
 
-/* 兜底悬浮按钮 */
+/* ── 入口：悬浮按钮 ── */
 #story-ledger-fab {
     position: fixed;
     right: 16px;
@@ -164,9 +218,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--SmartThemeBlurTintColor, rgba(30, 30, 34, .92));
-    border: 1px solid var(--SmartThemeBorderColor, #555);
-    color: var(--SmartThemeBodyColor, #eee);
+    background: rgba(30, 30, 34, .92);
+    border: 1px solid #666;
+    color: #eee;
     box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
     cursor: pointer;
     z-index: 30000;
@@ -178,14 +232,43 @@
     border-color: var(--SmartThemeQuoteColor, #8ab4f8);
 }
 
-
-/* 扩展设置里的入口块内容（折叠由 ST 的 inline-drawer 负责） */
+/* ── 入口：扩展设置里的块 ── */
 .story-ledger-body {
     padding: 4px 2px 8px;
 }
 
 .story-ledger-body .sl-note {
-    font-size: 11px;
-    opacity: .7;
     margin-bottom: 6px;
+}
+
+/* ── 窄屏 ── */
+@media (max-width: 520px) {
+    .sl-dialog {
+        width: 96vw;
+        max-height: 88vh;
+        border-radius: 12px;
+    }
+
+    .sl-head {
+        padding: 12px 14px;
+    }
+
+    .sl-close {
+        width: 34px;
+        height: 34px;
+        font-size: 22px;
+    }
+
+    .sl-tab {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .sl-body {
+        padding: 12px 14px 18px;
+    }
+
+    .sl-row {
+        font-size: 13px;
+    }
 }
