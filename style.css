@@ -401,13 +401,14 @@ body.story-ledger-locked {
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
-    bottom: 8px;
-    max-width: 92vw;
+    /* 贴屏幕顶部，让开 ST 的顶栏（--topBarBlockSize 由 ST 提供，取不到就用 44px 兜底） */
+    top: calc(var(--topBarBlockSize, 44px) + 2px);
+    max-width: 96vw;
     display: flex;
     gap: 10px;
-    padding: 5px 12px;
+    padding: 4px 12px;
     border-radius: 999px;
-    background: rgba(24, 24, 28, .82);
+    background: rgba(24, 24, 28, .88);
     border: 1px solid var(--SmartThemeBorderColor, #3a3a40);
     color: var(--SmartThemeBodyColor, #ddd);
     font-size: 12px;
@@ -426,6 +427,7 @@ body.story-ledger-locked {
     display: inline-flex;
     align-items: baseline;
     gap: 4px;
+    flex: 0 0 auto;
 }
 
 .sl-hud-name { opacity: .85; }
@@ -440,12 +442,43 @@ body.story-ledger-locked {
 
 .sl-hud-band { opacity: .55; font-size: 11px; }
 
+.sl-hud-fold {
+    margin-left: 8px;
+    padding: 0 6px;
+    opacity: .5;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.sl-hud-fold:hover { opacity: 1; }
+
+.story-ledger-hud.is-collapsed {
+    padding: 3px 12px;
+}
+
+.sl-hud-pill {
+    cursor: pointer;
+    opacity: .8;
+}
+
+.sl-hud-pill:hover { opacity: 1; }
+
+/* 手机：更小、更靠上、横向可滑 */
 @media (max-width: 768px) {
     .story-ledger-hud {
-        bottom: 72px;
+        top: calc(var(--topBarBlockSize, 40px) + 1px);
+        max-width: 98vw;
         font-size: 11px;
-        padding: 4px 10px;
-        gap: 8px;
+        padding: 3px 8px;
+        gap: 7px;
+        border-radius: 999px;
+    }
+
+    .sl-hud-band { font-size: 10px; }
+
+    .sl-hud-fold {
+        margin-left: 4px;
+        padding: 0 4px;
     }
 }
 
