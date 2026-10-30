@@ -18,7 +18,7 @@ import { openingMeta, openingLabel } from './src/core/runtime/opening.js';
 import { createTree, putNode } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
-import { parsePresence, resolveActors } from './src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, inferPresence } from './src/core/clock/presence.js';
 import { candidatesFor } from './src/core/codes/codes.js';
 import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
@@ -476,20 +476,25 @@ function settleMessage() {
     const { pack, state, meta } = currentState();
     const parsed = parseHeader(msg.mes ?? '', pack.calendar);
 
-    // 主模型写的【在场】行：解析成角色 id，写进名单
-    const names = parsePresence(msg.mes ?? '');
-    if (names && names.length) {
-        const { ids, unknown } = resolveActors(pack, names);
-        if (ids.length) {
-            writeMeta({ onstage: ids, onstageSrc: 'ai' });
-            log('主模型给出在场：', ids.join(','), unknown.length ? `（未识别的：${unknown.join(',')}）` : '');
-        } else if (unknown.length) {
-            log('在场行里的人名都认不出：', unknown.join(','));
+    // 在场：优先用旧协议的【在场】行（兼容），否则从正文推断
+    const declared = parsePresence(msg.mes ?? '');
+    let onIds = null;
+    if (declared && declared.length) {
+        const { ids } = resolveActors(pack, declared);
+        if (ids.length) onIds = ids;
+        // 旧协议的行从正文里删掉，避免每楼留一条污染上下文
+        const cleaned = stripPresence(msg.mes ?? '');
+        if (cleaned !== msg.mes) {
+            msg.mes = cleaned;
+            try { ctx().saveChat?.(); } catch { /* noop */ }
         }
-    } else if (names && names.length === 0) {
-        writeMeta({ onstage: [], onstageSrc: 'ai' });
-        log('主模型给出空在场');
+    } else if (declared && declared.length === 0) {
+        onIds = [];
+    } else {
+        onIds = inferPresence(pack, msg.mes ?? '');
+        if (onIds.length) log('从正文推断在场：', onIds.join(','));
     }
+    if (onIds) writeMeta({ onstage: onIds, onstageSrc: 'ai' });
 
     if (parsed) {
         const prev = meta.lastT ?? 0;

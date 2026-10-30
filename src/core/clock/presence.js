@@ -52,3 +52,33 @@ export function renderPresence(pack, ids = []) {
     const names = ids.map(id => pack?.index?.actor?.[id]?.name ?? id);
     return PRESENCE_MARK + names.join('、');
 }
+
+/** 名字的别称：全名 + 去掉姓（如 沈知微 → 知微） */
+function aliasesOf(actor) {
+    const out = new Set();
+    const n = String(actor?.name ?? '').trim();
+    if (n.length >= 2) {
+        out.add(n);
+        if (n.length >= 3) out.add(n.slice(1));   // 去姓
+        if (n.length >= 4) out.add(n.slice(-2));  // 末二字
+    }
+    return [...out];
+}
+
+/**
+ * 从正文里推断谁在场：谁的名字（或别称）出现在这一楼里。
+ * 不要求 AI 写任何标记行，也就不会往历史里留垃圾。
+ * @returns {string[]} 角色 id（最多 limit 个）
+ */
+export function inferPresence(pack, text, { limit = 6 } = {}) {
+    const t = String(text ?? '');
+    if (!t) return [];
+    const hits = [];
+    for (const actor of Object.values(pack?.index?.actor ?? {})) {
+        const alias = aliasesOf(actor);
+        // 用最长的别称判断，避免「知微」误命中别人的名字
+        const found = alias.some(a => a.length >= 2 && t.includes(a));
+        if (found && !hits.includes(actor.id)) hits.push(actor.id);
+    }
+    return hits.slice(0, limit);
+}

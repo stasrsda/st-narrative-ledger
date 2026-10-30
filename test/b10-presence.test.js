@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizePack } from '../src/core/pack/registry.js';
-import { parsePresence, stripPresence, resolveActors, renderPresence } from '../src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, renderPresence, inferPresence } from '../src/core/clock/presence.js';
 
 const raw = JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8'));
 const pack = normalizePack(raw);
@@ -41,4 +41,18 @@ test('去掉在场行', () => {
 
 test('渲染在场行', () => {
     assert.equal(renderPresence(pack, ['huozhen', 'zhiwei']), '【在场】霍振、沈知微');
+});
+
+test('从正文推断：全名与去姓别称都能认', () => {
+    const ids = inferPresence(pack, '霍振低声说了一句，沈知微抬头，知微没接话。');
+    assert.deepEqual(ids.sort(), ['huozhen', 'zhiwei'].sort());
+});
+
+test('从正文推断：没提到就返回空', () => {
+    assert.deepEqual(inferPresence(pack, '风把烟吹过来，带着血腥味。'), []);
+});
+
+test('从正文推断：最多 6 个', () => {
+    const long = pack.actors.map(a => a.name).join('，');
+    assert.ok(inferPresence(pack, long).length <= 6);
 });
