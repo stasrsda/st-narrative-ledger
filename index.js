@@ -23,6 +23,7 @@ import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
+import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
 import { candidatesFor } from './src/core/codes/codes.js';
 import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
@@ -341,6 +342,45 @@ function panelBase() {
     };
 }
 
+/** 轻角色：临时出现的人，只有名字与身分 */
+function addGuest(pack, guest) {
+    if (!guest?.name) return;
+    const meta = readMeta() ?? {};
+    const guests = Array.isArray(meta.guests) ? [...meta.guests] : [];
+    if (guests.some(g => g.name === guest.name)) return;
+    guests.push({ ...guest, rank: guest.rank ?? '客', aff: 0, since: Date.now() });
+    writeMeta({ guests: guests.slice(-40) });
+    // 当场合进运行时包，本轮就能被在场推断认出来
+    if (!pack.index.actor[guest.id]) {
+        const actor = {
+            id: guest.id, name: guest.name, aliases: [], rank: '客', aff: 0,
+            bond: 'love', stance: 'beiliang_folk', knows: [], temper: 'timid',
+            lines: [], beats: [], guest: true, title: guest.title,
+        };
+        pack.actors = [...pack.actors, actor];
+        pack.index.actor = { ...pack.index.actor, [actor.id]: actor };
+    }
+}
+
+/** 把 meta.guests 合进包（刷新页面后仍然认得出这些人） */
+function withGuests(pack, meta) {
+    const guests = meta?.guests ?? [];
+    if (!guests.length) return pack;
+    const actors = [...pack.actors];
+    const index = { ...pack.index.actor };
+    for (const g of guests) {
+        if (!g?.name || index[g.id]) continue;
+        const actor = {
+            id: g.id, name: g.name, aliases: [], rank: '客', aff: 0,
+            bond: 'love', stance: 'beiliang_folk', knows: [], temper: 'timid',
+            lines: [], beats: [], guest: true, title: g.title,
+        };
+        actors.push(actor);
+        index[actor.id] = actor;
+    }
+    return { ...pack, actors, index: { ...pack.index, actor: index } };
+}
+
 /** 好感视图（自取值版，任何地方都能调） */
 function affView() {
     try {
@@ -425,11 +465,11 @@ function treeOf(pack) {
 }
 
 function currentState() {
-    const { pack } = ensurePack();
+    const { pack: basePack } = ensurePack();
     let meta = readMeta();
     if (!meta?.seed) {
         // 新聊天或从未设置过：直接落一份开局状态，避免出现「承平元年正月初一」
-        const fresh = openingMeta(pack);
+        const fresh = openingMeta(basePack);
         writeMeta(fresh);
         meta = { ...(readMeta() ?? {}), ...fresh };
         log('首次进入本聊天，已写入开局状态');
@@ -438,13 +478,14 @@ function currentState() {
     state.place = meta.placeId ?? meta.seed?.place ?? state.place;
 
     // 在场名单：meta 里没写、或者写了太多（>6）都回落到世界包的开局名单
-    const openingList = pack.opening?.onstage ?? [];
+    const openingList = basePack.opening?.onstage ?? [];
     if (!Array.isArray(meta.onstage) || meta.onstage.length === 0 || meta.onstage.length > 6) {
         if (openingList.length) {
             meta.onstage = [...openingList];
             log('在场名单异常，回落到开局：', openingList.join(','));
         }
     }
+    const pack = withGuests(basePack, meta);
     return { pack, state, meta };
 }
 
@@ -528,6 +569,24 @@ function settleMessage() {
         msg.mes = scrubbed.text;
         log('清掉本楼状态残留', scrubbed.removed, '处');
         try { ctx().saveChat?.(); } catch { /* noop */ }
+    }
+
+    // 职权自动添加：正文里出现「某人+职位」时，给他一份职能
+    try {
+        const known = new Set(Object.values(pack.index?.actor ?? {}).map(a => a.name));
+        const officials = detectOfficials(msg.mes ?? '', { knownNames: known, limit: 3 });
+        if (officials.length) {
+            const evs = [];
+            for (const o of officials) {
+                evs.push(...officialToGrants(o));
+                // 记成轻角色：只有名字与身分，没有好感档案
+                addGuest(pack, { id: `guest_${o.name}`, name: o.name, title: o.title });
+            }
+            appendEvents(msg, evs);
+            log('自动登记职权', officials.map(o => `${o.name}(${o.title})`).join('、'));
+        }
+    } catch (e) {
+        log('职权自动添加失败', e?.message ?? e);
     }
 
     // 在场：优先用旧协议的【在场】行（兼容），否则从正文推断

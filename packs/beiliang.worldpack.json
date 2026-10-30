@@ -4286,7 +4286,7 @@
     "render": "取 stance.base，逐项加 knowledge.mod；fear 高且 respect 低 → 跪、躲、不敢称；respect 高 → 抱拳、敢说话；contempt 高 → 礼数齐全但慢半拍、不看人；closeness 高 → 少礼、说话随意。temper.shift 只调一级姿态，不改四轴。"
   },
   "authority": {
-    "note": "职权不等于位份，也不等于「什么都管」。白景昭手里只有北凉的兵权与自家府内的处置权；朝廷、别府、律法都不归他。两者常常错位，错位本身就是戏。",
+    "note": "职权不等于位份。位份决定礼数与待遇，职权决定「这件事归谁办」。白景昭手里只有北凉兵权与自家府内；朝廷、别府、律法都不归他。两者常常错位，错位本身就是戏。",
     "scopes": [
       {
         "id": "household",
@@ -4337,6 +4337,36 @@
         "id": "place",
         "label": "某院",
         "note": "以地点为范围，管一处院子"
+      },
+      {
+        "id": "guard",
+        "label": "宿卫",
+        "note": "王爷的刀、马、夜巡、随行"
+      },
+      {
+        "id": "kitchen",
+        "label": "厨下",
+        "note": "饭食、采买食材"
+      },
+      {
+        "id": "palace",
+        "label": "内廷",
+        "note": "宫里的起居、传话、赏赐"
+      },
+      {
+        "id": "court",
+        "label": "朝议",
+        "note": "上朝、奏对、参劾"
+      },
+      {
+        "id": "grassland",
+        "label": "草原",
+        "note": "部族、互市、马源"
+      },
+      {
+        "id": "county",
+        "label": "州县",
+        "note": "一地的民政与刑名"
       }
     ],
     "rights": [
@@ -4427,7 +4457,7 @@
           "view",
           "act"
         ],
-        "source": "副将"
+        "source": "副将·统全军执行"
       },
       {
         "holder": "huozhen",
@@ -4435,7 +4465,7 @@
         "rights": [
           "view"
         ],
-        "source": "副将"
+        "source": "副将·可请调"
       },
       {
         "holder": "song",
@@ -4444,7 +4474,23 @@
           "view",
           "act"
         ],
-        "source": "掌文书"
+        "source": "幕僚长·文书"
+      },
+      {
+        "holder": "song",
+        "scope": "investigate",
+        "rights": [
+          "view"
+        ],
+        "source": "幕僚长·刑名"
+      },
+      {
+        "holder": "song",
+        "scope": "ledger",
+        "rights": [
+          "view"
+        ],
+        "source": "幕僚长·赋税户籍"
       },
       {
         "holder": "zhaobo",
@@ -4453,7 +4499,7 @@
           "view",
           "act"
         ],
-        "source": "总管"
+        "source": "管家·外院"
       },
       {
         "holder": "zhaobo",
@@ -4462,7 +4508,7 @@
           "view",
           "act"
         ],
-        "source": "总管"
+        "source": "管家·人事"
       },
       {
         "holder": "zhaobo",
@@ -4470,73 +4516,25 @@
         "rights": [
           "view"
         ],
-        "source": "总管"
+        "source": "管家·采买"
       },
       {
-        "holder": "xie",
-        "scope": "household",
-        "rights": [
-          "view"
-        ],
-        "source": "正妃（未过门·暂看）"
-      },
-      {
-        "holder": "qingyun",
-        "scope": "p_wf_dong",
+        "holder": "zhaobo",
+        "scope": "protocol",
         "rights": [
           "view",
           "act"
         ],
-        "source": "东跨院"
-      },
-      {
-        "holder": "qixia",
-        "scope": "p_wf_dong",
-        "rights": [
-          "view"
-        ],
-        "source": "东跨院"
-      },
-      {
-        "holder": "biya",
-        "scope": "p_wf_dong",
-        "rights": [
-          "view"
-        ],
-        "source": "东跨院"
-      },
-      {
-        "holder": "huixiang",
-        "scope": "p_wf_shufang",
-        "rights": [
-          "view",
-          "act"
-        ],
-        "source": "管书房"
-      },
-      {
-        "holder": "huangxiong",
-        "scope": "*",
-        "rights": [
-          "view"
-        ],
-        "source": "君"
-      },
-      {
-        "holder": "qindou",
-        "scope": "army",
-        "rights": [
-          "view"
-        ],
-        "source": "亲卫统领"
+        "source": "管家·门房车马"
       },
       {
         "holder": "fushu",
-        "scope": "household",
+        "scope": "kitchen",
         "rights": [
-          "view"
+          "view",
+          "act"
         ],
-        "source": "老仆"
+        "source": "厨役"
       },
       {
         "holder": "sunzhangfang",
@@ -4545,7 +4543,107 @@
           "view",
           "act"
         ],
-        "source": "账房"
+        "source": "户房·田庄军饷采买"
+      },
+      {
+        "holder": "sunzhangfang",
+        "scope": "storehouse",
+        "rights": [
+          "view"
+        ],
+        "source": "户房·点账"
+      },
+      {
+        "holder": "cuizhanggui",
+        "scope": "protocol",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "商队大掌柜·外路"
+      },
+      {
+        "holder": "cuizhanggui",
+        "scope": "ledger",
+        "rights": [
+          "view"
+        ],
+        "source": "商队·外账"
+      },
+      {
+        "holder": "qindou",
+        "scope": "guard",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "亲卫队长"
+      },
+      {
+        "holder": "xie",
+        "scope": "household",
+        "rights": [
+          "view"
+        ],
+        "source": "待嫁·婚后掌总账"
+      },
+      {
+        "holder": "qingyun",
+        "scope": "p_wf_dong",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "妾·东跨院"
+      },
+      {
+        "holder": "qingyun",
+        "scope": "protocol",
+        "rights": [
+          "view"
+        ],
+        "source": "妾·宴席琴"
+      },
+      {
+        "holder": "qixia",
+        "scope": "p_wf_dong",
+        "rights": [
+          "view"
+        ],
+        "source": "通房·近身茶水"
+      },
+      {
+        "holder": "biya",
+        "scope": "p_wf_dong",
+        "rights": [
+          "view"
+        ],
+        "source": "通房·针线"
+      },
+      {
+        "holder": "huixiang",
+        "scope": "p_wf_shufang",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "通房·书房纸墨"
+      },
+      {
+        "holder": "nongyue",
+        "scope": "protocol",
+        "rights": [
+          "view"
+        ],
+        "source": "妾·歌舞宴客"
+      },
+      {
+        "holder": "nichang",
+        "scope": "protocol",
+        "rights": [
+          "view"
+        ],
+        "source": "妾·歌舞宴客"
       },
       {
         "holder": "qianbo",
@@ -4556,15 +4654,67 @@
         "source": "门房"
       },
       {
-        "holder": "cuizhanggui",
-        "scope": "protocol",
+        "holder": "wubo",
+        "scope": "household",
         "rights": [
           "view"
         ],
-        "source": "商队"
+        "source": "洒扫看屋"
+      },
+      {
+        "holder": "zhengbo",
+        "scope": "kitchen",
+        "rights": [
+          "view"
+        ],
+        "source": "厨下"
+      },
+      {
+        "holder": "huangxiong",
+        "scope": "court",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "君"
+      },
+      {
+        "holder": "huangxiong",
+        "scope": "army",
+        "rights": [
+          "view"
+        ],
+        "source": "君·调兵需旨"
+      },
+      {
+        "holder": "taihou",
+        "scope": "palace",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "太后·内廷"
+      },
+      {
+        "holder": "taihou",
+        "scope": "court",
+        "rights": [
+          "view"
+        ],
+        "source": "太后·可议"
       }
     ],
-    "seedNote": "开局分配。账目一职故意空着——知微是后来才接手的。改动用 grant/revoke 事件，不改这里。"
+    "seedNote": "开局分配。账目一职故意空着——知微是后来才接手的。改动用 grant/revoke 事件，不改这里。",
+    "layers": {
+      "core": {
+        "label": "核心层",
+        "note": "府内 / 北凉军政 / 草原王庭 / 宫中：精确到哪一摊、能看还是能动"
+      },
+      "outer": {
+        "label": "外围层",
+        "note": "京城百官、州县、外路商号：只记管哪一摊、能不能办，不记品级下属"
+      }
+    }
   },
   "events": [
     {

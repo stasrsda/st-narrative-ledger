@@ -140,9 +140,11 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
         doneNames.length ? `已结：${doneNames.join('、')}` : '',
     ].filter(Boolean).join('｜');
 
+    // holder 可能是 id（包内角色），也可能是名字（剧情里自动登记的官员）
+    const onstageKey = new Set(onstage.flatMap(o => [o.id, o.name]));
     const auth = (state.grants ?? [])
-        .filter(g => onstage.some(o => o.id === g.holder))
-        .slice(0, 2)
+        .filter(g => onstageKey.has(g.holder))
+        .slice(0, 3)
         .map(g => grantLine({ ...g, holder: pack.index?.actor?.[g.holder]?.name ?? g.holder }));
 
     const season = w?.season ?? null;
