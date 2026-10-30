@@ -63,6 +63,36 @@ test('从没做过时不给间隔', () => {
     assert.equal(recentOf(pack, { lastT: null }, 999).days, null);
 });
 
+test('单场阶段：只在当天有效', async () => {
+    const { phaseOf, phaseAlive } = await import('../src/core/actors/experience.js');
+    const t = 100 * 1440;
+    assert.equal(phaseOf(pack, 'mid').label, '交合');
+    assert.equal(phaseAlive(pack, { id: 'mid', t: t - 600 }, t), true);
+    assert.equal(phaseAlive(pack, { id: 'mid', t: t - 2 * 1440 }, t), false);
+    assert.equal(phaseAlive(pack, { id: 'none', t }, t), false);
+});
+
+test('经验行带当前阶段', async () => {
+    const { expLine } = await import('../src/core/actors/experience.js');
+    const t = 100 * 1440;
+    const line = expLine(pack, '知微', { total: 5, withUser: 5, lastT: t - 60 }, t, { id: 'mid', t: t - 30 });
+    assert.match(line, /此刻:交合/);
+});
+
+test('阶段过期就不提', async () => {
+    const { expLine } = await import('../src/core/actors/experience.js');
+    const t = 100 * 1440;
+    const line = expLine(pack, '知微', { total: 5, withUser: 5, lastT: t - 2 * 1440 }, t, { id: 'mid', t: t - 2 * 1440 });
+    assert.ok(!line.includes('此刻'));
+});
+
+test('账本：exp 事件记录阶段', async () => {
+    const { applyEvent, emptyState } = await import('../src/core/ledger/ledger.js');
+    const s = applyEvent(emptyState(), { k: 'exp', actor: 'zhiwei', phase: 'warm', t: 120 });
+    assert.equal(s.phase.zhiwei.id, 'warm');
+    assert.equal(s.exp.zhiwei.total, 1);
+});
+
 test('账本：exp 事件累加并记时刻', async () => {
     const { applyEvent, emptyState } = await import('../src/core/ledger/ledger.js');
     let s = applyEvent(emptyState(), { k: 'clock', t: 5000 });

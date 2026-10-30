@@ -42,7 +42,7 @@ export function toEvents(pack, state, data = {}) {
 
     for (const it of data.intimate ?? []) {
         if (!actorIds.has(it.actor)) continue;
-        events.push({ k: 'exp', actor: it.actor });
+        events.push({ k: 'exp', actor: it.actor, phase: it.phase });
     }
 
     for (const k of data.knows ?? []) {

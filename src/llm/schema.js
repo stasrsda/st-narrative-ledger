@@ -50,7 +50,7 @@ export function normalizeSettle(raw, { actorIds = null, text = '' } = {}) {
     for (const it of asArray(obj.intimate).slice(0, 1)) {
         if (!it?.actor) continue;
         if (actorIds && !actorIds.has(it.actor)) continue;
-        data.intimate.push({ actor: it.actor });
+        data.intimate.push({ actor: it.actor, phase: String(it.phase ?? 'mid') });
     }
     for (const m of asArray(obj.motives)) {
         if (!m?.actor || !m.id) continue;

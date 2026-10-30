@@ -6,6 +6,7 @@ export function emptyState() {
         aff: {},
         rank: {},
         exp: {},
+        phase: {},
         know: {},
         done: [],
         emergent: [],
@@ -26,6 +27,7 @@ function clone(s) {
         aff: { ...s.aff },
         rank: { ...s.rank },
         exp: { ...s.exp },
+        phase: { ...s.phase },
         know: { ...s.know },
         done: [...s.done],
         emergent: [...s.emergent],
@@ -67,13 +69,18 @@ export function applyEvent(state, ev, opts = {}) {
         case 'exp': {
             if (!ev.actor) break;
             const cur = s.exp[ev.actor] ?? { total: 0, withUser: 0, lastT: null };
+            const at = Number.isFinite(ev.t) ? ev.t : s.t;
             s.exp[ev.actor] = {
                 total: cur.total + 1,
                 withUser: cur.withUser + 1,
-                lastT: Number.isFinite(ev.t) ? ev.t : s.t,
+                lastT: at,
             };
+            s.phase[ev.actor] = { id: ev.phase ?? 'mid', t: at };
             break;
         }
+        case 'phase':
+            if (ev.actor) s.phase[ev.actor] = { id: ev.phase ?? 'none', t: Number.isFinite(ev.t) ? ev.t : s.t };
+            break;
         case 'event':
             if (ev.id && !s.done.includes(ev.id)) s.done.push(ev.id);
             break;

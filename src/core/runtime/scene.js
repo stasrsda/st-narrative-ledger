@@ -86,7 +86,8 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     const intimateScene = meta.intimate || node?.scene === 'bedroom';
     if (focus && shouldInjectExp({ intimate: intimateScene, mentioned: meta.expMentioned })) {
         const e = state.exp?.[focus.id] ?? expOf(state, focus.id);
-        if (e.total > 0 || intimateScene) exp = expLine(pack, focus.name, e, state.t ?? 0);
+        const ph = state.phase?.[focus.id] ?? null;
+        if (e.total > 0 || intimateScene) exp = expLine(pack, focus.name, e, state.t ?? 0, ph);
     }
 
     return composeSceneBlock({
