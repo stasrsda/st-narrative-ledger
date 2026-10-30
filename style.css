@@ -280,3 +280,59 @@ body.story-ledger-locked {
     min-height: 32px;
     cursor: pointer;
 }
+
+/* ===== 移动端定位修正（追加，覆盖上面的规则） ===== */
+/*
+ * 手机浏览器里 100vh 是按「布局视口」算的，地址栏收起/展开会让它比可见区大，
+ * 于是居中的弹窗上半部分被顶到屏幕外——只看得见下半截。
+ * 这里改用 dvh，并改成顶部对齐，保证上沿永远可达。
+ */
+.story-ledger-modal {
+    height: 100vh;
+    height: 100dvh;
+    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 99999;
+    padding-top: max(10px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    overscroll-behavior: contain;
+}
+
+.sl-dialog {
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    margin: auto;
+}
+
+/* 窄屏：顶部对齐 + 内容区自己滚，不让整块超出屏幕 */
+@media (max-width: 768px) {
+    .story-ledger-modal {
+        align-items: flex-start;
+        justify-content: center;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .sl-dialog {
+        width: 100%;
+        max-width: 560px;
+        max-height: calc(100dvh - 20px);
+        margin-top: 0;
+        border-radius: 12px;
+    }
+
+    .sl-head {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--SmartThemeBlurTintColor, #1b1b1f);
+    }
+
+    .sl-body {
+        padding-bottom: max(18px, env(safe-area-inset-bottom, 0px));
+    }
+}
