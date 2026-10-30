@@ -19,6 +19,7 @@ import { createTree, putNode } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
 import { renderHeader } from './src/core/calendar/guofeng.js';
+import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { candidatesFor } from './src/core/codes/codes.js';
@@ -356,6 +357,7 @@ function diagInfo() {
             onstage: meta?.onstage ?? [],
             lastEvents: (state.done?.length ?? 0) + (state.emergent?.length ?? 0),
             lastLen: (messages()[messages().length - 1]?.mes ?? '').length,
+            advance: readMeta()?.lastAdvance ?? null,
             affSample: ['huozhen', 'zhiwei']
                 .filter(id => state.aff?.[id] != null)
                 .map(id => `${id} ${state.aff[id]}`)
@@ -478,13 +480,20 @@ function settleMessage() {
     if (!msg || msg.is_user) return;
 
     const { pack, state, meta } = currentState();
+    // 时钟由插件推进：按这一轮的内容估算耗时，写一条 clock 事件
+    const userTextForClock = messages()[idx - 1]?.mes ?? '';
+    const step = advanceTurn(state.t ?? 0, userTextForClock + String(msg.mes ?? ''));
+    appendEvents(msg, [{ k: 'clock', t: step.t, src: 'auto' }]);
+    writeMeta({ lastAdvance: { minutes: step.minutes, why: step.why, from: state.t, to: step.t } });
+    log('时间推进', renderAdvance(step.minutes, step.why));
+
     let parsed = parseHeader(msg.mes ?? '', pack.calendar);
     if (!parsed) {
         // 模型没写或写坏了：用当前状态补一行，保证时地永远在
         const treeNow = treeOf(pack);
         const node = meta.placeId || state.place ? treeNow.nodes?.[meta.placeId ?? state.place] : null;
         const placeName = meta.placeName || node?.name || '';
-        const header = renderHeader(state.t ?? 0, placeName, pack.calendar);
+        const header = renderHeader(step.t, placeName, pack.calendar);
         msg.mes = header + '\n\n' + String(msg.mes ?? '').trim();
         parsed = parseHeader(msg.mes, pack.calendar);
         log('模型没写时间头，已补：', header);
@@ -530,7 +539,7 @@ function settleMessage() {
         const prev = meta.lastT ?? 0;
         appendEvents(msg, [{ k: 'clock', t: parsed.t, src: 'header' }]);
         writeMeta({ lastT: parsed.t, placeName: parsed.place || meta.placeName || '', backward: parsed.t < prev });
-        const fixed = rewriteHeader(msg.mes, parsed.t, parsed.place || meta.placeName || '');
+        const fixed = rewriteHeader(msg.mes, step.t, parsed.place || meta.placeName || '');
         if (fixed !== msg.mes) {
             msg.mes = fixed;
             try {
