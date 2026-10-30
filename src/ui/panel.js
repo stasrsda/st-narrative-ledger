@@ -371,6 +371,12 @@ function render() {
             dg.append(row('在场来源', S.diag.onstageSrc === 'ai' ? '主模型写的【在场】行' : '手动/开局'));
             dg.append(row('事件数', S.diag.lastEvents ?? 0));
             dg.append(row('末楼字数', S.diag.lastLen ?? 0));
+            if (S.diag.lastThink) {
+                dg.append(row('其中思考', `${S.diag.lastThink} 字（正文 ${S.diag.lastBody ?? 0} 字）`));
+            }
+            if (S.diag.lastCut) {
+                dg.append(el('div', 'sl-note', '⚠ 末楼正文疑似被截断：结尾没有句读。多半是 max_tokens 太小，或思考吃掉了输出预算。'));
+            }
             if (S.diag.advance) {
                 const a = S.diag.advance;
                 dg.append(row('上一轮推进', `${a.minutes} 分（${a.why}）`));

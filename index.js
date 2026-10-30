@@ -31,7 +31,7 @@ import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
 import { normalizeSettle } from './src/llm/schema.js';
 import { toEvents } from './src/llm/settle.js';
-import { reviewText, summarize } from './src/core/review/review.js';
+import { reviewText, summarize, looksTruncated } from './src/core/review/review.js';
 
 const MENU_CLASS = 'story-ledger-menu-item';
 const registry = createRegistry();
@@ -401,6 +401,9 @@ function diagInfo() {
             onstage: meta?.onstage ?? [],
             lastEvents: (state.done?.length ?? 0) + (state.emergent?.length ?? 0),
             lastLen: (messages()[messages().length - 1]?.mes ?? '').length,
+            lastThink: splitThinking(messages()[messages().length - 1]?.mes ?? '').thinking.length,
+            lastBody: splitThinking(messages()[messages().length - 1]?.mes ?? '').body.length,
+            lastCut: looksTruncated(splitThinking(messages()[messages().length - 1]?.mes ?? '').body),
             advance: readMeta()?.lastAdvance ?? null,
             affSample: ['huozhen', 'zhiwei']
                 .filter(id => state.aff?.[id] != null)
