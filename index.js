@@ -289,18 +289,19 @@ function syncChatVariables(state) {
 
 /** 好感视图：在场的一行 + 全量列表，给面板和底部好感条用 */
 function affinityView(pack, state, meta) {
-    const bandOf = (v) => {
-        const ladder = pack.affinity?.ladder ?? [];
+    // 档位按角色的 bond 选词：臣属/亲族不能用情爱那套（否则赵伯 70 会显示「深爱」）
+    const bandOf = (v, bond = 'love') => {
+        const table = (bond && bond !== 'love' ? pack.affinity?.[bond] : null) ?? pack.affinity?.ladder ?? [];
         const min = pack.affinity?.min ?? -100;
         const step = pack.affinity?.step ?? 10;
-        const idx = Math.max(0, Math.min(ladder.length - 1, Math.floor((Math.max(min, Math.min(100, v)) - min) / step)));
-        return ladder[idx] ?? '';
+        const idx = Math.max(0, Math.min(table.length - 1, Math.floor((Math.max(min, Math.min(100, v)) - min) / step)));
+        return table[idx] ?? '';
     };
     const onstageIds = (meta?.onstage ?? []).filter(id => pack.index?.actor?.[id]);
     const row = id => {
         const a = pack.index.actor[id];
         const aff = state.aff?.[id] ?? a.aff ?? 0;
-        return { id, name: a.name, aff, band: bandOf(aff) };
+        return { id, name: a.name, aff, bond: a.bond ?? 'love', band: bandOf(aff, a.bond ?? 'love') };
     };
     return {
         bar: onstageIds.map(row),

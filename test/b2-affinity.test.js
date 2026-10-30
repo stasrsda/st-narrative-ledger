@@ -79,3 +79,30 @@ test('位份行', () => {
     assert.match(line, /称王爷·自称妾身/);
     assert.match(line, /留宿:不可/);
 });
+
+test('bond 决定词表：赵伯 70 是「死忠」不是「深爱」', () => {
+    assert.equal(bandOf(pack, 70, 'loyalty').name, '死忠');
+    assert.equal(bandOf(pack, 70, 'love').name, '深爱');   // 用错词表就会变成这个
+    assert.equal(bandOf(pack, 60, 'loyalty').name, '心腹');
+    assert.equal(bandOf(pack, 40, 'loyalty').name, '信服');
+});
+
+test('bond 决定词表：亲族用 kin', () => {
+    assert.equal(bandOf(pack, 30, 'kin').name, '亲近');
+    assert.equal(bandOf(pack, 20, 'kin').name, '亲近');
+    assert.equal(bandOf(pack, -30, 'kin').name, '生分');
+});
+
+test('女眷仍用 love 词表', () => {
+    assert.equal(bandOf(pack, -30, 'love').name, '怕');
+    assert.equal(bandOf(pack, 60, 'love').name, '爱');
+});
+
+test('包里每个角色的 bond 都有对应词表', () => {
+    for (const a of pack.actors) {
+        const bond = a.bond ?? 'love';
+        if (bond === 'love') continue;
+        assert.ok(Array.isArray(pack.affinity[bond]), `${a.name} 的 bond=${bond} 没有词表`);
+        assert.equal(pack.affinity[bond].length, pack.affinity.ladder.length);
+    }
+});
