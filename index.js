@@ -1,6 +1,8 @@
 // 叙事账本 · 入口
-// 用命名空间导入：即使某个导出在新版 ST 里被改名/移除，模块也不会整体加载失败
-import * as ST from '../../../script.js';
+// 不静态 import script.js：新版 ST 若改名/挪位置，静态导入会让整个扩展加载失败。
+// 改成运行时动态取，取不到就用字符串常量兜底——扩展至少能起来。
+try { console.log('[叙事账本] module start'); } catch { /* noop */ }
+
 import { VERSION } from './src/core/version.js';
 import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset } from './src/ui/panel.js';
 import {
@@ -27,15 +29,27 @@ const MENU_CLASS = 'story-ledger-menu-item';
 const registry = createRegistry();
 const settings = { profileId: '', depth: 1, enabled: true };
 
-/** 事件源与事件名：优先用 ST 导出的，缺了就用字符串常量 */
-const eventSource = ST.eventSource ?? globalThis.eventSource ?? null;
-const EV = ST.event_types ?? globalThis.event_types ?? {
+/** 事件源与事件名：先取全局，再动态 import script.js，最后回落字符串常量 */
+let eventSource = globalThis.eventSource ?? null;
+let EV = globalThis.event_types ?? {
     CHAT_CHANGED: 'chat_changed',
     GENERATION_AFTER_COMMANDS: 'generation_after_commands',
     MESSAGE_RECEIVED: 'message_received',
     MESSAGE_SWIPED: 'message_swiped',
     MESSAGE_DELETED: 'message_deleted',
 };
+
+async function loadSTEvents() {
+    if (typeof eventSource?.on === 'function' && EV.CHAT_CHANGED) return;
+    try {
+        const mod = await import('../../../script.js');
+        eventSource = mod.eventSource ?? mod.default?.eventSource ?? eventSource;
+        if (mod.event_types) EV = { ...EV, ...mod.event_types };
+        if (mod.default?.eventSource) eventSource = mod.default.eventSource;
+    } catch (e) {
+        log('script.js 取不到，用字符串常量', e?.message ?? e);
+    }
+}
 
 /** 环境自检：面板里能看见，出问题不用翻控制台 */
 function envInfo() {
@@ -277,8 +291,15 @@ function boot() {
 }
 
 jQuery(async () => {
-    await loadBundledPacks();
-    boot();
+    await loadSTEvents();
+    window.addEventListener('error', e => log('未捕获错误', e?.message));
+    window.addEventListener('unhandledrejection', e => log('未处理的拒绝', e?.reason?.message ?? e?.reason));
+    try {
+        await loadBundledPacks();
+        boot();
+    } catch (e) {
+        log('启动失败', e?.message ?? e, e?.stack ?? '');
+    }
     window.addEventListener('beforeunload', () => closeDrawer());
 });
 
