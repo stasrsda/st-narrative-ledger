@@ -10,7 +10,7 @@ import {
     appendEvents, eventsByFloor, packMatchNames,
 } from './src/adapters/st/context.js';
 import { setStatePrompt, clearStatePrompt, setRawSlot } from './src/adapters/st/prompt.js';
-import { transportAvailable, requestCompletion } from './src/adapters/st/llm.js';
+import { transportAvailable, requestCompletion, requestCustom, probeModel } from './src/adapters/st/llm.js';
 import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.js';
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
 import { fold } from './src/core/ledger/ledger.js';
@@ -27,7 +27,7 @@ import { reviewText, summarize } from './src/core/review/review.js';
 
 const MENU_CLASS = 'story-ledger-menu-item';
 const registry = createRegistry();
-const settings = { profileId: '', depth: 1, enabled: true };
+const settings = { profileId: '', depth: 1, enabled: true, direct: { baseUrl: '', apiKey: '', model: '' } };
 
 // 启动信标：模块一被求值就在 <head> 留痕，不依赖控制台就能查
 try {
@@ -231,7 +231,10 @@ function composeAndInject() {
         pending: pendingEvents(pack, state, 6),
         done: doneEventNames(pack, state, 6),
         items: Object.values(state.items ?? {}),
-        transport: transportAvailable() ? (settings.profileId ? '就绪' : '缺连接配置') : '不可用',
+        transport: !transportAvailable()
+            ? '不可用'
+            : (settings.direct?.model || settings.profileId ? '就绪' : '缺连接配置'),
+        direct: settings.direct,
         chatId: chatId(),
         messageCount: messages().length,
     });
@@ -268,14 +271,24 @@ function settleMessage() {
     refreshPanel({ review: findings, reviewSum: summarize(findings) });
 
     // 投递结算
-    if (pack && transportAvailable() && settings.profileId) {
+    const directReady = Boolean(settings.direct?.baseUrl && settings.direct?.model);
+    if (pack && transportAvailable() && (settings.profileId || directReady)) {
         enqueueSettle(idx, pack, state, userText, msg.mes);
     }
 }
 
 const settleQueue = createQueue({
     handler: async task => {
-        const res = await requestCompletion(task.messages, { profileId: settings.profileId });
+        const d = settings.direct ?? {};
+        const res = d.baseUrl && d.model
+            ? await requestCustom({
+                baseUrl: d.baseUrl,
+                apiKey: d.apiKey,
+                model: d.model,
+                messages: task.messages,
+                maxTokens: 400,
+            })
+            : await requestCompletion(task.messages, { profileId: settings.profileId });
         const actorIds = new Set(Object.keys(task.pack.index?.actor ?? {}));
         const parsed = normalizeSettle(res, { actorIds, text: task.text });
         if (!parsed.ok) throw new Error(parsed.error);
@@ -420,6 +433,7 @@ function boot() {
     try {
         const saved = ctx().extensionSettings?.storyLedger;
         if (saved?.profileId) settings.profileId = saved.profileId;
+        if (saved?.directModel) settings.direct = { ...settings.direct, ...saved.directModel };
     } catch {
         /* noop */
     }
@@ -456,7 +470,22 @@ function boot() {
         composeAndInject();
         log('已切换世界包', id);
     });
-    onSaveProfile(id => {
+    onSaveProfile((id, direct) => {
+        if (direct) {
+            settings.direct = { ...direct };
+            try {
+                const c = ctx();
+                c.extensionSettings = c.extensionSettings ?? {};
+                c.extensionSettings.storyLedger = {
+                    ...(c.extensionSettings.storyLedger ?? {}),
+                    directModel: settings.direct,
+                };
+                c.saveSettingsDebounced?.();
+            } catch { /* noop */ }
+            refreshPanel({ direct: settings.direct });
+            log('直连已保存', settings.direct.model || '（空）');
+            return;
+        }
         settings.profileId = id;
         try {
             const c = ctx();
@@ -468,7 +497,14 @@ function boot() {
         log('副模型已保存', id || '（关闭）');
     });
 
-    onTestModel(async id => {
+    onTestModel(async (id, direct) => {
+        if (direct) {
+            return probeModel({
+                baseUrl: direct.baseUrl,
+                apiKey: direct.apiKey,
+                model: direct.model,
+            });
+        }
         const t0 = globalThis.performance?.now?.() ?? Date.now();
         try {
             const text = await requestCompletion(

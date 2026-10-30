@@ -31,6 +31,7 @@ const S = {
     packError: '',
     testResult: null,
     importStatus: '',
+    direct: {},
 };
 
 let profileHandler = null;
@@ -350,6 +351,75 @@ function render() {
 
         s.append(el('div', 'sl-note', '选 ST 里已有的连接配置。留空则不做结算：状态块照常注入，但好感与礼法不会自动变。'));
         body.append(s);
+
+        // ── 直连（不走 ST 配置）──
+        const d = card('直连（不走 ST 配置）');
+        d.append(el('div', 'sl-note', '填了就会优先用它；请求经 ST 服务端转发，不受浏览器跨域限制。'));
+
+        const mk = (label, key, placeholder, type = 'text') => {
+            const input = el('input', 'sl-input');
+            input.type = type;
+            input.placeholder = placeholder;
+            input.value = S.direct?.[key] ?? '';
+            input.dataset.key = key;
+            d.append(el('div', 'sl-note', label));
+            d.append(input);
+            return input;
+        };
+
+        const dUrl = mk('Base URL', 'baseUrl', 'https://api.siliconflow.cn/v1');
+        const dKey = mk('API Key', 'apiKey', 'sk-...', 'password');
+        const dModel = mk('模型', 'model', 'Qwen/Qwen2.5-7B-Instruct');
+
+        const dRow = el('div', 'sl-btn-row');
+        const dSave = el('button', 'sl-btn', '保存');
+        const dTest = el('button', 'sl-btn', '测试');
+        dSave.type = 'button';
+        dTest.type = 'button';
+        dRow.append(dSave, dTest);
+        d.append(dRow);
+
+        const dStat = el('div', 'sl-note', '');
+        d.append(dStat);
+
+        const readDirect = () => ({
+            baseUrl: String(dUrl.value ?? '').trim(),
+            apiKey: String(dKey.value ?? '').trim(),
+            model: String(dModel.value ?? '').trim(),
+        });
+
+        dSave.addEventListener('click', () => {
+            const cfg = readDirect();
+            S.direct = cfg;
+            try {
+                saveHandler?.(null, cfg);
+                dStat.textContent = cfg.model ? `已保存直连：${cfg.model}` : '已保存（直连为空）';
+            } catch (e) {
+                dStat.textContent = '保存失败：' + (e?.message ?? e);
+            }
+        });
+
+        dTest.addEventListener('click', async () => {
+            const cfg = readDirect();
+            if (!cfg.baseUrl || !cfg.model) {
+                dStat.textContent = 'Base URL 和模型都要填';
+                return;
+            }
+            dTest.disabled = true;
+            dStat.textContent = '测试中…';
+            try {
+                const r = await testHandler?.(null, cfg);
+                dStat.textContent = r?.ok
+                    ? `连通 · ${r.ms} ms · 回复「${r.text || '空'}」`
+                    : '失败：' + (r?.msg ?? '未知错误');
+            } catch (e) {
+                dStat.textContent = '失败：' + (e?.message ?? e);
+            } finally {
+                dTest.disabled = false;
+            }
+        });
+
+        body.append(d);
 
         const r = card('开局');
         const btn = el('button', 'sl-btn', '重置到开局' + (S.openingLabel ? `（${S.openingLabel}）` : ''));
