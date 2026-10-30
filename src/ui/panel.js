@@ -26,6 +26,7 @@ const S = {
     profileId: '',
     env: null,
     packs: [],
+    openingLabel: '',
 };
 
 let profileHandler = null;
@@ -218,7 +219,7 @@ function render() {
         body.append(s);
 
         const r = card('开局');
-        const btn = el('button', 'sl-btn', '重置到开局（雁回县外）');
+        const btn = el('button', 'sl-btn', '重置到开局' + (S.openingLabel ? `（${S.openingLabel}）` : ''));
         btn.type = 'button';
         btn.addEventListener('click', () => {
             if (!window.confirm('会清空本档已记录的事件与状态，回到城外五里那一刻。继续？')) return;
@@ -229,7 +230,7 @@ function render() {
             }
         });
         r.append(btn);
-        r.append(el('div', 'sl-note', '承平十六年九月十四 · 酉初三刻 · 北门外五里'));
+        r.append(el('div', 'sl-note', S.openingLabel || '开局由世界包的 opening 段决定'));
         body.append(r);
     }
 

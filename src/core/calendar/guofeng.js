@@ -109,7 +109,9 @@ export function renderDay(d) {
 
 export function renderDate(t, cal = DEFAULT_CAL) {
     const { year, month, day } = toDate(t, cal);
-    return cal.yearFormat.replace('{era}', cal.era).replace('{year}', cnNum(year))
+    // 第一年称「元年」，这是年号纪年的写法
+    const yearCn = year === 1 ? '元' : cnNum(year);
+    return cal.yearFormat.replace('{era}', cal.era).replace('{year}', yearCn)
         + renderMonth(month) + renderDay(day);
 }
 

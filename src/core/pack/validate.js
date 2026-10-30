@@ -167,6 +167,8 @@ export function validatePack(pack) {
         if (!SCENES.includes(k)) err(`props.by_scene.${k}`, 'enum', `场景非法：${k}`);
     }
 
+    for (const e of openingErrors(pack)) errors.push(e);
+
     // ── timeline：纪年自洽 ──
     for (const e of timelineErrors(pack)) errors.push(e);
 
@@ -217,6 +219,30 @@ function timelineErrors(pack) {
                         ' 年应为 ' + expect + ' 岁，但写的是 ' + ages[a.actor] + ' 岁',
                 });
             }
+        }
+    }
+    return out;
+}
+
+/** 开局段引用检查：地点要在册，done 里的事件要存在 */
+function openingErrors(pack) {
+    const out = [];
+    const o = pack?.opening;
+    if (!o) return out;
+    const placeIds = new Set((pack.places ?? []).map(x => x.id));
+    if (o.place && !placeIds.has(o.place)) {
+        out.push({ path: 'opening.place', code: 'ref', msg: '开局地点不存在：' + o.place });
+    }
+    const evIds = new Set((pack.events ?? []).map(x => x.id));
+    for (const id of o.done ?? []) {
+        if (!evIds.has(id)) {
+            out.push({ path: 'opening.done', code: 'ref', msg: '开局已完成事件不存在：' + id });
+        }
+    }
+    const actorIds = new Set((pack.actors ?? []).map(x => x.id));
+    for (const id of o.onstage ?? []) {
+        if (!actorIds.has(id)) {
+            out.push({ path: 'opening.onstage', code: 'ref', msg: '开局在场者不在册：' + id });
         }
     }
     return out;

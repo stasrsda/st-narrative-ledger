@@ -4931,5 +4931,36 @@
         "year": 16
       }
     ]
+  },
+  "opening": {
+    "note": "重置到开局时用。改这里就能换开局的时间、地点、在场者与初始状态，不用改代码。",
+    "label": "承平十六年九月十四 · 酉初三刻 · 北门外五里",
+    "time": {
+      "year": 16,
+      "month": 9,
+      "day": 14,
+      "shichen": 9,
+      "ke": 3
+    },
+    "place": "p_wuli",
+    "placeName": "北门外五里",
+    "onstage": [
+      "huozhen"
+    ],
+    "aff": {
+      "zhiwei": -30,
+      "huozhen": 60,
+      "song": 40,
+      "zhaobo": 70,
+      "xie": 0,
+      "qingyun": 0
+    },
+    "rank": {
+      "zhiwei": "囚",
+      "xie": "待嫁"
+    },
+    "done": [
+      "e_break_city"
+    ]
   }
 }

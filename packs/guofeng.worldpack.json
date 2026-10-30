@@ -2,166 +2,659 @@
   "schemaVersion": 1,
   "id": "guofeng",
   "name": "古风 · 通用示例",
-  "match": { "worldBooks": [], "characters": [] },
-  "calendar": { "type": "guofeng", "era": "承平", "monthDays": 30, "kePerShichen": 8, "weekdays": null },
+  "match": {
+    "worldBooks": [],
+    "characters": []
+  },
+  "calendar": {
+    "type": "guofeng",
+    "era": "承平",
+    "monthDays": 30,
+    "kePerShichen": 8,
+    "weekdays": null
+  },
   "climate": {
-    "vocabulary": ["晴", "阴", "小雨", "大雨", "雪", "风沙", "雾", "霜"],
+    "vocabulary": [
+      "晴",
+      "阴",
+      "小雨",
+      "大雨",
+      "雪",
+      "风沙",
+      "雾",
+      "霜"
+    ],
     "zones": [
       {
         "id": "north",
         "name": "北地",
-        "places": ["城"],
-        "seasonOverride": { "3": "winter", "10": "winter" },
+        "places": [
+          "城"
+        ],
+        "seasonOverride": {
+          "3": "winter",
+          "10": "winter"
+        },
         "seasons": {
-          "spring": ["晴", "阴", "风沙"],
-          "summer": ["晴", "阴", "小雨"],
-          "autumn": ["晴", "阴", "霜"],
-          "winter": ["雪", "阴", "晴"]
+          "spring": [
+            "晴",
+            "阴",
+            "风沙"
+          ],
+          "summer": [
+            "晴",
+            "阴",
+            "小雨"
+          ],
+          "autumn": [
+            "晴",
+            "阴",
+            "霜"
+          ],
+          "winter": [
+            "雪",
+            "阴",
+            "晴"
+          ]
         }
       },
       {
         "id": "south",
         "name": "江南",
-        "places": ["镇"],
+        "places": [
+          "镇"
+        ],
         "seasons": {
-          "spring": ["小雨", "阴", "雾"],
-          "summer": ["大雨", "晴", "阴"],
-          "autumn": ["晴", "阴", "小雨"],
-          "winter": ["阴", "小雨", "雾"]
+          "spring": [
+            "小雨",
+            "阴",
+            "雾"
+          ],
+          "summer": [
+            "大雨",
+            "晴",
+            "阴"
+          ],
+          "autumn": [
+            "晴",
+            "阴",
+            "小雨"
+          ],
+          "winter": [
+            "阴",
+            "小雨",
+            "雾"
+          ]
         }
       }
     ]
   },
   "festivals": [
-    { "month": 1, "day": 1, "name": "元日" },
-    { "month": 1, "day": 15, "name": "上元" },
-    { "month": 3, "day": 15, "name": "清明" },
-    { "month": 5, "day": 5, "name": "端午" },
-    { "month": 8, "day": 15, "name": "中秋" },
-    { "month": 12, "day": 8, "name": "腊八" }
+    {
+      "month": 1,
+      "day": 1,
+      "name": "元日"
+    },
+    {
+      "month": 1,
+      "day": 15,
+      "name": "上元"
+    },
+    {
+      "month": 3,
+      "day": 15,
+      "name": "清明"
+    },
+    {
+      "month": 5,
+      "day": 5,
+      "name": "端午"
+    },
+    {
+      "month": 8,
+      "day": 15,
+      "name": "中秋"
+    },
+    {
+      "month": 12,
+      "day": 8,
+      "name": "腊八"
+    }
   ],
   "affinity": {
-    "min": -100, "max": 100, "step": 10,
-    "maxPerRound": 50, "capPerArc": 120,
-    "ladder": ["死敌", "仇视", "憎恨", "怨毒", "敌意", "厌恶", "戒备", "怕", "防", "冷", "无感",
-      "动摇", "感激", "信", "依赖", "动心", "爱", "深爱", "不可替代", "共生", "唯一"],
-    "loyalty": ["死敌", "叛", "怨怼", "离心", "阳奉", "疑", "疏", "惧", "观望", "循例", "无感",
-      "听令", "奉命", "尽职", "信服", "倚重", "心腹", "死忠", "死忠", "死忠", "死忠"],
-    "kin": ["决裂", "怨", "疏远", "冷淡", "隔阂", "客气", "平淡", "生分", "寻常", "如常", "无感",
-      "念", "亲近", "亲近", "倚靠", "亲厚", "亲厚", "至亲", "至亲", "至亲", "至亲"],
-    "events": { "A": 8, "B": 15, "C": 30, "D": 50, "E": -40, "F": 0 }
+    "min": -100,
+    "max": 100,
+    "step": 10,
+    "maxPerRound": 50,
+    "capPerArc": 120,
+    "ladder": [
+      "死敌",
+      "仇视",
+      "憎恨",
+      "怨毒",
+      "敌意",
+      "厌恶",
+      "戒备",
+      "怕",
+      "防",
+      "冷",
+      "无感",
+      "动摇",
+      "感激",
+      "信",
+      "依赖",
+      "动心",
+      "爱",
+      "深爱",
+      "不可替代",
+      "共生",
+      "唯一"
+    ],
+    "loyalty": [
+      "死敌",
+      "叛",
+      "怨怼",
+      "离心",
+      "阳奉",
+      "疑",
+      "疏",
+      "惧",
+      "观望",
+      "循例",
+      "无感",
+      "听令",
+      "奉命",
+      "尽职",
+      "信服",
+      "倚重",
+      "心腹",
+      "死忠",
+      "死忠",
+      "死忠",
+      "死忠"
+    ],
+    "kin": [
+      "决裂",
+      "怨",
+      "疏远",
+      "冷淡",
+      "隔阂",
+      "客气",
+      "平淡",
+      "生分",
+      "寻常",
+      "如常",
+      "无感",
+      "念",
+      "亲近",
+      "亲近",
+      "倚靠",
+      "亲厚",
+      "亲厚",
+      "至亲",
+      "至亲",
+      "至亲",
+      "至亲"
+    ],
+    "events": {
+      "A": 8,
+      "B": 15,
+      "C": 30,
+      "D": 50,
+      "E": -40,
+      "F": 0
+    }
   },
   "ranks": {
-    "正妻": { "order": 5, "address": "夫君", "self": "妾身", "access": "free", "overnight": true, "public": "可并肩", "after": {} },
-    "妾": { "order": 3, "address": "老爷", "self": "妾身", "access": "free", "overnight": false, "public": "可同席", "after": {} },
-    "婢": { "order": 1, "address": "主子", "self": "奴婢", "access": "discreet", "overnight": false, "public": "不预宴", "after": {} },
-    "客": { "order": 2, "address": "公子", "self": "在下", "access": "discreet", "overnight": false, "public": "可同席", "after": {} },
-    "臣": { "order": 2, "address": "大人", "self": "下官", "access": "discreet", "overnight": false, "public": "可列朝会", "after": {} }
+    "正妻": {
+      "order": 5,
+      "address": "夫君",
+      "self": "妾身",
+      "access": "free",
+      "overnight": true,
+      "public": "可并肩",
+      "after": {}
+    },
+    "妾": {
+      "order": 3,
+      "address": "老爷",
+      "self": "妾身",
+      "access": "free",
+      "overnight": false,
+      "public": "可同席",
+      "after": {}
+    },
+    "婢": {
+      "order": 1,
+      "address": "主子",
+      "self": "奴婢",
+      "access": "discreet",
+      "overnight": false,
+      "public": "不预宴",
+      "after": {}
+    },
+    "客": {
+      "order": 2,
+      "address": "公子",
+      "self": "在下",
+      "access": "discreet",
+      "overnight": false,
+      "public": "可同席",
+      "after": {}
+    },
+    "臣": {
+      "order": 2,
+      "address": "大人",
+      "self": "下官",
+      "access": "discreet",
+      "overnight": false,
+      "public": "可列朝会",
+      "after": {}
+    }
   },
   "motives": [
-    { "id": "dread", "label": "屈从", "min": -100, "body": "不挣不躲", "voice": "不接话" },
-    { "id": "bargain", "label": "交易", "min": -30, "body": "先说条件", "voice": "每句都是条件" },
-    { "id": "debt", "label": "还恩", "min": 0, "body": "做得仔细", "voice": "只答是" },
-    { "id": "duty", "label": "义务", "min": 20, "body": "按规矩", "voice": "平铺直叙" },
-    { "id": "desire", "label": "情愿", "min": 60, "body": "先伸手", "voice": "会问" }
+    {
+      "id": "dread",
+      "label": "屈从",
+      "min": -100,
+      "body": "不挣不躲",
+      "voice": "不接话"
+    },
+    {
+      "id": "bargain",
+      "label": "交易",
+      "min": -30,
+      "body": "先说条件",
+      "voice": "每句都是条件"
+    },
+    {
+      "id": "debt",
+      "label": "还恩",
+      "min": 0,
+      "body": "做得仔细",
+      "voice": "只答是"
+    },
+    {
+      "id": "duty",
+      "label": "义务",
+      "min": 20,
+      "body": "按规矩",
+      "voice": "平铺直叙"
+    },
+    {
+      "id": "desire",
+      "label": "情愿",
+      "min": 60,
+      "body": "先伸手",
+      "voice": "会问"
+    }
   ],
   "codes": {
     "rites": [
       {
-        "id": "greeting", "name": "请安", "brief": "晨起向长辈问安",
-        "when": ["scene:inner_court"], "who": ["所有人"],
+        "id": "greeting",
+        "name": "请安",
+        "brief": "晨起向长辈问安",
+        "when": [
+          "scene:inner_court"
+        ],
+        "who": [
+          "所有人"
+        ],
         "detail": "晨起去长辈院中站着问安，不坐，问完退半步。",
-        "breach": ["不省", "擅坐"],
-        "react": { "servants": "下人会传", "peers": "记在心里", "superior": "训斥" },
+        "breach": [
+          "不省",
+          "擅坐"
+        ],
+        "react": {
+          "servants": "下人会传",
+          "peers": "记在心里",
+          "superior": "训斥"
+        },
         "penalty": "训斥；罚月例"
       }
     ],
     "house": [
       {
-        "id": "curfew", "name": "夜禁", "brief": "戌时落锁",
-        "when": ["夜"], "who": ["所有人"],
+        "id": "curfew",
+        "name": "夜禁",
+        "brief": "戌时落锁",
+        "when": [
+          "夜"
+        ],
+        "who": [
+          "所有人"
+        ],
         "detail": "戌时掌灯后落锁，无牌不得穿院。",
-        "breach": ["夜间穿院", "无牌出入"],
-        "react": { "servants": "巡夜记名", "peers": "结交受影响", "superior": "管家处置" },
+        "breach": [
+          "夜间穿院",
+          "无牌出入"
+        ],
+        "react": {
+          "servants": "巡夜记名",
+          "peers": "结交受影响",
+          "superior": "管家处置"
+        },
         "penalty": "罚月例；跪祠堂"
       }
     ],
     "laws": [
       {
-        "id": "murder", "name": "杀人", "severity": "斩", "brief": "故杀者斩",
-        "when": ["任何场合"], "who": ["所有人"],
+        "id": "murder",
+        "name": "杀人",
+        "severity": "斩",
+        "brief": "故杀者斩",
+        "when": [
+          "任何场合"
+        ],
+        "who": [
+          "所有人"
+        ],
         "detail": "故杀斩，斗杀绞，误杀徒。",
-        "breach": ["故杀", "斗杀"],
-        "react": { "court": "县衙初审", "public": "一县皆知", "record": "尸格" },
+        "breach": [
+          "故杀",
+          "斗杀"
+        ],
+        "react": {
+          "court": "县衙初审",
+          "public": "一县皆知",
+          "record": "尸格"
+        },
         "penalty": "斩／绞／徒"
       }
     ]
   },
   "places": [
-    { "id": "p_city", "name": "城", "parent": null, "scale": "region", "climate": "north", "scene": "street", "tags": [] },
-    { "id": "p_inn", "name": "客栈", "parent": "p_city", "scale": "place", "climate": "north", "scene": "hall", "tags": ["人来人往"] },
-    { "id": "p_alley", "name": "后巷", "parent": "p_city", "scale": "place", "climate": "north", "scene": "street", "tags": ["窄", "暗"] }
+    {
+      "id": "p_city",
+      "name": "城",
+      "parent": null,
+      "scale": "region",
+      "climate": "north",
+      "scene": "street",
+      "tags": []
+    },
+    {
+      "id": "p_inn",
+      "name": "客栈",
+      "parent": "p_city",
+      "scale": "place",
+      "climate": "north",
+      "scene": "hall",
+      "tags": [
+        "人来人往"
+      ]
+    },
+    {
+      "id": "p_alley",
+      "name": "后巷",
+      "parent": "p_city",
+      "scale": "place",
+      "climate": "north",
+      "scene": "street",
+      "tags": [
+        "窄",
+        "暗"
+      ]
+    }
   ],
   "actors": [],
   "events": [],
   "gaze": {
-    "axes": ["respect", "fear", "closeness", "contempt"],
+    "axes": [
+      "respect",
+      "fear",
+      "closeness",
+      "contempt"
+    ],
     "stances": [
-      { "id": "commoner", "label": "百姓", "base": { "respect": 1, "fear": 1, "closeness": 0, "contempt": 0 }, "posture": "垂手，侧身让路", "eye": "偷看", "address": "公子" }
+      {
+        "id": "commoner",
+        "label": "百姓",
+        "base": {
+          "respect": 1,
+          "fear": 1,
+          "closeness": 0,
+          "contempt": 0
+        },
+        "posture": "垂手，侧身让路",
+        "eye": "偷看",
+        "address": "公子"
+      }
     ],
     "knowledge": [],
     "temper": [
-      { "id": "timid", "label": "胆小", "style": "说话小声", "shift": 1 },
-      { "id": "bold", "label": "胆大", "style": "敢直视", "shift": -1 }
+      {
+        "id": "timid",
+        "label": "胆小",
+        "style": "说话小声",
+        "shift": 1
+      },
+      {
+        "id": "bold",
+        "label": "胆大",
+        "style": "敢直视",
+        "shift": -1
+      }
     ]
   },
   "tables": {
-    "prices": { "unit": "文", "base": { "米一石": 1200, "肉一斤": 20 }, "index": { "丰年": 0.8, "常年": 1.0, "战乱": 2.2 } },
-    "stipend": { "unit": "文/月", "base": { "正妻": 20000, "妾": 8000, "婢": 1000 }, "modifiers": ["府库紧张 ×0.5"] }
+    "prices": {
+      "unit": "文",
+      "base": {
+        "米一石": 1200,
+        "肉一斤": 20
+      },
+      "index": {
+        "丰年": 0.8,
+        "常年": 1.0,
+        "战乱": 2.2
+      }
+    },
+    "stipend": {
+      "unit": "文/月",
+      "base": {
+        "正妻": 20000,
+        "妾": 8000,
+        "婢": 1000
+      },
+      "modifiers": [
+        "府库紧张 ×0.5"
+      ]
+    }
   },
   "customs": [],
   "props": {
     "by_scene": {
-      "inner_court": ["榻", "铜手炉", "妆奁", "屏风", "烛台"],
-      "hall": ["条案", "椅子", "香炉", "茶盏"],
-      "street": ["灯笼", "幌子", "石阶", "拴马桩"],
-      "bedroom": ["架子床", "帐", "衣桁", "脚炉"],
-      "roadside": ["凉亭", "土路", "界石"],
-      "study": ["案", "笔架", "砚", "灯"]
+      "inner_court": [
+        "榻",
+        "铜手炉",
+        "妆奁",
+        "屏风",
+        "烛台"
+      ],
+      "hall": [
+        "条案",
+        "椅子",
+        "香炉",
+        "茶盏"
+      ],
+      "street": [
+        "灯笼",
+        "幌子",
+        "石阶",
+        "拴马桩"
+      ],
+      "bedroom": [
+        "架子床",
+        "帐",
+        "衣桁",
+        "脚炉"
+      ],
+      "roadside": [
+        "凉亭",
+        "土路",
+        "界石"
+      ],
+      "study": [
+        "案",
+        "笔架",
+        "砚",
+        "灯"
+      ]
     },
     "age": {
       "thresholds": [
-        { "idleYears": 0, "cond": "新", "until": 3 },
-        { "idleYears": 3, "cond": "旧", "until": 15 },
-        { "idleYears": 15, "cond": "陈", "until": 40 },
-        { "idleYears": 40, "cond": "损", "until": 999 }
+        {
+          "idleYears": 0,
+          "cond": "新",
+          "until": 3
+        },
+        {
+          "idleYears": 3,
+          "cond": "旧",
+          "until": 15
+        },
+        {
+          "idleYears": 15,
+          "cond": "陈",
+          "until": 40
+        },
+        {
+          "idleYears": 40,
+          "cond": "损",
+          "until": 999
+        }
       ]
     },
     "hold": {
       "kinds": [
-        { "id": "borrow", "label": "借用", "force": true, "return": "次日送回", "who": "该院粗使", "trace": "" },
-        { "id": "give", "label": "赏给", "force": false, "return": "不送回", "who": null, "trace": "" },
-        { "id": "unknown", "label": "未明言", "force": true, "return": "按借用", "who": "该院粗使", "trace": "" }
+        {
+          "id": "borrow",
+          "label": "借用",
+          "force": true,
+          "return": "次日送回",
+          "who": "该院粗使",
+          "trace": ""
+        },
+        {
+          "id": "give",
+          "label": "赏给",
+          "force": false,
+          "return": "不送回",
+          "who": null,
+          "trace": ""
+        },
+        {
+          "id": "unknown",
+          "label": "未明言",
+          "force": true,
+          "return": "按借用",
+          "who": "该院粗使",
+          "trace": ""
+        }
       ],
       "default": "unknown"
     },
-    "requirements": { "rules": [] },
-    "supply": { "paths": [{ "id": "store", "label": "库房调拨", "days": 1, "cost": "0", "noise": "低", "note": "" }, { "id": "buy", "label": "采买", "days": 3, "cost": "按物价", "noise": "中", "note": "" }] }
+    "requirements": {
+      "rules": []
+    },
+    "supply": {
+      "paths": [
+        {
+          "id": "store",
+          "label": "库房调拨",
+          "days": 1,
+          "cost": "0",
+          "noise": "低",
+          "note": ""
+        },
+        {
+          "id": "buy",
+          "label": "采买",
+          "days": 3,
+          "cost": "按物价",
+          "noise": "中",
+          "note": ""
+        }
+      ]
+    }
   },
-  "titles": { "matrix": {} },
-  "authority": { "scopes": [], "rights": [], "sources": [], "seed": [] },
+  "titles": {
+    "matrix": {}
+  },
+  "authority": {
+    "scopes": [],
+    "rights": [],
+    "sources": [],
+    "seed": []
+  },
   "experience": {
     "ladder": [
-      { "min": 0, "label": "未经", "body": "不知道手往哪放", "voice": "几乎不开口" },
-      { "min": 1, "label": "初经", "body": "动作生，会试探", "voice": "问得多" },
-      { "min": 3, "label": "渐熟", "body": "知道该往哪靠", "voice": "偶尔说一句" },
-      { "min": 8, "label": "熟", "body": "不慌", "voice": "会商量" },
-      { "min": 20, "label": "老夫老妻", "body": "不必问", "voice": "随口说别的" }
+      {
+        "min": 0,
+        "label": "未经",
+        "body": "不知道手往哪放",
+        "voice": "几乎不开口"
+      },
+      {
+        "min": 1,
+        "label": "初经",
+        "body": "动作生，会试探",
+        "voice": "问得多"
+      },
+      {
+        "min": 3,
+        "label": "渐熟",
+        "body": "知道该往哪靠",
+        "voice": "偶尔说一句"
+      },
+      {
+        "min": 8,
+        "label": "熟",
+        "body": "不慌",
+        "voice": "会商量"
+      },
+      {
+        "min": 20,
+        "label": "老夫老妻",
+        "body": "不必问",
+        "voice": "随口说别的"
+      }
     ],
     "bond": [
-      { "min": 0, "label": "初", "note": "第一回" },
-      { "min": 1, "label": "二回", "note": "记得上一次" },
-      { "min": 10, "label": "老夫老妻", "note": "不避讳" }
+      {
+        "min": 0,
+        "label": "初",
+        "note": "第一回"
+      },
+      {
+        "min": 1,
+        "label": "二回",
+        "note": "记得上一次"
+      },
+      {
+        "min": 10,
+        "label": "老夫老妻",
+        "note": "不避讳"
+      }
     ]
+  },
+  "opening": {
+    "note": "示例开局：客栈大堂，无人预期在场。",
+    "label": "承平元年正月初一 · 午初一刻 · 客栈",
+    "time": {
+      "year": 1,
+      "month": 1,
+      "day": 1,
+      "shichen": 6,
+      "ke": 1
+    },
+    "place": "p_inn",
+    "placeName": "客栈",
+    "onstage": [],
+    "aff": {},
+    "rank": {},
+    "done": []
   }
 }

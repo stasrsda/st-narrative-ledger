@@ -1,42 +1,65 @@
-// 开局状态：人还在雁回县外
+// 开局状态：由世界包的 opening 段决定，不再写死在代码里
 import { fromParts } from '../calendar/guofeng.js';
 
-/** 承平十六年九月十四 · 酉初三刻 · 北门外五里 */
-export const OPENING_TIME = Object.freeze({ year: 16, month: 9, day: 14, shichen: 9, ke: 3 });
-
-/** 开场在场：只有霍振。知微还在牢里，不算在场。 */
-export const OPENING_ONSTAGE = Object.freeze(['huozhen']);
-
-export const OPENING_AFF = Object.freeze({
-    zhiwei: -30,
-    huozhen: 60,
-    song: 40,
-    zhaobo: 70,
-    xie: 0,
-    qingyun: 0,
+/** 包里没写 opening 时的兜底：承平元年正月初一 · 午初一刻 */
+const FALLBACK = Object.freeze({
+    time: { year: 1, month: 1, day: 1, shichen: 6, ke: 1 },
+    place: null,
+    placeName: '',
+    onstage: [],
+    aff: {},
+    rank: {},
+    done: [],
+    label: '',
 });
 
-export const OPENING_RANK = Object.freeze({ zhiwei: '囚', xie: '待嫁' });
+/** 读包里 opening，缺的项用兜底 */
+export function openingOf(pack) {
+    const o = pack?.opening ?? {};
+    const era = pack?.calendar?.era ?? '承平';
+    const t = o.time ?? FALLBACK.time;
+    return {
+        time: t,
+        place: o.place ?? FALLBACK.place,
+        placeName: o.placeName ?? FALLBACK.placeName,
+        onstage: [...(o.onstage ?? FALLBACK.onstage)],
+        aff: { ...(o.aff ?? {}) },
+        rank: { ...(o.rank ?? {}) },
+        done: [...(o.done ?? FALLBACK.done)],
+        label: o.label ?? '',
+        era,
+    };
+}
+
+/** 下拉/按钮上显示的开局说明 */
+export function openingLabel(pack) {
+    const o = openingOf(pack);
+    if (o.label) return o.label;
+    const bits = [`${o.era}${o.time.year}年`];
+    if (o.placeName) bits.push(o.placeName);
+    return bits.join(' · ');
+}
 
 /**
  * 生成开局 seed（供 chat_metadata.storyLedger.seed）
  * @param {object} pack
  */
 export function openingSeed(pack, overrides = {}) {
-    const time = overrides.time ?? OPENING_TIME;
+    const o = openingOf(pack);
+    const time = overrides.time ?? o.time;
     const t = fromParts(time, {
-        era: pack?.calendar?.era ?? '承平',
+        era: o.era,
         months: 12,
         monthDays: pack?.calendar?.monthDays ?? 30,
         yearFormat: '{era}{year}年',
     });
     return {
         t,
-        place: overrides.place ?? 'p_wuli',
-        aff: { ...OPENING_AFF, ...(overrides.aff ?? {}) },
-        rank: { ...OPENING_RANK, ...(overrides.rank ?? {}) },
+        place: overrides.place ?? o.place,
+        aff: { ...o.aff, ...(overrides.aff ?? {}) },
+        rank: { ...o.rank, ...(overrides.rank ?? {}) },
         exp: { ...(overrides.exp ?? {}) },
-        done: ['e_break_city'],   // 城已经破了，他还在城外
+        done: [...(overrides.done ?? o.done)],
         emergent: [],
         traces: [],
         grants: [],
@@ -47,12 +70,14 @@ export function openingSeed(pack, overrides = {}) {
 }
 
 export function openingMeta(pack, overrides = {}) {
+    const o = openingOf(pack);
     const seed = openingSeed(pack, overrides);
     return {
         seed,
         placeId: seed.place,
-        placeName: overrides.placeName ?? '北门外五里',
-        onstage: overrides.onstage ?? [...OPENING_ONSTAGE],
+        placeName: overrides.placeName ?? o.placeName,
+        onstage: overrides.onstage ?? [...o.onstage],
+        label: overrides.label ?? openingLabel(pack),
         lastT: seed.t,
         resetAt: Date.now(),
     };

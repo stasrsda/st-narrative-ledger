@@ -14,7 +14,7 @@ import { transportAvailable, requestCompletion } from './src/adapters/st/llm.js'
 import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.js';
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
 import { fold } from './src/core/ledger/ledger.js';
-import { openingMeta } from './src/core/runtime/opening.js';
+import { openingMeta, openingLabel } from './src/core/runtime/opening.js';
 import { createTree, putNode } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
@@ -165,6 +165,7 @@ function composeAndInject() {
         packId: pack.id,
         packName: pack.name,
         packs: packChoices(),
+        openingLabel: openingLabel(pack),
         injected: Boolean(ok),
         tokens: block.tokens,
         dropped: block.dropped,

@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizePack } from '../src/core/pack/registry.js';
+import { validatePack } from '../src/core/pack/validate.js';
 import { levelOf, bondOf, blankExp, bumpExp, expOf, expLine, shouldInjectExp, physicalOf, recentOf } from '../src/core/actors/experience.js';
-import { openingSeed, openingMeta, OPENING_ONSTAGE } from '../src/core/runtime/opening.js';
+import { openingSeed, openingMeta, openingOf, openingLabel } from '../src/core/runtime/opening.js';
 import { renderDate, renderTime } from '../src/core/calendar/guofeng.js';
 
 const raw = JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8'));
@@ -132,7 +133,7 @@ test('开局：时间与地点', () => {
 
 test('开局：只有霍振在场，知微仍是囚', () => {
     const seed = openingSeed(pack);
-    assert.deepEqual([...OPENING_ONSTAGE], ['huozhen']);
+    assert.deepEqual(openingOf(pack).onstage, ['huozhen']);
     assert.equal(seed.rank.zhiwei, '囚');
     assert.equal(seed.aff.zhiwei, -30);
     assert.equal(seed.aff.huozhen, 60);
@@ -150,4 +151,41 @@ test('meta：带 placeName 与在场名单', () => {
     assert.equal(meta.placeName, '北门外五里');
     assert.deepEqual(meta.onstage, ['huozhen']);
     assert.equal(meta.placeId, 'p_wuli');
+});
+
+test('开局由世界包决定：改包就换开局', () => {
+    const p = normalizePack(JSON.parse(JSON.stringify(raw)));
+    p.opening.time = { year: 1, month: 2, day: 3, shichen: 4, ke: 2 };
+    p.opening.place = 'p_yanhui';
+    p.opening.placeName = '雁回县城内';
+    p.opening.onstage = [];
+    p.opening.label = '改过的开局';
+    const seed = openingSeed(p);
+    assert.equal(seed.place, 'p_yanhui');
+    assert.equal(renderDate(seed.t), '承平元年二月初三');
+    assert.deepEqual(openingMeta(p).onstage, []);
+    assert.equal(openingLabel(p), '改过的开局');
+});
+
+test('开局：包里没写 opening 时用兜底不崩', () => {
+    const p = normalizePack(JSON.parse(JSON.stringify(raw)));
+    delete p.opening;
+    const seed = openingSeed(p);
+    assert.equal(renderDate(seed.t), '承平元年正月初一');
+    assert.deepEqual(openingOf(p).onstage, []);
+    assert.deepEqual(openingOf(p).done, []);
+});
+
+test('校验：开局地点不存在要报错', () => {
+    const p = normalizePack(JSON.parse(JSON.stringify(raw)));
+    p.opening.place = 'p_不存在';
+    const errs = validatePack(p).errors.filter(e => e.path === 'opening.place');
+    assert.equal(errs.length, 1);
+});
+
+test('校验：开局在场者不在册要报错', () => {
+    const p = normalizePack(JSON.parse(JSON.stringify(raw)));
+    p.opening.onstage = ['路人甲'];
+    const errs = validatePack(p).errors.filter(e => e.path === 'opening.onstage');
+    assert.equal(errs.length, 1);
 });
