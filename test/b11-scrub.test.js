@@ -48,7 +48,9 @@ test('清掉预设脚手架：<content>、<!-- -->、<记录>', () => {
     assert.ok(!r.text.includes('<!--'), '不该留注释');
     assert.ok(!r.text.includes('<记录>'), '不该留 <记录>');
     assert.ok(r.text.includes('马鞭一甩'));
-    assert.ok(r.text.includes('巷中有活人'));
+    // <记录> 里的内容要保留（那是楼层摘要），只去掉标签
+    assert.ok(r.text.includes('巷中有活人'), '记录内容不该被删');
+    assert.ok(!r.text.includes('<记录>'), '标签要去掉');
 });
 
 test('普通尖括号不被误删', () => {

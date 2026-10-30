@@ -1,11 +1,9 @@
 // 清理历史消息里的状态残留：<好感> 块、【在场】行、误写进正文的状态块
-// 预设脚手架：不是故事，必须剥掉
+// 预设脚手架：只去掉标签与注释，**保留里面的文字**
+// （<记录> 里的摘要是有用的东西，不能连内容一起删）
 const SCAFFOLD = [
-    /<!--[\s\S]*?-->/g,      // <!-- consider: ... -->
-    /<\/?content>/g,          // <content>…</content>
-    /<\/?记录>/g,
-    /<\/?状态栏>/g,
-    /<\/?状态>/g,
+    /<!--[\s\S]*?-->/g,                                  // HTML 注释：页面上本来就不显示
+    /<\/?(?:content|记录|状态栏|状态|status)>/g,            // 只去掉标签本身
 ];
 
 function stripScaffold(text) {
@@ -14,7 +12,7 @@ function stripScaffold(text) {
     for (const re of SCAFFOLD) {
         out = out.replace(re, () => {
             n++;
-            return '\n';
+            return '';
         });
     }
     return { text: out.replace(/\n{3,}/g, '\n\n').trim(), removed: n };
