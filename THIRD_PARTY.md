@@ -31,7 +31,7 @@
 ## card/beiliang-card.json
 
 自制角色卡。**内嵌世界书已剥离**（原卡含 85 条，与本仓库 `worldbook/` 重复），
-使用前请单独导入 `worldbook/beiliang-v4.json`。
+使用前请单独导入 `worldbook/beiliang-v3.json`。
 
 ## card/beiliang-card.png
 
@@ -39,9 +39,9 @@
 
 ---
 
-## worldbook/beiliang-v4.json
+## worldbook/beiliang-v3.json
 
-自制世界书（94 条），已按插件要求改造：
+自制世界书 v3（70 条），已按插件要求改造：
 
 - `[状态]` 块优先，世界书让出当前状态
 - `[L3] 好感现状` 停用（插件接管）

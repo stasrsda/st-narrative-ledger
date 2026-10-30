@@ -13,7 +13,7 @@
 | `index.js` `src/` | 插件本体 |
 | `packs/beiliang.worldpack.json` | **配套世界包**（历法、气候、礼法、人物、事件图、器物） |
 | `packs/guofeng.worldpack.json` | 通用古风示例包，换卡时照它抄字段 |
-| `worldbook/beiliang-v4.json` | 配套世界书（94 条，已按插件改造） |
+| `worldbook/beiliang-v3.json` | 配套世界书 v3（70 条，已按插件改造） |
 | `card/beiliang-card.json` | 配套角色卡（**内嵌世界书已剥离**） |
 | `presets/GrayWill-0.45.2-账本版.json` | 配套预设（灰魂改版，见 `THIRD_PARTY.md`） |
 | `DESIGN.md` | 完整设计书（18 个数据小节 + 实现总表） |
@@ -21,7 +21,7 @@
 ### 三位一体的用法
 
 ```
-角色卡  +  世界书 v4  +  世界包
+角色卡  +  世界书 v3  +  世界包
   ↑           ↑            ↑
 叙事      设定与文风    可计算的状态
 ```
