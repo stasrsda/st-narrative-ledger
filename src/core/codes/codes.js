@@ -38,6 +38,7 @@ export function candidatesFor(pack, { scene = null, rankIds = [], household = {}
         ...(pack.codes?.house ?? []).map(c => ({ ...c, kind: 'house' })),
         ...(pack.codes?.laws ?? []).map(c => ({ ...c, kind: 'law' })),
         ...(pack.codes?.procedure ?? []).map(c => ({ ...c, kind: 'procedure' })),
+        ...(pack.codes?.clan ?? []).map(c => ({ ...c, kind: 'clan' })),
     ];
     return all.filter(c => gateOk(c, household) && whenOk(c, scene) && whoOk(c, rankIds));
 }
@@ -45,7 +46,7 @@ export function candidatesFor(pack, { scene = null, rankIds = [], household = {}
 /** 注入行：[礼] 座次违制 —— 妾不得与正妃同席 */
 export function renderHit(code) {
     if (!code) return '';
-    const tag = { rite: '礼', house: '家法', law: '法', procedure: '程序' }[code.kind ?? (code.severity ? 'law' : 'rite')] ?? '礼';
+    const tag = { rite: '礼', house: '家法', law: '法', procedure: '程序', clan: '宗法' }[code.kind ?? (code.severity ? 'law' : 'rite')] ?? '礼';
     return `[${tag}] ${code.name}违制 —— ${(code.breach ?? []).slice(0, 2).join('、')}`;
 }
 

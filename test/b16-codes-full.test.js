@@ -6,7 +6,8 @@ import { candidatesFor, renderHit } from '../src/core/codes/codes.js';
 
 const pack = normalizePack(JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8')));
 const all = [
-    ...pack.codes.rites, ...pack.codes.house, ...pack.codes.laws, ...(pack.codes.procedure ?? []),
+    ...pack.codes.rites, ...pack.codes.house, ...pack.codes.laws,
+    ...(pack.codes.procedure ?? []), ...(pack.codes.clan ?? []),
 ];
 const ids = new Set(all.map(c => c.id));
 
@@ -15,7 +16,8 @@ test('四组齐备且数量足够', () => {
     assert.ok(pack.codes.house.length >= 40, '家法应当 >= 40');
     assert.ok(pack.codes.laws.length >= 35, '律应当 >= 35');
     assert.ok((pack.codes.procedure ?? []).length >= 33, '程序应当 >= 33');
-    assert.ok(all.length >= 170, `总数应当 >= 170，现在 ${all.length}`);
+    assert.ok((pack.codes.clan ?? []).length >= 13, '宗法应当 >= 13');
+    assert.ok(all.length >= 185, `总数应当 >= 185，现在 ${all.length}`);
 });
 
 test('id 全局唯一', () => {
@@ -184,4 +186,45 @@ test('赏罚：赏差事最重，罚不到送官', () => {
 
 test('听曲写清了清韵的琵琶来自教坊司', () => {
     assert.match(all.find(c => c.id === 'music_gathering').detail, /教坊司/);
+});
+
+test('皇族法是独立一组：十三类都在', () => {
+    for (const need of ['eight_deliberations', 'clan_court', 'jade_record', 'clan_detention',
+        'demote_title', 'clan_fine', 'no_torture', 'clan_marriage', 'clan_leave',
+        'clan_profit', 'ancestral_temple', 'strip_clan', 'clan_troops']) {
+        assert.ok(ids.has(need), `缺 ${need}`);
+    }
+});
+
+test('皇族法渲染成「宗法」', () => {
+    const cs = candidatesFor(pack, { scene: 'inner_court', rankIds: ['王'] });
+    const clan = cs.filter(c => c.kind === 'clan');
+    assert.ok(clan.length > 0);
+    assert.match(renderHit(clan[0]), /^\[宗法\]/);
+});
+
+test('宗室不加刑：写清了「革去宗室」那一步', () => {
+    const c = all.find(x => x.id === 'no_torture');
+    assert.match(c.detail, /革去宗室/);
+});
+
+test('革去宗室：这一句之后八议全不适用', () => {
+    const c = all.find(x => x.id === 'strip_clan');
+    assert.match(c.detail, /交刑部严审/);
+    assert.match(c.detail, /不算宗室/);
+});
+
+test('八议：先议后断，法司不得径断', () => {
+    const c = all.find(x => x.id === 'eight_deliberations');
+    assert.match(c.brief, /先议后断/);
+    assert.match(c.detail, /先奏请议/);
+});
+
+test('宗室不得与民争利：点到白景昭的商队', () => {
+    const c = all.find(x => x.id === 'clan_profit');
+    assert.match(c.detail, /崔掌柜/);
+});
+
+test('宗室掌兵：削兵不需要说谋反', () => {
+    assert.match(all.find(c => c.id === 'clan_troops').detail, /兵数不符/);
 });
