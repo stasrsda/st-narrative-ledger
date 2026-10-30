@@ -1,6 +1,22 @@
 // 审稿人（纯规则，不调模型）
 const VAGUE = ['仿佛', '好像', '如同', '似乎', '近乎', '一丝'];
 
+const END_OK = /[。！？…”」』）】\.!?"')]$/;
+const END_BAD = /[，、；：,;:—…「『（【]$/;
+
+/**
+ * 看起来被截断了：结尾既不是句读，又断在逗号/顿号/半句上。
+ * 正常结尾允许省略号、引号收尾。
+ */
+export function looksTruncated(text) {
+    const s = String(text ?? '').trim();
+    if (!s) return false;
+    if (END_OK.test(s)) return false;
+    if (END_BAD.test(s)) return true;
+    // 结尾没有句读、又不是正常收尾符号：超过 20 字基本就是断了
+    return s.length > 20;
+}
+
 export function reviewText({ text, userInput = '', pack = null, state = null }) {
     const out = [];
     const s = String(text ?? '');
@@ -20,6 +36,15 @@ export function reviewText({ text, userInput = '', pack = null, state = null }) 
             break;
         }
     }
+    if (looksTruncated(s)) {
+        out.push({
+            code: 'truncated',
+            level: 'warn',
+            msg: '疑似被截断：结尾没有句读',
+            quote: s.slice(-18),
+        });
+    }
+
     const echo = echoOfUser(userInput, s);
     if (echo) {
         out.push({ code: 'echo_user', level: 'warn', msg: '复述了玩家原话', quote: echo });

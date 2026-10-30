@@ -5,7 +5,7 @@ import { normalizePack } from '../src/core/pack/registry.js';
 import { createQueue } from '../src/llm/queue.js';
 import { normalizeSettle, extractJson } from '../src/llm/schema.js';
 import { toEvents } from '../src/llm/settle.js';
-import { reviewText, echoOfUser, summarize } from '../src/core/review/review.js';
+import { reviewText, echoOfUser, summarize, looksTruncated } from '../src/core/review/review.js';
 
 const raw = JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8'));
 const pack = normalizePack(raw);
@@ -180,4 +180,21 @@ test('重试不叠加：同一楼重复结算只算一次', async () => {
     const s2 = fold(seed, [{ floor: 0, events: second }]);
     assert.equal(s1.aff.zhiwei, s2.aff.zhiwei);
     assert.equal(s2.aff.zhiwei, 0);   // -30 + 30
+});
+
+test('截断检测：正常结尾不算', () => {
+    assert.equal(looksTruncated('他勒马停在城外五里。'), false);
+    assert.equal(looksTruncated('他说：「明日再议。」'), false);
+    assert.equal(looksTruncated('嗯。'), false);
+    assert.equal(looksTruncated(''), false);
+});
+
+test('截断检测：逗号/半句算', () => {
+    assert.equal(looksTruncated('他勒马停在城外五里，'), true);
+    assert.equal(looksTruncated('他看着城头那面烧掉一半的旗子在风里卷起来又落下，忽然想起'), true);
+});
+
+test('审稿会把截断报出来', () => {
+    const f = reviewText({ text: '『承平十六年九月十四 · 酉初三刻 · 某地』\n他勒马停在城外五里，' });
+    assert.ok(f.some(x => x.code === 'truncated'));
 });

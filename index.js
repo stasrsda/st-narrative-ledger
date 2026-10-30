@@ -354,6 +354,7 @@ function diagInfo() {
         const metaHint = {
             onstage: meta?.onstage ?? [],
             lastEvents: (state.done?.length ?? 0) + (state.emergent?.length ?? 0),
+            lastLen: (messages()[messages().length - 1]?.mes ?? '').length,
             affSample: ['huozhen', 'zhiwei']
                 .filter(id => state.aff?.[id] != null)
                 .map(id => `${id} ${state.aff[id]}`)
