@@ -283,7 +283,39 @@ function mountMenu() {
     return true;
 }
 
-/** 兜底：右下角常驻小按钮，容器找不到时也能进面板 */
+/** 轮询等元素出现（照小白X 的写法：100ms 一次，默认 10 秒） */
+function waitForElement(selector, timeout = 10000) {
+    const start = Date.now();
+    return new Promise(resolve => {
+        const tick = () => {
+            const el = document.querySelector(selector);
+            if (el) return resolve(el);
+            if (Date.now() - start >= timeout) return resolve(null);
+            setTimeout(tick, 100);
+        };
+        tick();
+    });
+}
+
+/** ST 1.19 不一定吃 manifest 的 css 字段，自己注入一份 */
+async function injectStyles() {
+    if (document.getElementById('story-ledger-style')) return true;
+    try {
+        const res = await fetch(new URL('./style.css', import.meta.url));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const css = await res.text();
+        const el = document.createElement('style');
+        el.id = 'story-ledger-style';
+        el.textContent = css;
+        document.head.append(el);
+        return true;
+    } catch (e) {
+        log('样式注入失败（界面会没样式但不影响功能）', e?.message ?? e);
+        return false;
+    }
+}
+
+/** 兜底：右下角常驻小按钮。内联样式，不依赖 CSS 是否加载 */
 function mountFab() {
     if (document.getElementById('story-ledger-fab')) return true;
     const fab = document.createElement('div');
@@ -291,26 +323,55 @@ function mountFab() {
     fab.className = MENU_CLASS;
     fab.title = '叙事账本 v' + VERSION;
     fab.innerHTML = '<i class="fa-solid fa-scroll"></i>';
+    fab.setAttribute('style', [
+        'position:fixed', 'right:16px', 'bottom:84px', 'width:44px', 'height:44px',
+        'border-radius:50%', 'display:flex', 'align-items:center', 'justify-content:center',
+        'background:rgba(30,30,34,.92)', 'border:1px solid #666', 'color:#eee',
+        'box-shadow:0 2px 10px rgba(0,0,0,.35)', 'cursor:pointer', 'z-index:30000',
+    ].join(';'));
     fab.addEventListener('click', () => openDrawer());
     (document.body ?? document.documentElement).append(fab);
     return true;
 }
 
-/** 面板可能比扩展晚就绪，最多重试 40 次；始终失败就挂悬浮按钮 */
-function mountMenuWithRetry(attempt = 0) {
-    let ok = false;
-    try {
-        ok = mountMenu();
-    } catch (e) {
-        log('挂载入口失败', e?.message ?? e);
+/** 1.19：把界面挂进扩展设置区（等它真正出现） */
+async function setupSettings(attempt = 0) {
+    const host = await waitForElement('#extensions_settings', 15000)
+        ?? await waitForElement('#extensions_settings2', 3000);
+    if (!host) {
+        if (attempt < 2) return setupSettings(attempt + 1);
+        log('等不到 #extensions_settings，只保留悬浮按钮');
+        return false;
     }
-    if (ok) return;
-    if (attempt >= 40) {
-        log('找不到扩展容器，改用悬浮按钮');
-        mountFab();
-        return;
+    if (host.querySelector('.' + MENU_CLASS)) {
+        document.getElementById('story-ledger-fab')?.remove();
+        return true;
     }
-    setTimeout(() => mountMenuWithRetry(attempt + 1), 500);
+
+    const block = document.createElement('div');
+    block.className = 'story-ledger-settings ' + MENU_CLASS;
+    block.innerHTML = [
+        '<div class="inline-drawer">',
+        '  <div class="inline-drawer-toggle inline-drawer-header">',
+        '    <b>叙事账本</b>',
+        '    <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>',
+        '  </div>',
+        '  <div class="inline-drawer-content">',
+        `    <div class="sl-note">v${VERSION} · 时间 / 地点 / 在场 / 好感 / 礼法 / 器物</div>`,
+        '    <div class="menu_button menu_button_icon story-ledger-open">',
+        '      <i class="fa-solid fa-scroll"></i><span>打开面板</span>',
+        '    </div>',
+        '  </div>',
+        '</div>',
+    ].join('\n');
+    block.querySelector('.story-ledger-open')?.addEventListener('click', () => openDrawer());
+    host.append(block);
+    block.querySelector('.inline-drawer-toggle')?.addEventListener('click', () => {
+        block.querySelector('.inline-drawer-content')?.classList.toggle('displayNone');
+    });
+    document.getElementById('story-ledger-fab')?.remove();
+    log('已挂到扩展设置区');
+    return true;
 }
 
 function onChatChanged() {
@@ -319,8 +380,9 @@ function onChatChanged() {
 }
 
 function boot() {
-    mountFab();            // 先保证有入口
-    mountMenuWithRetry();  // 挂上正规入口后自动撤掉
+    mountFab();                    // 先保证有入口（内联样式，不依赖 CSS）
+    void injectStyles();           // 自己注入样式，不等 manifest 的 css
+    void setupSettings();          // 等扩展设置区出现后挂正规入口
     try {
         const saved = ctx().extensionSettings?.storyLedger;
         if (saved?.profileId) settings.profileId = saved.profileId;
@@ -393,5 +455,17 @@ jQuery(async () => {
     }
     window.addEventListener('beforeunload', () => closeDrawer());
 });
+
+/** ST 的 activate 钩子：hooks.activate 在 manifest 里声明 */
+export function activate() {
+    log('activate hook 被调用');
+    try {
+        mountFab();
+        void injectStyles();
+        void setupSettings();
+    } catch (e) {
+        log('activate 失败', e?.message ?? e);
+    }
+}
 
 export { composeAndInject, settings };
