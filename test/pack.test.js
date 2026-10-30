@@ -96,3 +96,33 @@ test('解析：显式 > 匹配 > 默认 > 兜底', () => {
     const empty = createRegistry();
     assert.equal(resolvePack(empty, {}).reason, 'none');
 });
+
+test('纪年自洽：真实世界包通过', () => {
+    const p = normalizePack(clone());
+    const r = validatePack(p);
+    assert.deepEqual(r.errors.filter(e => e.code === 'age_mismatch' || e.code === 'future'), []);
+});
+
+test('纪年自洽：年号写错会报出来', () => {
+    // 把 nowYear 改回 15：12 岁就藩 + 15 年 = 26 岁，与 27 岁对不上
+    const p = normalizePack(clone());
+    p.timeline.nowYear = 15;
+    p.timeline.anchors.find(a => a.id === 'now').year = 15;
+    const errs = validatePack(p).errors.filter(e => e.code === 'age_mismatch');
+    assert.equal(errs.length, 1);
+    assert.match(errs[0].msg, /应为 26 岁/);
+});
+
+test('纪年自洽：锚点不能晚于现在', () => {
+    const p = normalizePack(clone());
+    p.timeline.anchors.push({ id: 'future', label: '还没发生的事', year: 99 });
+    const errs = validatePack(p).errors.filter(e => e.code === 'future');
+    assert.equal(errs.length, 1);
+    assert.match(errs[0].msg, /晚于现在/);
+});
+
+test('纪年自洽：没有 timeline 不报错', () => {
+    const p = normalizePack(clone());
+    delete p.timeline;
+    assert.deepEqual(validatePack(p).errors.filter(e => e.code === 'age_mismatch'), []);
+});

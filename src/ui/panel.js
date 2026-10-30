@@ -202,7 +202,7 @@ function render() {
             }
         });
         r.append(btn);
-        r.append(el('div', 'sl-note', '承平十五年九月十四 · 酉初三刻 · 北门外五里'));
+        r.append(el('div', 'sl-note', '承平十六年九月十四 · 酉初三刻 · 北门外五里'));
         body.append(r);
     }
 

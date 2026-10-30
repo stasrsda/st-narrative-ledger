@@ -9,7 +9,7 @@ import { fromParts } from '../src/core/calendar/guofeng.js';
 
 const raw = JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8'));
 const pack = normalizePack(raw);
-const t = fromParts({ year: 15, month: 9, day: 14, shichen: 9, ke: 3 });
+const t = fromParts({ year: 16, month: 9, day: 14, shichen: 9, ke: 3 });
 
 function tree() {
     const tr = createTree();
@@ -29,7 +29,7 @@ test('骨架：头、在场、尾都在', () => {
         onstage: [{ name: '沈知微', aff: -30, address: '王爷' }],
     });
     assert.match(b.text, /^\[状态·只读·勿复述\]/);
-    assert.match(b.text, /时:承平十五年九月十四·酉初三刻/);
+    assert.match(b.text, /时:承平十六年九月十四·酉初三刻/);
     assert.match(b.text, /地:雁回县>北门外五里/);
     assert.match(b.text, /在场:沈知微\(-30\/怕\/称"王爷"\)/);
     assert.match(b.text, /与<info>冲突时以本块为准。/);

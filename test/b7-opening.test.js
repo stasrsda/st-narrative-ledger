@@ -125,7 +125,7 @@ test('状态里没有这人时给空经验', () => {
 
 test('开局：时间与地点', () => {
     const seed = openingSeed(pack);
-    assert.equal(renderDate(seed.t), '承平十五年九月十四');
+    assert.equal(renderDate(seed.t), '承平十六年九月十四');
     assert.equal(renderTime(seed.t), '酉初三刻');
     assert.equal(seed.place, 'p_wuli');
 });

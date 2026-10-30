@@ -167,6 +167,9 @@ export function validatePack(pack) {
         if (!SCENES.includes(k)) err(`props.by_scene.${k}`, 'enum', `场景非法：${k}`);
     }
 
+    // ── timeline：纪年自洽 ──
+    for (const e of timelineErrors(pack)) errors.push(e);
+
     // ── gaze ──
     for (const s of pack.gaze?.stances ?? []) {
         for (const ax of AXES) {
@@ -175,4 +178,46 @@ export function validatePack(pack) {
     }
 
     return { ok: errors.length === 0, errors };
+}
+
+/**
+ * 纪年自洽：anchor 钉住「某年此人多少岁」，用 nowYear 推算现在该多大。
+ * 对不上就报错——这类错肉眼很难发现（曾把 27 岁当年号用过）。
+ */
+function timelineErrors(pack) {
+    const out = [];
+    const tl = pack?.timeline;
+    if (!tl) return out;
+    const now = Number(tl.nowYear);
+    if (!Number.isFinite(now) || now < 1) {
+        out.push({ path: 'timeline.nowYear', code: 'range', msg: 'nowYear 需为正整数' });
+        return out;
+    }
+    const ages = tl.ages ?? {};
+    for (const a of tl.anchors ?? []) {
+        const y = Number(a.year);
+        if (!Number.isFinite(y) || y < 1) {
+            out.push({ path: 'timeline.anchors.' + a.id + '.year', code: 'range', msg: '年份需为正整数' });
+            continue;
+        }
+        if (y > now) {
+            out.push({
+                path: 'timeline.anchors.' + a.id + '.year',
+                code: 'future',
+                msg: '「' + a.label + '」在第 ' + y + ' 年，晚于现在（第 ' + now + ' 年）',
+            });
+        }
+        if (a.actor && Number.isFinite(a.ageThen) && Number.isFinite(ages[a.actor])) {
+            const expect = a.ageThen + (now - y);
+            if (expect !== ages[a.actor]) {
+                out.push({
+                    path: 'timeline.ages.' + a.actor,
+                    code: 'age_mismatch',
+                    msg: '「' + a.label + '」是第 ' + y + ' 年、' + a.ageThen + ' 岁；到第 ' + now +
+                        ' 年应为 ' + expect + ' 岁，但写的是 ' + ages[a.actor] + ' 岁',
+                });
+            }
+        }
+    }
+    return out;
 }
