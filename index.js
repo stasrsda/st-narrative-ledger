@@ -131,6 +131,27 @@ function ensurePack() {
     });
 }
 
+/** localStorage 兜底：ST 设置偶尔会被重置，这里再存一份 */
+const LS_KEY = 'storyLedger.settings';
+
+function lsGet() {
+    try {
+        return JSON.parse(globalThis.localStorage?.getItem(LS_KEY) ?? '{}') ?? {};
+    } catch {
+        return {};
+    }
+}
+
+function lsSet(patch) {
+    try {
+        const next = { ...lsGet(), ...patch };
+        globalThis.localStorage?.setItem(LS_KEY, JSON.stringify(next));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 /** 用户导入过的世界包（存在 ST 设置里，重启仍在） */
 function importedPacks() {
     try {
@@ -431,9 +452,17 @@ function boot() {
     void injectStyles();           // 自己注入样式，不等 manifest 的 css
     void setupSettings();          // 等扩展设置区出现后挂正规入口
     try {
-        const saved = ctx().extensionSettings?.storyLedger;
-        if (saved?.profileId) settings.profileId = saved.profileId;
-        if (saved?.directModel) settings.direct = { ...settings.direct, ...saved.directModel };
+        const saved = ctx().extensionSettings?.storyLedger ?? {};
+        const local = lsGet();
+        const merged = {
+            profileId: saved.profileId || local.profileId || '',
+            directModel: { ...(local.directModel ?? {}), ...(saved.directModel ?? {}) },
+        };
+        if (merged.profileId) settings.profileId = merged.profileId;
+        if (merged.directModel?.model || merged.directModel?.baseUrl) {
+            settings.direct = { ...settings.direct, ...merged.directModel };
+            log('读回直连配置', settings.direct.model || settings.direct.baseUrl);
+        }
     } catch {
         /* noop */
     }
@@ -473,25 +502,30 @@ function boot() {
     onSaveProfile((id, direct) => {
         if (direct) {
             settings.direct = { ...direct };
+            lsSet({ directModel: settings.direct });
             try {
                 const c = ctx();
-                c.extensionSettings = c.extensionSettings ?? {};
-                c.extensionSettings.storyLedger = {
-                    ...(c.extensionSettings.storyLedger ?? {}),
-                    directModel: settings.direct,
-                };
-                c.saveSettingsDebounced?.();
-            } catch { /* noop */ }
+                const st = c.extensionSettings;
+                if (st) {
+                    st.storyLedger = { ...(st.storyLedger ?? {}), directModel: settings.direct };
+                    c.saveSettingsDebounced?.();
+                }
+            } catch (e) {
+                log('写 ST 设置失败（已存本地）', e?.message ?? e);
+            }
             refreshPanel({ direct: settings.direct });
             log('直连已保存', settings.direct.model || '（空）');
             return;
         }
         settings.profileId = id;
+        lsSet({ profileId: id });
         try {
             const c = ctx();
-            c.extensionSettings = c.extensionSettings ?? {};
-            c.extensionSettings.storyLedger = { ...(c.extensionSettings.storyLedger ?? {}), profileId: id };
-            c.saveSettingsDebounced?.();
+            const st = c.extensionSettings;
+            if (st) {
+                st.storyLedger = { ...(st.storyLedger ?? {}), profileId: id };
+                c.saveSettingsDebounced?.();
+            }
         } catch { /* noop */ }
         refreshPanel({ profileId: id, transport: transportAvailable() ? (id ? '就绪' : '缺连接配置') : '不可用' });
         log('副模型已保存', id || '（关闭）');
@@ -546,7 +580,7 @@ function boot() {
         return { ok: true, id: r.pack.id, name: r.pack.name };
     });
 
-    refreshPanel({ chatId: chatId(), messageCount: messages().length, profileId: settings.profileId, env: envInfo() });
+    refreshPanel({ chatId: chatId(), messageCount: messages().length, profileId: settings.profileId, direct: settings.direct, env: envInfo() });
     if (typeof eventSource?.on !== 'function') { log('事件源不可用，扩展只会显示面板'); refreshPanel({ env: envInfo() }); return; }
     try {
         eventSource.on(EV.CHAT_CHANGED, onChatChanged);
