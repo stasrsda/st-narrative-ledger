@@ -198,3 +198,9 @@ test('审稿会把截断报出来', () => {
     const f = reviewText({ text: '『承平十六年九月十四 · 酉初三刻 · 某地』\n他勒马停在城外五里，' });
     assert.ok(f.some(x => x.code === 'truncated'));
 });
+
+test('截断检测：以标签收尾不算截断', () => {
+    assert.equal(looksTruncated('故事写完了。\n</记录>'), false);
+    assert.equal(looksTruncated('故事写完了。\n</content>'), false);
+    assert.equal(looksTruncated('写到一半，'), true);
+});

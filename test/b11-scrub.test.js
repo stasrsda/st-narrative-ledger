@@ -40,3 +40,18 @@ test('批量清理：统计楼数与处数', () => {
     assert.equal(r.blocks, 2);
     assert.equal(msgs[1].mes, '正文');
 });
+
+test('清掉预设脚手架：<content>、<!-- -->、<记录>', () => {
+    const src = '正文一句。\n\n<content>\n　　马鞭一甩。\n</content>\n\n<!-- consider: (模拟内容) -->\n\n<记录>巷中有活人。</记录>';
+    const r = scrubText(src);
+    assert.ok(!r.text.includes('<content>'), '不该留 <content>');
+    assert.ok(!r.text.includes('<!--'), '不该留注释');
+    assert.ok(!r.text.includes('<记录>'), '不该留 <记录>');
+    assert.ok(r.text.includes('马鞭一甩'));
+    assert.ok(r.text.includes('巷中有活人'));
+});
+
+test('普通尖括号不被误删', () => {
+    const r = scrubText('他压低声音说：「县衙那边有动静。」');
+    assert.equal(r.removed, 0);
+});

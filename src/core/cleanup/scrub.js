@@ -1,4 +1,25 @@
 // 清理历史消息里的状态残留：<好感> 块、【在场】行、误写进正文的状态块
+// 预设脚手架：不是故事，必须剥掉
+const SCAFFOLD = [
+    /<!--[\s\S]*?-->/g,      // <!-- consider: ... -->
+    /<\/?content>/g,          // <content>…</content>
+    /<\/?记录>/g,
+    /<\/?状态栏>/g,
+    /<\/?状态>/g,
+];
+
+function stripScaffold(text) {
+    let out = String(text ?? '');
+    let n = 0;
+    for (const re of SCAFFOLD) {
+        out = out.replace(re, () => {
+            n++;
+            return '\n';
+        });
+    }
+    return { text: out.replace(/\n{3,}/g, '\n\n').trim(), removed: n };
+}
+
 const PATTERNS = [
     /<好感>[\s\S]*?<\/好感>\s*/g,          // 旧世界书要求的输出块
     /^[ \t]*【在场】[^\n]*\n?/gm,           // 我们 0.7.x 的临时协议
@@ -10,6 +31,9 @@ const PATTERNS = [
 export function scrubText(text) {
     let out = String(text ?? '');
     let removed = 0;
+    const sc = stripScaffold(out);
+    out = sc.text;
+    removed += sc.removed;
     for (const re of PATTERNS) {
         out = out.replace(re, () => {
             removed++;

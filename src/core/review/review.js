@@ -9,6 +9,8 @@ const META_TALK = [
 
 const END_OK = /[。！？…”」』）】\.!?"')]$/;
 const END_BAD = /[，、；：,;:—…「『（【]$/;
+// 以「状态块/记录块」收尾不算截断
+const TAG_END = /<\/[^>]{1,12}>\s*$|【[^】]{1,12}】\s*$/;
 
 /**
  * 看起来被截断了：结尾既不是句读，又断在逗号/顿号/半句上。
@@ -18,6 +20,7 @@ export function looksTruncated(text) {
     const s = String(text ?? '').trim();
     if (!s) return false;
     if (END_OK.test(s)) return false;
+    if (TAG_END.test(s)) return false;   // 以 </content> 收尾是正常结束
     if (END_BAD.test(s)) return true;
     // 结尾没有句读、又不是正常收尾符号：超过 20 字基本就是断了
     return s.length > 20;
