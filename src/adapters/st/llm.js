@@ -6,6 +6,17 @@ function c() {
     return globalThis.SillyTavern?.getContext?.() ?? {};
 }
 
+/**
+ * ST 的 custom_include_headers 只吃 **YAML 字符串**：
+ *   util.js → mergeObjectWithYaml(obj, yamlString) → yaml.parse(yamlString)
+ * 传对象会抛异常并被静默吞掉，等于没带 Authorization（上游就 401）。
+ */
+function authHeadersYaml(apiKey) {
+    const k = String(apiKey ?? '').trim();
+    if (!k) return '';
+    return `Authorization: Bearer ${k}`;
+}
+
 export function transportAvailable() {
     const ctx = c();
     return typeof ctx.ConnectionManagerRequestService?.sendRequest === 'function'
@@ -87,7 +98,7 @@ export async function requestCustom({
         // model: undefined，上游直接 400 Bad Request。
         model,
         custom_model: model,
-        custom_include_headers: apiKey ? { Authorization: 'Bearer ' + apiKey } : {},
+        custom_include_headers: authHeadersYaml(apiKey),
         custom_include_body: {
             temperature,
             ...(extraBody ?? {}),
@@ -169,7 +180,7 @@ export async function listModels({ baseUrl, apiKey } = {}) {
         body: JSON.stringify({
             chat_completion_source: 'custom',
             custom_url: url,
-            custom_include_headers: apiKey ? { Authorization: 'Bearer ' + apiKey } : {},
+            custom_include_headers: authHeadersYaml(apiKey),
         }),
     });
 

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeBase, pickText, requestCustom, listModels } from '../src/adapters/st/llm.js';
@@ -72,7 +73,8 @@ test('请求体字段：model / custom_url 用 base / 带 Authorization', async 
     assert.equal(b.chat_completion_source, 'custom');
     assert.equal(b.model, 'Qwen/Qwen2.5-7B-Instruct');              // ← 关键：必须有 model
     assert.equal(b.custom_url, 'https://api.siliconflow.cn/v1');    // ← 不能带 /chat/completions
-    assert.equal(b.custom_include_headers.Authorization, 'Bearer sk-test');
+    // ST 的 custom_include_headers 只吃 YAML 字符串（传对象会被静默丢弃 → 401）
+    assert.equal(b.custom_include_headers, 'Authorization: Bearer sk-test');
     assert.equal(b.stream, false);
 });
 
@@ -96,4 +98,10 @@ test('上游 400 时把地址和错误体带进异常', async () => {
         () => requestCustom({ baseUrl: 'https://x/v1', apiKey: 'k', model: 'bad', messages: [] }),
         /HTTP 400 .*\/chat\/completions .*model not found/,
     );
+});
+
+test('授权头是 YAML 字符串，不是对象（对象会被 ST 静默丢弃 → 401）', async () => {
+    const src = readFileSync(new URL('../src/adapters/st/llm.js', import.meta.url), 'utf8');
+    assert.ok(src.includes('Authorization: Bearer ${k}'), '应当拼成 YAML 字符串');
+    assert.ok(!/custom_include_headers:\s*apiKey\s*\?\s*\{/.test(src), '不能再传对象');
 });

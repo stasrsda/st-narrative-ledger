@@ -6,6 +6,13 @@
 
 ---
 
+## 0.9.29 — 2026-10-30
+
+- 修 `Unauthorized` / 「端点没有返回任何模型」：`custom_include_headers` 必须是 **YAML 字符串**
+  （ST 的 `mergeObjectWithYaml` 用 `yaml.parse` 解析，传对象会抛异常并被静默吞掉，
+  结果请求根本没带 Authorization）
+  现在传：`Authorization: Bearer sk-...`
+
 ## 0.9.28 — 2026-09-30
 
 修：在场判断把「被提到」当成「在场」，导致孙账房、宋衍之出现在雁回县前线。
