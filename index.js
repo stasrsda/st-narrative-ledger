@@ -9,7 +9,7 @@ import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
 } from './src/adapters/st/context.js';
-import { setStatePrompt, clearStatePrompt, setRawSlot, configurePrompt, PROMPT_KEY_ADDR } from './src/adapters/st/prompt.js';
+import { setStatePrompt, clearStatePrompt, setRawSlot, configurePrompt, PROMPT_KEY_ADDR, PROMPT_KEY_FMT } from './src/adapters/st/prompt.js';
 import { transportAvailable, requestCompletion, requestCustom, probeModel, listModels } from './src/adapters/st/llm.js';
 import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.js';
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
@@ -21,7 +21,7 @@ import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
 import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
-import { parsePresence, stripPresence, resolveActors, inferPresence } from './src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { splitThinking, thinkingDominates, normalizeMessage } from './src/core/cleanup/thinking.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
@@ -542,6 +542,19 @@ function composeAndInject() {
     const hintText = lastUser + lastAi;
     const varCount = syncChatVariables(state);
     const block = buildSceneBlock({ pack, state, tree, chatSeed: chatId(), meta: { ...meta, hintText }, budget: Number.POSITIVE_INFINITY });   // 不设上限：一行都不丢
+    // 输出格式：让主模型在正文后写一行隐藏注释声明在场，插件解析后删掉
+    const FORMAT_HINT = [
+        '正文写完之后，另起一行写一行 HTML 注释，声明此刻在场的人：',
+        '<!--在场:名字、名字-->',
+        '只写名字，用顿号分隔；不在场的不要写；谁也不在就写 <!--在场:-->。',
+        '这一行读者看不到，插件读完会删掉，不要写进正文，也不要解释它。',
+    ].join('\n');
+    try {
+        setStatePrompt(FORMAT_HINT, { depth: 3, key: PROMPT_KEY_FMT });
+    } catch (e) {
+        log('注入输出格式失败', e?.message ?? e);
+    }
+
     const ok = settings.enabled && (setStatePrompt(block.text) || setRawSlot(block.text));
 
     // 称谓块：只有两个以上在场者才需要（§5.2）
@@ -674,6 +687,19 @@ function settleMessage() {
         }
     } catch (e) {
         log('职权自动添加失败', e?.message ?? e);
+    }
+
+    // 在场：① 主模型的隐藏注释 > ② 旧【在场】行 > ③ 正文证据推断
+    const declaredInComment = parsePresenceComment(msg.mes ?? '');
+    if (declaredInComment) {
+        const { ids } = resolveActors(pack, declaredInComment);
+        if (ids.length) {
+            writeMeta({ onstage: ids, onstageSrc: 'ai' });
+            log('主模型声明在场：', ids.join(','));
+        } else if (declaredInComment.length === 0) {
+            writeMeta({ onstage: [], onstageSrc: 'ai' });
+            log('主模型声明：无人');
+        }
     }
 
     // 在场：优先用旧协议的【在场】行（兼容），否则从正文推断

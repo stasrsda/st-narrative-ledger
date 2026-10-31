@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizePack } from '../src/core/pack/registry.js';
-import { parsePresence, stripPresence, resolveActors, renderPresence, inferPresence, canBePresent } from '../src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, renderPresence, inferPresence, canBePresent, parsePresenceComment } from '../src/core/clock/presence.js';
 import { createTree, putNode } from '../src/core/place/tree.js';
 
 const raw = JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8'));
@@ -135,4 +135,21 @@ test('证据判定：对白归属（…」霍振说）也算', () => {
 test('证据判定：县丞出场（沈述）', () => {
     const ids = inferPresence(pack, '沈述跪在堂下，抬头看了一眼。', { placeId: 'p_yanhui', tree });
     assert.deepEqual(ids, ['shenshu']);
+});
+
+test('隐藏注释：主模型声明在场', () => {
+    assert.deepEqual(parsePresenceComment('正文。\n<!--在场:霍振、沈知微-->'), ['霍振', '沈知微']);
+    assert.deepEqual(parsePresenceComment('正文。\n<!-- 在场：霍振 / 沈知微 -->'), ['霍振', '沈知微']);
+});
+
+test('隐藏注释：写了空表示没人；没写返回 null', () => {
+    assert.deepEqual(parsePresenceComment('正文。\n<!--在场:-->'), []);
+    assert.equal(parsePresenceComment('正文，没有注释'), null);
+});
+
+test('隐藏注释会被清理器删掉（不进上下文）', async () => {
+    const { scrubText } = await import('../src/core/cleanup/scrub.js');
+    const r = scrubText('正文一句。\n<!--在场:霍振-->');
+    assert.ok(!r.text.includes('<!--'), '注释要被删掉');
+    assert.equal(r.text, '正文一句。');
 });

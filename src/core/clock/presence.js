@@ -153,3 +153,22 @@ export function canBePresent(actor, { placeId = null, tree = null } = {}) {
     if (home === placeId) return true;
     return ancestors(tree, placeId).includes(home);
 }
+
+/**
+ * 主模型在正文末尾写的隐藏注释：
+ *   <!--在场:霍振、沈知微-->
+ *   <!-- 在场：霍振 / 沈知微 -->
+ * 返回名字数组；没写返回 null（区别于写了空的）
+ */
+export function parsePresenceComment(text) {
+    const t = String(text ?? '');
+    const m = t.match(/<!--\s*(?:在场|出场|presence)\s*[:：]\s*([^>]*?)-->/i);
+    if (!m) return null;
+    const raw = m[1] ?? '';
+    const names = raw
+        .split(/[、,，/｜|\s]+/)
+        .map(x => x.trim())
+        .filter(Boolean)
+        .filter(x => !/^(无|无人|空|—|-|none)$/i.test(x));
+    return [...new Set(names)];
+}
