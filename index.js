@@ -614,34 +614,32 @@ function settleMessage() {
     if (!msg || msg.is_user) return;
 
     const { pack, state, meta } = currentState();
-    // 思考块与正文分开：时间头、在场、截断判断都只认正文
+    // ① 先切思考（标记 / 灰魂小标题 / 无标记三种都能认）
     const norm = normalizeMessage(msg.mes ?? '');
-    const body = norm.body;
-    const thinking = norm.thinking;
+    let body = String(norm.body ?? '').trim();
+    const thinking = String(norm.thinking ?? '').trim();
+
     if (norm.broken) {
         writeMeta({ lastBroken: { at: Date.now(), len: (msg.mes ?? '').length } });
         log('思考标记没有闭合：这一楼只有思考，没有正文');
     }
-    if (norm.loose && norm.thinking) {
-        // 模型没写标记：把思考搬进 ST 的推理通道 → 界面折成灰块，正文保持干净
-        msg.extra = msg.extra ?? {};
-        const prevReason = String(msg.extra.reasoning ?? '');
-        msg.extra.reasoning = prevReason ? `${prevReason}\n\n${norm.thinking}` : norm.thinking;
-        msg.mes = body;
-        try { ctx().saveChat?.(); } catch { /* noop */ }
-        repaintChat();
-        log('认出未标记的思考，已折起来：', `${norm.thinking.length} 字`);
-    }
-    if (norm.recovered) {
-        // 正文被塞进了思考块：提回来，并写回消息，否则用户默认折叠时看不到
-        msg.mes = body;
-        try { ctx().saveChat?.(); } catch { /* noop */ }
-        repaintChat();
-        log('正文原先在思考块里，已提回正文：', `${body.length} 字`);
-    }
     if (thinkingDominates(thinking, body)) {
         log('思考块比正文长很多：', `思考 ${thinking.length} 字 / 正文 ${body.length} 字`);
     }
+
+    // ② 思考一律搬进 extra.reasoning：界面折成灰块，正文里不再留标记
+    //    这样 ST 不需要在「消息开头」找标记，也不会因为时间头挡在前面而解析失败
+    if (thinking) {
+        msg.extra = msg.extra ?? {};
+        const prev = String(msg.extra.reasoning ?? '');
+        if (!prev.includes(thinking.slice(0, 40))) {
+            msg.extra.reasoning = prev ? `${prev}\n\n${thinking}` : thinking;
+        }
+        log('思考已折进 reasoning：', `${thinking.length} 字`);
+    }
+
+    // ③ 正文去掉旧时间头后重新写一遍（时间以插件为准）
+    body = body.replace(/^[ \t]*『[^』]{6,60}』[^\n]*\n*/, '').trim();
 
     // 时钟由插件推进：按这一轮的内容估算耗时，写一条 clock 事件
     const userTextForClock = messages()[idx - 1]?.mes ?? '';
@@ -657,21 +655,8 @@ function settleMessage() {
     writeMeta({ lastAdvance: { minutes: step.minutes, why: step.why, from: state.t, to: step.t } });
     log('时间推进', renderAdvance(step.minutes, step.why));
 
+    // 时间以插件为准：正文里若还留着旧时间头，用地名解析出来供地点更新
     let parsed = parseHeader(body, pack.calendar);
-    if (!parsed) {
-        // 模型没写或写坏了：用当前状态补一行，保证时地永远在
-        const treeNow = treeOf(pack);
-        const node = meta.placeId || state.place ? treeNow.nodes?.[meta.placeId ?? state.place] : null;
-        const placeName = meta.placeName || node?.name || '';
-        const header = renderHeader(step.t, placeName, pack.calendar);
-        const thinkingPart = thinking ? `${thinking}\n\n` : '';
-        msg.mes = header + '\n\n' + thinkingPart + String(body ?? '').trim();
-        parsed = parseHeader(msg.mes, pack.calendar);
-        log('模型没写时间头，已补：', header);
-        try { ctx().saveChat?.(); } catch { /* noop */ }
-        repaintChat();
-        refreshPanel({ headerFixed: true });
-    }
 
     // 时间头里写了地名 → 更新当前地点（地点是叙事推着走的，不该永远是开局那一个）
     if (parsed?.place) {
@@ -691,21 +676,22 @@ function settleMessage() {
         }
     }
 
-    // 兜底：不管前面怎么处理，正文第一行必须是时间头
+    // ④ 统一写回：mes = 时间头 + 空行 + 正文（思考已经在 extra.reasoning 里）
     try {
-        const cur = String(msg.mes ?? '');
-        if (!/^[ \t]*『[^』]{6,60}』/.test(cur.trimStart())) {
-            const treeNow = treeOf(pack);
-            const node = treeNow.nodes?.[meta.placeId ?? state.place] ?? null;
-            const placeName = meta.placeName || node?.name || '';
-            const header = renderHeader(step.t, placeName, pack.calendar);
-            msg.mes = `${header}\n\n${cur.trimStart()}`;
+        const treeNow = treeOf(pack);
+        const node = treeNow.nodes?.[meta.placeId ?? state.place] ?? null;
+        const placeName = meta.placeName || node?.name || parsed?.place || '';
+        const header = renderHeader(step.t, placeName, pack.calendar);
+        const cleanBody = String(body ?? '').trim();
+        const next = cleanBody ? `${header}\n\n${cleanBody}` : `${header}\n`;
+        if (msg.mes !== next) {
+            msg.mes = next;
             try { ctx().saveChat?.(); } catch { /* noop */ }
             repaintChat();
-            log('首行不是时间头，已补：', header);
+            log('正文已重写（时间头 + 正文）：', `${cleanBody.length} 字`);
         }
     } catch (e) {
-        log('校验首行失败', e?.message ?? e);
+        log('写回正文失败', e?.message ?? e);
     }
 
     // 先清掉正文里的状态残留（<好感> 块、旧【在场】行等），避免它们跟着历史进上下文
