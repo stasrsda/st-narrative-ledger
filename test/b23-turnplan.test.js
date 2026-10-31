@@ -72,3 +72,20 @@ test('副模型能看到「上一幕在场+注记」', () => {
     assert.match(m[1].content, /左肩带伤/);
     assert.match(m[0].content, /人没退场就别换人/);
 });
+
+test('副模型能看到紧迫度 / 已知事实 / 随身物品状态', () => {
+    const m = buildTurnMessages({
+        userText: '带上来',
+        placeName: '县衙',
+        urgency: '距天亮还有 4 个时辰',
+        relations: ['沈述 位置=在逃'],
+        items: ['佩刀(卷刃)'],
+        player: { rank: '王' },
+        onstage: ['霍振'],
+        places: ['县衙'],
+    });
+    assert.match(m[1].content, /时间紧迫/);
+    assert.match(m[1].content, /距天亮还有/);
+    assert.match(m[1].content, /已知事实.*在逃/);
+    assert.match(m[1].content, /佩刀\(卷刃\)/);
+});

@@ -22,6 +22,7 @@ import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { buildOutline } from './src/core/runtime/director.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
+import { urgencyLine } from './src/core/clock/urgency.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, parsePresenceCommentDetailed, canBePresent, parseNewPlacesComment, parsePresenceFromThinking, parseCastFromThinking } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { splitThinking, thinkingDominates, normalizeMessage, splitTailStory } from './src/core/cleanup/thinking.js';
@@ -33,7 +34,7 @@ import { buildSettleMessages } from './src/llm/prompt.js';
 import { buildOutlineMessages, renderModelOutline } from './src/llm/outline.js';
 import { buildTurnMessages, validateTurnPlan, renderTurnPlan } from './src/llm/turnPlan.js';
 import { buildDeliberateMessages } from './src/llm/deliberate.js';
-import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors } from './src/core/memory/lwb.js';
+import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors, factsForCast } from './src/core/memory/lwb.js';
 import { loadWorldbook, pickWorldEntries } from './src/core/memory/worldbook.js';
 import { normalizeSettle } from './src/llm/schema.js';
 import { toEvents } from './src/llm/settle.js';
@@ -557,6 +558,19 @@ async function composeTurnPlan() {
             props: nodeNow?.props ?? [],
             world,
             rounds,
+            urgency: (() => {
+                try { return urgencyLine(state.t ?? 0); } catch { return ''; }
+            })(),
+            relations: factsForCast(ctx().chatMetadata, cast.map(c => c.name), 6),
+            items: Object.values(state.items ?? {})
+                .filter(it => it && (it.hold === 'carry' || it.holder === playerId))
+                .slice(0, 6)
+                .map(it => {
+                    const bits = [it.name];
+                    if (it.cond && it.cond !== '旧') bits.push(it.cond);
+                    if (it.note) bits.push(String(it.note).slice(0, 10));
+                    return bits.length > 1 ? `${bits[0]}(${bits.slice(1).join('·')})` : bits[0];
+                }),
         });
 
         const d2 = settings.direct ?? {};

@@ -91,3 +91,27 @@ export function aliasMapForActors(pack, chatMeta) {
     }
     return out;
 }
+
+/**
+ * 只挑和这些人有关的事实：`沈述 位置=在逃`
+ * @returns {string[]}
+ */
+export function factsForCast(chatMeta, names = [], limit = 6) {
+    const sum = readLwbSummary(chatMeta);
+    if (!sum || !names.length) return [];
+    const want = new Set(names.filter(Boolean));
+    const out = [];
+    for (const f of sum.facts) {
+        if (f?.retracted) continue;
+        const subj = String(f?.s ?? '').trim();
+        if (!subj) continue;
+        const hit = [...want].some(n => subj.includes(n) || n.includes(subj));
+        if (!hit) continue;
+        const p = String(f?.p ?? '').trim();
+        const o = String(f?.o ?? '').trim();
+        if (!p && !o) continue;
+        out.push(`${subj} ${p}${p && o ? '=' : ''}${o}`);
+        if (out.length >= limit) break;
+    }
+    return out;
+}

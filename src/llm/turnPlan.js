@@ -7,6 +7,7 @@ export function buildTurnMessages(brief = {}) {
         onstage = [], prevLine = '', places = [], ruleOutline = '', recent = '', lastAi = '',
         cast = [], codes = [], events = {}, authority = [], player = {}, props = [],
         world = [], rounds = [], maxChars = 7000,
+        urgency = '', relations = [], items = [],
     } = brief;
 
     const sys = [
@@ -59,6 +60,7 @@ export function buildTurnMessages(brief = {}) {
     const blocks = [
         `【现在的时间】${timeText || '（未知）'}`,
         `【现在的地点】${placePath || placeName || '（未知）'}`,
+        urgency ? `【时间紧迫】${urgency}` : '',
         sceneCn ? `【场景类型】${sceneCn}` : '',
         `【在场】${onstage.join('、') || '（无）'}`,
         `【上一幕在场】${prevLine || '（无）'}`,
@@ -75,9 +77,10 @@ export function buildTurnMessages(brief = {}) {
         ev('【未结】', events.pending),
         ev('【可触发】', events.canTrigger),
         ev('【已结】', events.done),
+        relations.length ? `【已知事实】${relations.join('；')}` : '',
         authority.length ? `【职权】${authority.join('；')}` : '',
         player.rank || player.items?.length
-            ? `【玩家】位份:${player.rank || '—'}${player.items?.length ? `  随身:${player.items.join('、')}` : ''}`
+            ? `【玩家】位份:${player.rank || '—'}${items.length ? `  随身:${items.join('、')}` : ''}`
             : '',
         '',
         world.length
