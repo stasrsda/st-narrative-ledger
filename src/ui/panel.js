@@ -38,6 +38,7 @@ const S = {
     hudCollapsed: false,
     stateDetail: 'lean',
     directorModel: false,
+    directorDeliberate: true,
     cleanMsg: '',
     hudOn: true,
     directMsg: '',
@@ -56,6 +57,7 @@ let diagHandler = null;
 let onstageHandler = null;
 let detailHandler = null;
 let directorHandler = null;
+let deliberateHandler = null;
 let actorHomeHandler = null;
 let scrubHandler = null;
 
@@ -110,6 +112,10 @@ export function onStateDetailChange(fn) {
 
 export function onDirectorChange(fn) {
     directorHandler = fn;
+}
+
+export function onDeliberateChange(fn) {
+    deliberateHandler = fn;
 }
 
 export function onActorHomeChange(fn) {

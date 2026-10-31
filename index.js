@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange, onStateDetailChange, onScrubChat, onDirectorChange, onActorHomeChange } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange, onStateDetailChange, onScrubChat, onDirectorChange, onActorHomeChange, onDeliberateChange } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -32,6 +32,7 @@ import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
 import { buildOutlineMessages, renderModelOutline } from './src/llm/outline.js';
 import { buildTurnMessages, validateTurnPlan, renderTurnPlan } from './src/llm/turnPlan.js';
+import { buildDeliberateMessages } from './src/llm/deliberate.js';
 import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors } from './src/core/memory/lwb.js';
 import { normalizeSettle } from './src/llm/schema.js';
 import { toEvents } from './src/llm/settle.js';
@@ -546,10 +547,41 @@ async function composeTurnPlan() {
         const knownCodes = new Set(
             Object.values(pack.codes ?? {}).flat().map(c => c.id),
         );
-        const plan = validateTurnPlan(data, {
+        let plan = validateTurnPlan(data, {
             resolvePlace: (n) => resolvePlaceName(tree, n),
             knownCodes,
         });
+
+        // 第二遍：逻辑思辨（让副模型自己挑毛病并改分镜），省主模型这块的 CoT
+        let logicNotes = [];
+        if (settings.directorDeliberate !== false && plan.ok) {
+            try {
+                const dmsgs = buildDeliberateMessages({
+                    briefText: (msgs?.[1]?.content ?? '').slice(0, 6000),
+                    draft: { minutes: plan.minutes, place: plan.place?.name ?? '', beats: plan.beats, hook: plan.hook, codes: plan.codes },
+                });
+                const dres = d2.baseUrl && d2.model
+                    ? await requestCustom({ baseUrl: d2.baseUrl, apiKey: d2.apiKey, model: d2.model, messages: dmsgs, maxTokens: 420 })
+                    : await requestCompletion(dmsgs, { profileId: settings.profileId, maxTokens: 420 });
+                const ddata = extractJsonSafe(dres);
+                if (ddata) {
+                    const revised = validateTurnPlan(
+                        { ...data, ...ddata, minutes: ddata.minutes ?? data.minutes },
+                        { resolvePlace: (n) => resolvePlaceName(tree, n), knownCodes },
+                    );
+                    if (revised.ok) plan = { ...plan, ...revised };
+                    logicNotes = Array.isArray(ddata.problems)
+                        ? ddata.problems.map(x => String(x).slice(0, 16)).filter(Boolean).slice(0, 4)
+                        : [];
+                    log('思辨第二遍：', logicNotes.length ? logicNotes.join('；') : '未发现问题');
+                }
+            } catch (e) {
+                log('思辨第二遍失败（用草稿）', e?.message ?? e);
+            }
+        }
+
+        // 逻辑说明存下来，下一轮大纲里给主模型看（它就不用自己再推一遍）
+        if (logicNotes.length) writeMeta({ logicNotes, logicAt: Date.now() });
 
         if (!plan.ok) {
             log('总规划没用（解析失败或空），回落规则推进');
@@ -577,7 +609,10 @@ async function composeTurnPlan() {
             advanceFromUserInput();
         }
 
-        turnPlanCache = { key: cacheKey, text: renderTurnPlan(rule.text, plan) };
+        const logicBlock = logicNotes.length
+            ? `\n逻辑:${logicNotes.join('；')}（已核对过，不要再推一遍）`
+            : '';
+        turnPlanCache = { key: cacheKey, text: renderTurnPlan(rule.text, plan) + logicBlock };
         log('本轮规划已生成：', `+${plan.minutes}分`, plan.place?.name ?? '', `${plan.beats.length} 个分镜`);
     } catch (e) {
         log('总规划失败，回落规则推进', e?.message ?? e);
@@ -1721,6 +1756,12 @@ function boot() {
     onActorHomeChange((id, placeId) => {
         setActorHome(id, placeId);
         refreshPanel();
+    });
+
+    onDeliberateChange(v => {
+        settings.directorDeliberate = Boolean(v);
+        try { globalThis.localStorage?.setItem('storyLedger.directorDeliberate', v ? '1' : '0'); } catch { /* noop */ }
+        log('副模型思辨（二遍）', v ? '开' : '关');
     });
 
     onDirectorChange(v => {
