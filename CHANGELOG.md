@@ -6,6 +6,32 @@
 
 ---
 
+## 0.9.93 — 2026-10-30
+
+**修一个一直没被发现的大错：小白X 的数据我们读错了整整一层。**
+
+按 LWB 3.2.3 源码核对，真实结构是：
+
+```
+chat_metadata.extensions.LittleWhiteBox.storySummary = {
+  json: { events[], facts[], characters{main[]}, arcs[], characterAliases[], keywords[] },
+  lastSummarizedMesId, summaryHistory[], updatedAt,
+}
+```
+
+而旧代码读的是 `storySummary.events` —— 所以 **事实/关系/弧光/别名/前情一直是空的**
+（面板显示「小白X摘要（无）」不是没总结，是我们读错地方）。
+
+顺带按源码修了四处语义：
+- `events[].summary` 末尾带 `(#9-11)` 楼层标记 → 读时剥掉
+- `facts[].since` 是 **0-based** 楼层
+- `arcs[].progress` 是 **0..1 浮点**（旧代码当百分数，显示成 0.4% 而不是 40%）
+- **没有 `characters.relationships` 字段** → 关系图要从 facts 里谓词 `对X的…` + `trend` 投影出来
+- `trend` 的取值是 `破裂|厌恶|反感|陌生|投缘|亲密|交融`（不是升/降），显示成 `（关系:亲密）`
+
+新增 `summarizedBoundary()` / `lwbCast()`，为后面「和它分工、别重复注入」做准备。
+测试 b22 按真实结构重写，11 条全绿。
+
 ## 0.9.92 — 2026-10-30
 
 按 **ST 1.19 源码调研**修正四处（结论已写进 `docs/ARCHITECTURE.md §11 平台事实`）：

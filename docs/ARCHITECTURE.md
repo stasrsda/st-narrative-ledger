@@ -228,3 +228,59 @@ setExtensionPrompt(key, value, position, depth, scan = false, role = SYSTEM, fil
 - 独立请求：`ConnectionManagerRequestService.sendRequest(profileId, …)` 或 `/api/backends/chat-completions/generate`
 - 我们走后者（`src/model/transport.js`），因为它不污染主对话、可用独立模型、可传 `max_tokens`。
 - `custom_include_headers` 必须是 **YAML 字符串**（服务端 `yaml.parse`），传对象会被静默吞掉 → 401。
+
+## 12. 小白X（LittleWhiteBox 3.2.3）事实与边界
+
+### 12.1 数据在哪（我们曾经读错一层）
+
+```
+chat_metadata.extensions.LittleWhiteBox.storySummary = {
+  json: { events[], facts[], characters{main[]}, arcs[], characterAliases[], keywords[] },
+  lastSummarizedMesId, summaryHistory[], updatedAt, summaryInvalid?
+}
+```
+
+**数据在 `.json` 里**；`storySummary` 本身只是容器。旧代码读 `storySummary.events` → 永远空。
+
+字段语义（易错处）：
+
+| 字段 | 真实语义 |
+|---|---|
+| `events[].summary` | 末尾**强制**带 `(#起始-结束)`，1-based 闭区间，读时剥掉 |
+| `events[].memoryRole` | `状态变化/约定承诺/信息揭示/偏好习惯/具体经历`，可空 |
+| `events[].participants[]` | 纯人名，禁代词 |
+| `facts[].since` | **0-based** 楼层 |
+| `facts[].trend` | 仅关系谓词（`^对(.+)的`）才有：`破裂/厌恶/反感/陌生/投缘/亲密/交融` |
+| `characters` | **只有 `main`**；关系图是 facts 的投影，没有 `relationships` |
+| `arcs[].progress` | **0..1 浮点** |
+| `characterAliases[]` | `{from,to,evidence}`，有向图，命中后 LWB 自身已把 participants/s 归一 |
+| `keywords[]` | `{text, weight}`，**每次总结整组替换** |
+
+### 12.2 它注入了什么（会不会撞）
+
+- 只写一个槽：`extension_prompts["LittleWhiteBox_StorySummary"]`，`IN_CHAT`，`depth = max(2, chatLen - boundary - 1)`，`role` 可配
+- 包裹标签 `<剧情记忆>…</剧情记忆>`（**不是** `<world_state>`）
+- 注册为 `generate_interceptor`，每轮生成前**先 delete 再写**，`STOPPED/切聊天/关闭` 时清除
+- 不改写 `message.mes`；但会写 `message.is_system` 并 `saveChat()`
+
+### 12.3 分工（结论）
+
+| 谁 | 管什么 | 我们怎么用 |
+|---|---|---|
+| **小白X** | 长期记忆：事件时间线、SPO 事实、关系图、弧光、别名、向量召回 | **只读** `storySummary.json`；用它的事实/关系/弧光/别名 |
+| **账本** | 此刻：时辰、地点、在场、礼法、好感、底单 | 写自己的 `chat_metadata.storyLedger`，**绝不碰** LWB 的三个 key |
+
+### 12.4 必须避开（否则会互相破坏）
+
+1. **不写** `chat_metadata.extensions.LittleWhiteBox.*`（它的提交是「整段 draft 覆盖 + 回读确认」，外部写入会触发 `metadata_save_conflict`，整段记忆会被判为不可消费）
+2. **不在它提交窗口内抢写 metadata**：它的流程是 draft → saveMetadata → 回读服务器确认；我们改用自己的 key + `saveMetadataDebounced`
+3. **不覆盖** `globalThis.xiaobaixGenerateInterceptor`（它多模块共享这一个入口）
+4. **不依赖** `.mes_buttons` 里的按钮位置，也别碰 `.xiaobaix-sub-container`（它的折叠按钮会搬走子按钮）
+5. **不复用** `LittleWhiteBox_StorySummary` 这个 prompt key，不注入 `<剧情记忆>`
+6. **别指望 `<state>…</state>` 被它向量化**（整块删除），我们要让它索引，就不能用这个标签
+
+### 12.5 已实现
+
+`src/core/memory/lwb.js` 已按上述结构重写：`readLwbSummary` / `factsForCast` / `relationsFor` /
+`arcsFor` / `eventsForCast` / `lwbAliases` / `aliasMapForActors` / `summarizedBoundary` / `lwbCast`。
+测试 `test/b22-lwb.test.js`（11 条）按真实结构断言。
