@@ -369,6 +369,24 @@ function panelBase() {
     };
 }
 
+/** 改写消息内容后，让 ST 重新渲染（否则页面显示的还是旧 DOM） */
+let repaintTimer = null;
+function repaintChat() {
+    if (repaintTimer) return;
+    repaintTimer = setTimeout(() => {
+        repaintTimer = null;
+        try {
+            const c = ctx();
+            if (typeof c.printMessages === 'function') {
+                c.printMessages();
+                log('已请求 ST 重绘消息');
+            }
+        } catch (e) {
+            log('重绘失败', e?.message ?? e);
+        }
+    }, 400);
+}
+
 /** 轻角色：临时出现的人，只有名字与身分 */
 function addGuest(pack, guest) {
     if (!guest?.name) return;
@@ -607,6 +625,7 @@ function settleMessage() {
         // 正文被塞进了思考块：提回来，并写回消息，否则用户默认折叠时看不到
         msg.mes = body;
         try { ctx().saveChat?.(); } catch { /* noop */ }
+        repaintChat();
         log('正文原先在思考块里，已提回正文：', `${body.length} 字`);
     }
     if (thinkingDominates(thinking, body)) {
@@ -639,6 +658,7 @@ function settleMessage() {
         parsed = parseHeader(msg.mes, pack.calendar);
         log('模型没写时间头，已补：', header);
         try { ctx().saveChat?.(); } catch { /* noop */ }
+        repaintChat();
         refreshPanel({ headerFixed: true });
     }
 
@@ -666,6 +686,7 @@ function settleMessage() {
         msg.mes = scrubbed.text;
         log('清掉本楼状态残留', scrubbed.removed, '处');
         try { ctx().saveChat?.(); } catch { /* noop */ }
+        repaintChat();
     }
 
     // 职权自动添加：正文里出现「某人+职位」时，给他一份职能
@@ -710,6 +731,7 @@ function settleMessage() {
         if (cleaned !== msg.mes) {
             msg.mes = cleaned;
             try { ctx().saveChat?.(); } catch { /* noop */ }
+            repaintChat();
         }
     } else if (declared && declared.length === 0) {
         onIds = [];
@@ -734,6 +756,7 @@ function settleMessage() {
             msg.mes = fixed;
             try {
                 ctx().saveChat?.();
+                repaintChat();
             } catch {
                 /* noop */
             }
@@ -847,6 +870,7 @@ const settleQueue = createQueue({
         appendEvents(msg, events);
         try {
             ctx().saveChat?.();
+            repaintChat();
         } catch {
             /* noop */
         }
@@ -1029,6 +1053,7 @@ function boot() {
         }
         try {
             ctx().saveChat?.();
+            repaintChat();
         } catch {
             /* noop */
         }
@@ -1076,6 +1101,7 @@ function boot() {
     onScrubChat(() => {
         const r = scrubMessages(messages());
         try { ctx().saveChat?.(); } catch { /* noop */ }
+        repaintChat();
         composeAndInject();
         log('清理历史残留', r);
         return r;
