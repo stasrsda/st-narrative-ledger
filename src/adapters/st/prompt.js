@@ -1,6 +1,7 @@
 // 注入槽位（薄适配层）
 export const PROMPT_KEY = 'StoryLedger_State';
 export const PROMPT_KEY_FMT = 'StoryLedger_Format';
+export const PROMPT_KEY_DIRO = 'StoryLedger_Director';
 
 /** 由入口从 script.js 注入；拿不到就用默认值（与 ST 现行常量一致） */
 const P = { IN_CHAT: 1, SYSTEM: 0 };

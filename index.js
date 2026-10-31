@@ -9,7 +9,7 @@ import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
 } from './src/adapters/st/context.js';
-import { setStatePrompt, clearStatePrompt, setRawSlot, configurePrompt, PROMPT_KEY_ADDR, PROMPT_KEY_FMT } from './src/adapters/st/prompt.js';
+import { setStatePrompt, clearStatePrompt, setRawSlot, configurePrompt, PROMPT_KEY_ADDR, PROMPT_KEY_FMT, PROMPT_KEY_DIRO } from './src/adapters/st/prompt.js';
 import { transportAvailable, requestCompletion, requestCustom, probeModel, listModels } from './src/adapters/st/llm.js';
 import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.js';
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
@@ -20,6 +20,7 @@ import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
 import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
+import { buildOutline } from './src/core/runtime/director.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
@@ -506,6 +507,7 @@ function diagInfo() {
             affNow: metaHint.affSample || '（无）',
             onstageSrc: readMeta()?.onstageSrc ?? 'manual',
             books: worldBookNames(),
+            outline: outline?.text ?? '',
             hud: {
                 on: (() => { try { return globalThis.localStorage?.getItem('storyLedger.hud') !== '0'; } catch { return true; } })(),
                 onstage: (readMeta()?.onstage ?? []).length,
@@ -613,6 +615,20 @@ function composeAndInject() {
     // 免得同一件事说两遍、还离新消息更远。
 
     const ok = settings.enabled && (setStatePrompt(block.text) || setRawSlot(block.text));
+
+    // 导演层：把规则算出来的东西压成大纲，交给写作模型扩写
+    let outline = null;
+    try {
+        if (settings.director !== false) {
+            const lastUser = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
+            outline = buildOutline(pack, state, meta, lastUser, tree);
+            if (outline?.text && typeof setStatePrompt === 'function') {
+                setStatePrompt(outline.text, { depth: 2, key: PROMPT_KEY_DIRO });
+            }
+        }
+    } catch (e) {
+        log('生成大纲失败', e?.message ?? e);
+    }
 
     // 称谓块：只有两个以上在场者才需要（§5.2）
     let addrText = '';

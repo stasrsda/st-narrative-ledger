@@ -34,7 +34,7 @@ function textHits(code, text) {
     const t = String(text ?? '');
     if (!t) return 0;
     let n = 0;
-    const words = [code.name, ...(code.breach ?? [])];
+    const words = [code.name, ...(code.syn ?? []), ...(code.breach ?? [])];
     for (const w of words) {
         if (!w || w.length < 2) continue;
         // 取词的前两字，命中即算（「座次违制」→「座次」）
