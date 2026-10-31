@@ -6,6 +6,15 @@
 
 ---
 
+## 0.9.66 — 2026-10-30
+
+- **修诊断整页空白**：`diagInfo` 里引用了局部变量 `outline`，一 throw 就整页清零
+  （你看到的「角色数 0 / 末楼字数 0 / 世界书无 / outline is not defined」都是这一个错）
+- 大纲文本改存模块级 `lastOutlineText`
+- 诊断的 catch 现在返回完整字段，单点出错不再清空整页
+- 世界书名多路兜底（getWorldInfoNames → world_names → worldInfoSettings → chatMetadata）
+- 面板「直连」一行：走连接配置时显示配置名，不再误导成「未保存」
+
 ## 0.9.65 — 2026-10-30
 
 生成前的两步合并成**一次调用**（副模型总规划）：

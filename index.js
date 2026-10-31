@@ -505,6 +505,7 @@ async function composeTurnPlan() {
  * 失败/超时一律回落规则大纲，绝不阻塞生成。
  */
 let modelOutlineCache = { key: '', text: '' };
+let lastOutlineText = '';
 async function composeModelOutline() {
     try {
         const { pack, state, meta } = currentState();
@@ -696,7 +697,7 @@ function diagInfo() {
             lwb: { ...lwbStats(ctx().chatMetadata), aliases: lwbAliases(ctx().chatMetadata).length },
             places: Object.values(treeOf(pack)?.nodes ?? {}).map(n => ({ id: n.id, name: n.name })),
             customPlaces: (readMeta()?.customPlaces ?? []).length,
-            outline: outline?.text ?? '',
+            outline: lastOutlineText,
             hud: {
                 on: (() => { try { return globalThis.localStorage?.getItem('storyLedger.hud') !== '0'; } catch { return true; } })(),
                 onstage: (readMeta()?.onstage ?? []).length,
@@ -715,7 +716,25 @@ function diagInfo() {
             profileId: settings.profileId,
         };
     } catch (e) {
-        return { packId: '读取失败', packName: String(e?.message ?? e), actors: 0, sample: '—' };
+        // 别让一个字段出错把整页诊断清空
+        let first = '';
+        let len = 0;
+        try {
+            const m = messages()[messages().length - 1];
+            first = String(m?.mes ?? '').split('\n')[0].slice(0, 40);
+            len = String(m?.mes ?? '').length;
+        } catch { /* noop */ }
+        return {
+            packId: '读取失败', packName: String(e?.message ?? e),
+            actors: 0, sample: '—',
+            onstage: '（读不到）', lastEvents: 0, affNow: '—',
+            onstageSrc: 'manual', books: [], lwb: {}, places: [],
+            customPlaces: 0, outline: lastOutlineText,
+            lastFirst: first, lastLen: len,
+            hud: { on: true, onstage: 0 }, vars: {}, actorList: [],
+            directReady: false, keyLen: 0, profileId: settings.profileId,
+            err: String(e?.message ?? e),
+        };
     }
 }
 
@@ -725,8 +744,12 @@ function worldBookNames() {
         const c = ctx();
         // 1.19 上 world_names 可能还没加载，优先用官方 getter
         const viaGetter = typeof c.getWorldInfoNames === 'function' ? c.getWorldInfoNames() : null;
-        const names = viaGetter ?? c.world_names ?? c.worldNames ?? [];
-        return Array.isArray(names) ? names : [];
+        const names = viaGetter ?? c.world_names ?? c.worldNames
+            ?? c.worldInfoSettings?.world_info
+            ?? readMeta()?.world_info
+            ?? [];
+        const list = Array.isArray(names) ? names : (names ? [names] : []);
+        return list.filter(Boolean);
     } catch {
         return [];
     }
@@ -826,6 +849,7 @@ function composeAndInject() {
             } else if (modelOutlineCache.key === `${chatId()}|${lastU}` && modelOutlineCache.text) {
                 outline = { ...outline, text: modelOutlineCache.text };
             }
+            lastOutlineText = outline?.text ?? '';
             if (outline?.text && typeof setStatePrompt === 'function') {
                 setStatePrompt(outline.text, { depth: 2, key: PROMPT_KEY_DIRO });
             }
