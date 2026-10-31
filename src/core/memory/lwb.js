@@ -96,6 +96,19 @@ export function aliasMapForActors(pack, chatMeta) {
  * 只挑和这些人有关的事实：`沈述 位置=在逃`
  * @returns {string[]}
  */
+/** 趋势词统一成中文：升 / 降 / 维持 */
+function trendCn(raw) {
+    const t = String(raw ?? '').trim();
+    if (!t) return '';
+    const up = /^(升|上涨|上升|↑|\+|better|up|rising)$/i;
+    const down = /^(降|下跌|下降|↓|-|worse|down|falling)$/i;
+    const flat = /^(维持|不变|平|=|flat|same|stable)$/i;
+    if (up.test(t)) return '升';
+    if (down.test(t)) return '降';
+    if (flat.test(t)) return '维持';
+    return t.slice(0, 6);
+}
+
 export function factsForCast(chatMeta, names = [], limit = 6) {
     const sum = readLwbSummary(chatMeta);
     if (!sum || !names.length) return [];
@@ -110,7 +123,8 @@ export function factsForCast(chatMeta, names = [], limit = 6) {
         const p = String(f?.p ?? '').trim();
         const o = String(f?.o ?? '').trim();
         if (!p && !o) continue;
-        out.push(`${subj} ${p}${p && o ? '=' : ''}${o}`);
+        const trend = trendCn(f?.trend ?? f?.direction ?? f?.t ?? '');
+        out.push(`${subj} ${p}${p && o ? '=' : ''}${o}${trend ? `（趋势:${trend}）` : ''}`);
         if (out.length >= limit) break;
     }
     return out;

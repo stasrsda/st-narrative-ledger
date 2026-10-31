@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors } from '../src/core/memory/lwb.js';
+import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors, factsForCast } from '../src/core/memory/lwb.js';
 import { normalizePack } from '../src/core/pack/registry.js';
 import { createTree, putNode } from '../src/core/place/tree.js';
 import { inferPresence } from '../src/core/clock/presence.js';
@@ -79,4 +79,24 @@ test('用别名后，正文里的「县丞」也能认出是沈述', () => {
 test('不说话也算在场（有“没有说话”这类线索）', () => {
     const ids = inferPresence(pack, '知微没有说话，只把袖口攥紧了。', { placeId: 'p_shenzhai', tree });
     assert.deepEqual(ids, ['zhiwei']);
+});
+
+test('事实带趋势：升/降/维持 统一成中文', () => {
+    const chat = { extensions: { LittleWhiteBox: { storySummary: { facts: [
+        { s: '沈述', p: '位置', o: '在逃', trend: '维持' },
+        { s: '霍振', p: '对白景昭的态度', o: '死忠', trend: '升' },
+        { s: '沈知微', p: '对白景昭的态度', o: '怕', trend: 'down' },
+    ] } } } };
+    const out = factsForCast(chat, ['沈述', '霍振', '沈知微'], 6);
+    assert.ok(out.some(x => x.includes('（趋势:维持）')), out.join(' / '));
+    assert.ok(out.some(x => x.includes('（趋势:升）')), out.join(' / '));
+    assert.ok(out.some(x => x.includes('（趋势:降）')), out.join(' / '));
+});
+
+test('没有趋势就不加括号', () => {
+    const chat = { extensions: { LittleWhiteBox: { storySummary: { facts: [
+        { s: '沈述', p: '位置', o: '在逃' },
+    ] } } } };
+    const out = factsForCast(chat, ['沈述'], 3);
+    assert.equal(out[0], '沈述 位置=在逃');
 });
