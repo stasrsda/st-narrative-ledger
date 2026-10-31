@@ -712,6 +712,13 @@ function diagInfo() {
                 on: (meta?.onstage ?? []).includes(a.id),
             })),
             directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
+            directInfo: {
+                baseUrl: settings.direct?.baseUrl ?? '',
+                model: settings.direct?.model ?? '',
+                keyLen: (settings.direct?.apiKey ?? '').length,
+                inLs: Boolean(lsGet()?.directModel?.model),
+                inSt: Boolean(ctx()?.extensionSettings?.storyLedger?.directModel?.model),
+            },
             keyLen: (settings.direct?.apiKey ?? '').length,
             profileId: settings.profileId,
         };
@@ -1545,6 +1552,10 @@ function boot() {
             }
             refreshPanel({ ...panelBase(), direct: settings.direct });
             log('直连已保存', settings.direct.model || '（空）');
+            try {
+                const back = lsGet()?.directModel ?? {};
+                log('直连回读', `ls=${back.model || '空'}`, `st=${ctx()?.extensionSettings?.storyLedger?.directModel?.model || '空'}`);
+            } catch { /* noop */ }
             return;
         }
         settings.profileId = id;

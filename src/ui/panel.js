@@ -450,7 +450,14 @@ function render() {
             if (books.length > 1) {
                 dg.append(el('div', 'sl-note', '⚠ 挂了多本世界书：旧书若还写着「好感现状」，会盖掉插件注入。'));
             }
-            dg.append(row('直连', S.diag.directReady ? '已保存' : (S.diag.profileId ? `未用（走连接配置 ${S.diag.profileId}）` : '未保存')));
+            {
+                const di = S.diag.directInfo ?? {};
+                const label = di.baseUrl
+                    ? `${di.model || '（无模型）'} @ ${di.baseUrl}（key ${di.keyLen ?? 0} 位）`
+                    : (S.diag.profileId ? `未填（走连接配置 ${S.diag.profileId}）` : '未填');
+                dg.append(row('直连', label));
+                dg.append(row('直连落盘', `本地 ${di.inLs ? '有' : '无'} / ST 设置 ${di.inSt ? '有' : '无'}`));
+            }
             dg.append(row('Key 长度', S.diag.keyLen ?? 0));
             dg.append(row('连接配置', S.diag.profileId || '未填'));
             body.append(dg);
