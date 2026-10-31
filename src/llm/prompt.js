@@ -1,5 +1,5 @@
 // 结算提示词：一次读全文，输出多个分类字段
-export function buildSettleMessages({ pack, state, onstage, userText, aiText, candidates }) {
+export function buildSettleMessages({ pack, state, onstage, userText, aiText, aiThinking, candidates }) {
     const ev = pack?.affinity?.events ?? { A: 1, B: 2, C: 5, D: 10, E: -15, F: 0 };
     const kindLine = [
         `A日常 +${ev.A}`, `B有来有回 +${ev.B}`, `C关键场面 +${ev.C}`,
@@ -44,6 +44,8 @@ export function buildSettleMessages({ pack, state, onstage, userText, aiText, ca
         '',
         '【本轮正文】',
         aiText || '（空）',
+    ,
+        (aiThinking ? `【这一轮的思考（只作参考，不要当正文）】\n${String(aiThinking).slice(-800)}` : ''),
     ].join('\n');
 
     return [
