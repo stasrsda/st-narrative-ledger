@@ -1,3 +1,4 @@
+import * as tables from '../src/core/tables/tables.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -12,7 +13,7 @@ const raw = JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', 
 const pack = normalizePack(raw);
 
 test('触发词：买银子提钱，穿衣提色，赶路提程', () => {
-    assert.equal(wantsPrices('我买一斤肉'), true);
+    assert.equal(wantsPrices('这肉什么价'), true);
     assert.equal(wantsPrices('今日天气'), false);
     assert.equal(wantsColors('她换了件青色的袄'), true);
     assert.equal(wantsTravel('到京城要几天'), true);
@@ -49,7 +50,7 @@ test('路程', () => {
 
 test('按文本决定挂哪几行', () => {
     const a = tableLines(pack, '我去买点炭，顺便问问米价');
-    assert.deepEqual(a.map(x => x.key), ['price', 'stipend']);
+    assert.deepEqual(a.map(x => x.key), ['price', 'travel']);
     const b = tableLines(pack, '她穿了件新裙子');
     assert.deepEqual(b.map(x => x.key), ['color']);
     const c = tableLines(pack, '今天天气不错');
@@ -59,12 +60,29 @@ test('按文本决定挂哪几行', () => {
 test('状态块里能塞表，且预算超了先丢表', () => {
     const block = composeSceneBlock({
         pack, state: { t: 0 }, placePath: '某地',
-        tables: tableLines(pack, '买米'), budget: 999,
+        tables: tableLines(pack, '这米什么价'), budget: 999,
     });
     assert.match(block.text, /\[价\]/);
     const tight = composeSceneBlock({
         pack, state: { t: 0 }, placePath: '某地',
-        tables: tableLines(pack, '买米'), budget: 20,
+        tables: tableLines(pack, '这米什么价'), budget: 20,
     });
     assert.ok(tight.dropped.includes('price'));
+});
+
+test('语境：谈钱才挂价，谈位份才挂例', () => {
+    const { tableLines } = tables;
+    const keys = (t) => tableLines(pack, t).map(x => x.key);
+    assert.deepEqual(keys('这袋米多少两银子'), ['price']);
+    assert.deepEqual(keys('正妃的月钱是多少'), ['price', 'stipend']);
+    assert.deepEqual(keys('霍振把刀按回去'), []);
+});
+
+test('语境：走动才挂程，「到底」「路上」不算', () => {
+    const { tableLines } = tables;
+    const keys = (t) => tableLines(pack, t).map(x => x.key);
+    assert.deepEqual(keys('他往沈宅去了'), ['travel']);
+    assert.deepEqual(keys('启程去雁回县'), ['travel']);
+    assert.deepEqual(keys('沈述到底招了没有'), []);
+    assert.deepEqual(keys('路上小心'), []);
 });
