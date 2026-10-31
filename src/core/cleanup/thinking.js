@@ -4,6 +4,7 @@ const DEEPSEEK_BEGIN = /<[｜|]begin[▁_]of[▁_]thinking[｜|]>/g;
 const DEEPSEEK_END = /<[｜|]end[▁_]of[▁_]thinking[｜|]>/g;
 
 const PATTERNS = [
+    { name: 'tag-think', re: /<think>([\s\S]*?)<\/think>/gi },
     { name: 'tag', re: /<思考>([\s\S]*?)<\/思考>/g },
     { name: 'tag2', re: /<thinking>([\s\S]*?)<\/thinking>/gi },
     { name: 'bracket', re: /【思考】([\s\S]*?)【\/思考】/g },
@@ -74,6 +75,10 @@ export function thinkingDominates(thinking, body) {
  */
 export function normalizeMessage(text) {
     const r = splitThinking(text);
+    // 有 <think> 开头但没结尾：整段都是思考（ST 没解析成功时会出现）
+    if (!r.had && /<think>/i.test(text) && !/<\/think>/i.test(text)) {
+        return { body: '', thinking: String(text), had: true, broken: true, recovered: false };
+    }
     if (!r.had) return { ...r, recovered: false };
     // 思考没闭合：正文根本不存在，不要拿思考当正文
     if (r.broken) return { ...r, recovered: false };
