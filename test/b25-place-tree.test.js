@@ -65,3 +65,31 @@ test('地点行本身也是树状', () => {
     });
     assert.match(b.text, /地:北凉城>雁回县>沈宅/);
 });
+
+test('只给上一轮的在场：块里有「上场」，且只有一行', () => {
+    const t = treeWithTwoStudies();
+    const seed = openingSeed(pack);
+    const b = buildSceneBlock({
+        pack, state: { ...seed, place: 'p_shenzhai' }, tree: t, chatSeed: 'x',
+        meta: {
+            seed, placeId: 'p_shenzhai',
+            onstage: ['baijingzhao', 'huozhen'],
+            onstagePrev: ['baijingzhao', 'huozhen', 'qindou'],
+        },
+        budget: Number.POSITIVE_INFINITY,
+    });
+    const lines = b.text.split('\n').filter(l => l.startsWith('上场:'));
+    assert.equal(lines.length, 1, '只能有一行「上场」');
+    assert.match(lines[0], /霍振/);
+});
+
+test('此地行不出现「沈母沈母」这种重复', () => {
+    const t = treeWithTwoStudies();
+    const seed = openingSeed(pack);
+    const b = buildSceneBlock({
+        pack, state: { ...seed, place: 'p_shenzhai' }, tree: t, chatSeed: 'x',
+        meta: { seed, placeId: 'p_shenzhai', onstage: ['baijingzhao'] },
+        budget: Number.POSITIVE_INFINITY,
+    });
+    assert.ok(!/沈母沈母/.test(b.text), '不该重复姓名');
+});

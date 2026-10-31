@@ -15,6 +15,67 @@ const SPEECH_CUES = [
 // 句读：名字出现在这些字符之后，更像「新起的主语」
 const SENTENCE_START = '。！？…”』」\n';
 
+// 半在场也算：门外/帘后/隔屏/侧间/廊下——这些人仍在场
+const HALF_PRESENT = /门外|门外头|廊下|檐下|帘|屏|帐|隔|侧间|偏间|窗外|墙外|院子|天井|外间|厢房/;
+
+// 间接出现不算：派人、送信、那边的人、听说
+const INDIRECT = [
+    /派[人了个]/,
+    /叫[人了个]/,
+    /让[人了个]/,
+    /命[人令]/,
+    /打发/,
+    /送[信话]/,
+    /传[话信]/,
+    /那边/,
+    /的(人|货|信|伙计|手下|商队|铺子|家丁)/,
+    /听说|据说|传闻|传言/,
+];
+
+/**
+ * 这个名字是不是「间接出现」（只被提到，人不在场）。
+ * @returns {boolean}
+ */
+export function isIndirect(text, aliases) {
+    const t = String(text ?? '');
+    const VERB = /^(派|叫|让|命|打发|送信|送话|传话|传信|转告|捎信)/;
+    for (const name of aliases) {
+        if (!name || name.length < 2) continue;
+        let from = 0;
+        while (true) {
+            const i = t.indexOf(name, from);
+            if (i < 0) break;
+            from = i + name.length;
+            const after = t.slice(i + name.length, i + name.length + 6).trimStart();
+            const pre = t.slice(Math.max(0, i - 6), i);
+            // 名字后面紧跟「派人/叫人来/送信」→ 间接
+            if (VERB.test(after)) return true;
+            // 名字后面紧跟「那边/的人/的货/的信/的伙计」
+            if (/^(那边|的人|的货|的信|的伙计|的手下|的商队|的铺子|的家丁)/.test(after)) return true;
+            // 前面是「听说/据说/传闻」
+            if (/听说|据说|传闻|传言/.test(pre)) return true;
+        }
+    }
+    return false;
+}
+
+/** 半在场（门外、帘后…）：也算在场 */
+export function isHalfPresent(text, aliases, span = 10) {
+    const t = String(text ?? '');
+    for (const name of aliases) {
+        if (!name || name.length < 2) continue;
+        let from = 0;
+        while (true) {
+            const i = t.indexOf(name, from);
+            if (i < 0) break;
+            from = i + name.length;
+            const win = t.slice(Math.max(0, i - span), i + name.length + span);
+            if (HALF_PRESENT.test(win)) return true;
+        }
+    }
+    return false;
+}
+
 // 「这个人此刻在这儿」的线索词：在/来/到/站/坐/守/候/进/出/说/问/答/看/迎/送/跟/带
 const NEAR_CUE = /[在来到站坐守候进出说问答看迎送往跟带把递拿跪起身走]|没有|沉默/;
 
@@ -169,6 +230,8 @@ export function inferPresence(pack, text, { limit = 6, placeId = null, tree = nu
             ...aliasesOf(actor),
             ...((extraAliases?.get?.(actor.id)) ?? []),   // 小白X 认过的叫法
         ];
+        // 间接出现（派人送信、那边的人、听说）一律不算
+        if (isIndirect(t, alias)) continue;
         // 在逃的人：除非这一轮被抓/被押/开口，否则不算在场
         const caughtCue = /擒|押|抓住|捉|绑|捆绑|跪|开口|招了|供出|拿下|扣了/.test(t);
         const isCleared = Boolean(cleared?.has?.(actor.id) || cleared?.[actor.id]);
@@ -176,12 +239,22 @@ export function inferPresence(pack, text, { limit = 6, placeId = null, tree = nu
         // ① 先看有没有说话/动作的证据（「霍振低声说」「知微，…」）
         //    loose 模式（用于思考）：提到就算候选，靠驻地与在逃门兜过滤
         if (!loose) {
+            // 半在场也算
+            if (isHalfPresent(t, alias, 10)) {
+                if (!hits.includes(actor.id)) hits.push(actor.id);
+                continue;
+            }
             const evidence = hasActionEvidence(t, alias);
             if (!evidence.hit) continue;
         } else {
             // loose（思考）：光是提到不算，附近得有「人在这儿」的线索
             const mentioned = alias.some(a => a.length >= 2 && t.includes(a));
             if (!mentioned) continue;
+            // 半在场（门外/帘后/隔屏）直接算
+            if (isHalfPresent(t, alias, 10)) {
+                if (!hits.includes(actor.id)) hits.push(actor.id);
+                continue;
+            }
             // 走商队/流动的人（roaming）：窗口更窄，必须紧挨着在场动词
             const span = actor.roaming ? 5 : 8;
             if (!hasNearCue(t, alias, span)) continue;

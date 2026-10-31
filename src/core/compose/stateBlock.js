@@ -66,6 +66,9 @@ export function composeSceneBlock(o = {}) {
             text: `底单:${o.headerLine}｜正文第一行原样抄这一行，一字不改，然后空一行写正文`,
         });
     }
+    if (!lean && o.prevOnstage) {
+        parts.push({ key: 'prev', text: `上场:${o.prevOnstage}（你接过的那一幕）` });
+    }
     if (o.weather) parts.push({ key: 'weather', text: `天:${o.weather}` });
     if (!lean && o.here) parts.push({ key: 'here', text: o.here });
     if (!lean && o.recent) parts.push({ key: 'recent', text: `近事:${o.recent}` });

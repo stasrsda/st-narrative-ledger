@@ -134,6 +134,10 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     const placePath = node ? pathLabel(tree, placeId) : (meta.placeName ?? '');
     // 底单：正文第一行该长什么样，原样交给写文模型去抄
     const headerLine = String(meta.headerLine || '');
+    // 上一轮的在场（只保留一轮，用来给模型接续，不累积）
+    const prevNames = (meta.onstagePrev ?? [])
+        .map(id => pack.index?.actor?.[id]?.name)
+        .filter(Boolean);
 
     const onstage = onstageOf(pack, state, meta);
     // 动机与经验只对「情爱向」的角色有意义；臣属/亲族用 bond 区分，不走这条线
@@ -181,7 +185,8 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
         const parts = node.officials.slice(0, 4).map(o => {
             const a = pack.index?.actor?.[o.id];
             const nm = a?.name ?? o.id;
-            return o.status ? `${o.role}${nm}(${o.status})` : `${o.role}${nm}`;
+            const head = o.role && o.role !== nm ? `${o.role}${nm}` : nm;
+            return o.status ? `${head}(${o.status})` : head;
         });
         here = `此地:${parts.join('、')}`;
     } else if (!lean && Array.isArray(node?.notables) && node.notables.length) {
@@ -224,6 +229,7 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
         pack, state, placePath, weather, festival,
         onstage, showAffNumbers, lean, motive, exp, auth, events, tables, props, items, budget,
         placeTag, recent, reaction, codes, here, headerLine,
+        prevOnstage: prevNames.join('、'),
         nearby: [nearby, forbid].filter(Boolean).join(' | '),
     });
 }

@@ -1219,7 +1219,14 @@ function settleMessage() {
             log('从正文推断在场：', found.join(','));
         }
     }
-    if (onIds) writeMeta({ onstage: onIds, onstageSrc: onIds.length > 1 ? 'ai-evidence' : 'self' });
+    if (onIds) {
+        const prevList = readMeta()?.onstage ?? [];
+        writeMeta({
+            onstage: onIds,
+            onstagePrev: Array.isArray(prevList) ? prevList : [],
+            onstageSrc: onIds.length > 1 ? 'ai-evidence' : 'self',
+        });
+    }
 
     // 这一轮真把人拿住了：解除在逃状态（以后他就能正常出场）
     try {

@@ -274,3 +274,13 @@ test('沈述：在逃时不出现；被拿住后解除', () => {
     const cleared = new Set(['shenshu']);
     assert.deepEqual(inferPresence(pack, '沈述在堂下站着。', { placeId: 'p_shenzhai', tree, loose: true, cleared }), ['shenshu']);
 });
+
+test('半在场也算：门外候着 / 隔着帘子', () => {
+    assert.deepEqual(inferPresence(pack, '霍振在门外候着。', { placeId: 'p_shenzhai', tree, loose: true }), ['huozhen']);
+    assert.deepEqual(inferPresence(pack, '霍振隔着帘子压低了声音。', { placeId: 'p_shenzhai', tree, loose: true }), ['huozhen']);
+});
+
+test('间接出现不算：派人送信 / 听说', () => {
+    assert.deepEqual(inferPresence(pack, '崔掌柜派人送了封信来。', { placeId: 'p_xishi', tree, loose: true }), []);
+    assert.deepEqual(inferPresence(pack, '听说崔掌柜那边出了事。', { placeId: 'p_xishi', tree, loose: true }), []);
+});
