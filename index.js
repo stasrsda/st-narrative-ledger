@@ -369,6 +369,47 @@ function panelBase() {
     };
 }
 
+/**
+ * 生成前：按「用户这一句」推进时间与地点。
+ * 这样 AI 写的时候，[状态] 块里已经是新时间新地点，不会拿旧的写。
+ */
+function advanceFromUserInput() {
+    try {
+        const msgs = messages();
+        let idx = -1;
+        for (let i = msgs.length - 1; i >= 0; i--) {
+            if (msgs[i]?.is_user) { idx = i; break; }
+        }
+        if (idx < 0) return;
+        const msg = msgs[idx];
+        const text = String(msg.mes ?? '');
+
+        // 已经算过这一楼就不再算（重试、刷新都会走到这里）
+        const evs = msg?.extra?.storyLedger?.events ?? [];
+        if (evs.some(e => e?.k === 'clock' && e?.src === 'input')) return;
+
+        const { pack, state, meta } = currentState();
+
+        // ① 地点：你的输入里提到地名就改
+        try {
+            const hit = resolvePlaceName(treeOf(pack), text);
+            if (hit && hit.id !== (meta.placeId ?? state.place)) {
+                writeMeta({ placeId: hit.id, placeName: hit.name });
+                appendEvents(msg, [{ k: 'move', actor: 'user', place: hit.id, src: 'input' }]);
+                log('按你的输入换地点：', hit.name);
+            }
+        } catch { /* noop */ }
+
+        // ② 时间：按这一句估算耗时
+        const step = advanceTurn(state.t ?? 0, text);
+        appendEvents(msg, [{ k: 'clock', t: step.t, src: 'input' }]);
+        writeMeta({ lastAdvance: { minutes: step.minutes, why: step.why, from: state.t, to: step.t } });
+        log('按你的输入推进时间：', renderAdvance(step.minutes, step.why));
+    } catch (e) {
+        log('生成前推进失败', e?.message ?? e);
+    }
+}
+
 /** 改写消息内容后，让 ST 重新渲染（否则页面显示的还是旧 DOM） */
 let repaintTimer = null;
 function repaintChat() {
@@ -644,19 +685,9 @@ function settleMessage() {
     // ③ 正文去掉旧时间头后重新写一遍（时间以插件为准）
     body = body.replace(/^[ \t]*『[^』]{6,60}』[^\n]*\n*/, '').trim();
 
-    // 时钟由插件推进：按这一轮的内容估算耗时，写一条 clock 事件
-    const userTextForClock = messages()[idx - 1]?.mes ?? '';
-    // 同一楼可能被处理多次（重试、事件重放）：先清掉插件自己写过的 clock，
-    // 否则时间会被推进好几遍
-    if (Array.isArray(msg.extra?.storyLedger?.events)) {
-        msg.extra.storyLedger.events = msg.extra.storyLedger.events.filter(
-            e => !(e?.k === 'clock' && e?.src === 'auto'),
-        );
-    }
-    const step = advanceTurn(state.t ?? 0, userTextForClock + body);
-    appendEvents(msg, [{ k: 'clock', t: step.t, src: 'auto' }]);
-    writeMeta({ lastAdvance: { minutes: step.minutes, why: step.why, from: state.t, to: step.t } });
-    log('时间推进', renderAdvance(step.minutes, step.why));
+    // 时间已经在「生成前」按用户输入推进过了（advanceFromUserInput），
+    // 这里只取当前时间给时间头用，不再重复推进
+    const step = { t: state.t ?? 0 };
 
     // 时间以插件为准：正文里若还留着旧时间头，用地名解析出来供地点更新
     let parsed = parseHeader(body, pack.calendar);
@@ -1248,7 +1279,8 @@ function boot() {
         eventSource.on(EV.CHAT_CHANGED, onChatChanged);
         eventSource.on(EV.GENERATION_AFTER_COMMANDS, () => {
             try {
-                composeAndInject();
+                advanceFromUserInput();
+    composeAndInject();
             } catch (e) {
                 log('注入失败', e);
             }
