@@ -15,7 +15,7 @@ import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.j
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
 import { fold } from './src/core/ledger/ledger.js';
 import { openingMeta, openingLabel } from './src/core/runtime/opening.js';
-import { createTree, putNode, resolvePlaceName, mergeCustomPlaces } from './src/core/place/tree.js';
+import { createTree, putNode, resolvePlaceName, mergeCustomPlaces, pathLabel } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
 import { renderHeader } from './src/core/calendar/guofeng.js';
@@ -693,6 +693,16 @@ function lastAiMessage() {
     return '';
 }
 
+/** 取值包一层：出错就返回兜底值，不让整页诊断挂掉 */
+function safeField(get, fallback) {
+    try {
+        const v = get();
+        return v === undefined || v === null ? fallback : v;
+    } catch {
+        return fallback;
+    }
+}
+
 /** 诊断信息：不依赖任何局部变量，任何地方都能调 */
 function diagInfo() {
     try {
@@ -722,9 +732,21 @@ function diagInfo() {
             lastEvents: metaHint.lastEvents ?? 0,
             affNow: metaHint.affSample || '（无）',
             onstageSrc: readMeta()?.onstageSrc ?? 'manual',
+            placePathNow: safeField(() => {
+                const tr1 = treeOf(pack);
+                const id = readMeta()?.placeId ?? state.place;
+                return id && tr1.nodes?.[id] ? pathLabel(tr1, id) : '';
+            }, ''),
             books: worldBookNames(),
             lwb: { ...lwbStats(ctx().chatMetadata), aliases: lwbAliases(ctx().chatMetadata).length },
-            places: Object.values(treeOf(pack)?.nodes ?? {}).map(n => ({ id: n.id, name: n.name })),
+            places: safeField(() => {
+                const tr0 = treeOf(pack);
+                return Object.values(tr0.nodes ?? {}).map(n => ({
+                    id: n.id,
+                    name: n.name,
+                    path: pathLabel(tr0, n.id),
+                }));
+            }, []),
             customPlaces: (readMeta()?.customPlaces ?? []).length,
             outline: lastOutlineText,
             hud: {
@@ -1009,78 +1031,41 @@ function settleMessage() {
         }
     }
 
-    // ③.5 正文里凡是「像时间头」的开头行都剥掉，只留插件写的那一条
-    //     能认：『…』 包裹的、含「·」且带年/月/日/时辰的、带星期的
+    // ③.5 底单是 AI 自己贴的：只校验，不乱删
+    //      （以前这里会把正文里的时间行全删掉，会把刚贴好的底单也删掉）
     try {
-        const lines = String(body ?? '').split('\n');
-        let cut = 0;
-        while (cut < 3 && cut < lines.length) {
-            const ln = lines[cut].trim();
-            if (!ln) { cut++; continue; }
-            const isTimeLine = /^『[^』]{4,80}』$/.test(ln)
-                || /\d{1,4}\s*年.*[月日]/.test(ln) && ln.includes('·')
-                || /星期[一二三四五六日天]/.test(ln)
-                || /(子|丑|寅|卯|辰|巳|午|未|申|酉|戌|亥)(初|正)/.test(ln) && ln.includes('·');
-            if (!isTimeLine) break;
-            // 顺手从这一行里认地名
-            try {
-                const hit = resolvePlaceName(treeOf(pack), ln);
-                if (hit && hit.id !== (meta.placeId ?? state.place)) {
-                    writeMeta({ placeId: hit.id, placeName: hit.name });
-                    log('从被剥掉的时间行认出地点：', hit.name);
-                }
-            } catch { /* noop */ }
-            cut++;
-        }
-        if (cut > 0) {
-            body = lines.slice(cut).join('\n').replace(/^\s*\n+/, '').trim();
-            log('剥掉正文里的旧时间行：', cut, '行');
+        const expected = String(readMeta()?.headerLine ?? '').trim();
+        const firstLine = String(body ?? '').split('\n').map(x => x.trim()).find(Boolean) ?? '';
+        const norm = (x) => x.replace(/[『』\s]/g, '');
+        const wantNorm = norm(expected);
+        if (expected && norm(firstLine).startsWith(wantNorm.slice(0, 12))) {
+            log('AI 已按底单贴好时间头');
+        } else if (expected && firstLine && /^『[^』]+』/.test(firstLine)) {
+            // 贴了但写错（年份/时辰不对）→ 换成底单那一行
+            const lines = String(body ?? '').split('\n');
+            const idx = lines.findIndex(x => x.trim().length > 0);
+            lines[idx] = expected;
+            body = lines.join('\n');
+            log('时间头与底单不符，已换成底单：', expected);
+        } else if (expected) {
+            body = `${expected}\n\n${String(body ?? '').trim()}`;
+            log('AI 没贴底单，已补上：', expected);
         }
     } catch (e) {
-        log('剥时间行失败', e?.message ?? e);
+        log('校验底单失败', e?.message ?? e);
     }
 
-    // ③.6 正文里任何一行「纯时间/地点标注」都删掉（不只在开头）
+    // ④ 写回：正文由 AI 写（含底单），插件只在内容确实变了时才存
     try {
-        const isTimeLine = (ln) => {
-            const t2 = ln.trim();
-            if (!t2 || t2.length > 60) return false;
-            if (/^『[^』]{4,80}』$/.test(t2)) return true;
-            if (/\d{1,4}\s*年.*[月日]/.test(t2) && (t2.includes('·') || t2.includes('日'))) return true;
-            if (/星期[一二三四五六日天]/.test(t2)) return true;
-            if (/(子|丑|寅|卯|辰|巳|午|未|申|酉|戌|亥)(初|正)/.test(t2) && t2.length < 40) return true;
-            if (/^(地点|时间)[:：]/.test(t2)) return true;
-            return false;
-        };
-        const kept = String(body ?? '').split('\n').filter(ln => !isTimeLine(ln));
-        const cleaned = kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-        if (cleaned !== String(body ?? '').trim()) {
-            body = cleaned;
-            log('清掉正文里的时间行');
-        }
-    } catch (e) {
-        log('清时间行失败', e?.message ?? e);
-    }
-
-    // ④ 统一写回：mes = 时间头 + 空行 + 正文（思考已经在 extra.reasoning 里）
-    try {
-        const treeNow = treeOf(pack);
-        const node = treeNow.nodes?.[meta.placeId ?? state.place] ?? null;
-        const placeName = meta.placeName || node?.name || parsed?.place || '';
-        const header = renderHeader(step.t, placeName, pack.calendar);
         const cleanBody = String(body ?? '').trim();
-        // 护栏：拆出来的正文明显太少（原文很长），说明切错了 —— 宁可不动，
-        // 也不要把用户的正文弄没
         const tooShort = cleanBody.length < 30 && originalLen > 120;
         if (tooShort) {
             log('正文切得太少，本楼不改写：', `正文 ${cleanBody.length} 字 / 原文 ${originalLen} 字`);
-        }
-        const next = cleanBody ? `${header}\n\n${cleanBody}` : `${header}\n`;
-        if (!tooShort && msg.mes !== next) {
-            msg.mes = next;
+        } else if (cleanBody && msg.mes !== cleanBody) {
+            msg.mes = cleanBody;
             try { ctx().saveChat?.(); } catch { /* noop */ }
             repaintChat();
-            log('正文已重写（时间头 + 正文）：', `${cleanBody.length} 字`);
+            log('正文已写回：', `${cleanBody.length} 字`);
         }
     } catch (e) {
         log('写回正文失败', e?.message ?? e);

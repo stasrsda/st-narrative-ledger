@@ -377,7 +377,7 @@ function render() {
                     blank.value = '';
                     sel.append(blank);
                     for (const p of (S.diag.places ?? [])) {
-                        const op = el('option', '', p.name);
+                        const op = el('option', '', p.path ?? p.name);
                         op.value = p.id;
                         if (p.id === a.home) op.selected = true;
                         sel.append(op);
@@ -413,6 +413,7 @@ function render() {
             dg.append(row('角色数', S.diag.actors ?? 0));
             dg.append(row('基础好感', S.diag.sample ?? '—'));
             dg.append(row('此刻好感', S.diag.affNow ?? '—'));
+            if (S.diag.placePathNow) dg.append(row('地点', S.diag.placePathNow));
             dg.append(row('在场名单', S.diag.onstage ?? '（空）'));
             const srcCn = {
                 'ai-comment': '主模型自己报的（<!--在场:…-->）',

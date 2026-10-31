@@ -118,30 +118,74 @@ function treeDepth(tree, id) {
     return d;
 }
 
-export function resolvePlaceName(tree, text) {
-    const t0 = String(text ?? '').trim();
-    if (!t0) return null;
+export function resolvePlaceName(tree, text, opts = {}) {
+    const raw = String(text ?? '').trim();
+    if (!raw) return null;
+    const fromId = opts.fromId ?? null;   // 当前所在，用来消歧同名小地点
 
-    // 候选：地名本身、别名。都按「包含」命中，取最深的那个；同深度取命中字符串更长的
+    // ① 路径写法：「镇北王府>书房」「北凉城／镇北王府／书房」
+    if (/[>》〉\/／]/.test(raw)) {
+        for (const piece of raw.split(/[，,。；;\s]+/)) {
+            const segs = piece.split(/[>》〉\/／]+/).map(x => x.trim()).filter(Boolean);
+            if (segs.length < 2) continue;
+            const found = walkPath(tree, segs);
+            if (found) return found;
+        }
+    }
+
+    // ② 精确名 / 别名 / 包含，取最深；同深度优先「和当前地点同一支」的
     const cands = [];
     for (const n of Object.values(tree.nodes ?? {})) {
-        if (n?.id && n.name && t0.includes(n.name)) {
-            cands.push({ node: n, len: n.name.length });
-        }
-        for (const a of n?.aliases ?? []) {
-            if (a && a.length >= 2 && t0.includes(a)) cands.push({ node: n, len: a.length });
+        if (!n?.id) continue;
+        if (n.name && raw.includes(n.name)) cands.push({ node: n, len: n.name.length });
+        for (const a of n.aliases ?? []) {
+            if (a && a.length >= 2 && raw.includes(a)) cands.push({ node: n, len: a.length });
         }
     }
     if (cands.length) {
+        const sameBranch = (id) => {
+            if (!fromId) return 0;
+            const a = ancestors(tree, id);
+            const b = ancestors(tree, fromId);
+            let k = 0;
+            while (k < a.length && k < b.length && a[k] === b[k]) k++;
+            return k;   // 共同前缀越长越可能是同一个地方
+        };
         cands.sort((a, b) => {
             const d = treeDepth(tree, b.node.id) - treeDepth(tree, a.node.id);
-            return d !== 0 ? d : b.len - a.len;
+            if (d !== 0) return d;
+            const sb = sameBranch(b.node.id) - sameBranch(a.node.id);
+            if (sb !== 0) return sb;
+            return b.len - a.len;
         });
         return cands[0].node;
     }
+    return null;
+}
 
-    // 退回原逻辑：整串相等，再不行按原实现兜底
-    return resolvePlaceNameByContain(tree, t0);
+/** 按名字逐段往下走：大>小>更小（第一段可以在任意层级） */
+function walkPath(tree, segs) {
+    const byName = (n, seg) => n.name === seg || (n.aliases ?? []).includes(seg);
+    const fuzzy = (n, seg) => n.name.includes(seg) || seg.includes(n.name);
+
+    // 找一个起点：名字等于第一段的所有节点，优先最浅的
+    let anchors = Object.values(tree.nodes ?? {}).filter(n => byName(n, segs[0]));
+    if (!anchors.length) anchors = Object.values(tree.nodes ?? {}).filter(n => fuzzy(n, segs[0]));
+    if (!anchors.length) return null;
+    anchors = anchors.sort((a, b) => treeDepth(tree, a.id) - treeDepth(tree, b.id));
+
+    for (const anchor of anchors) {
+        let cur = anchor;
+        let ok = true;
+        for (const seg of segs.slice(1)) {
+            const pool = children(tree, cur.id);
+            const hit = pool.find(n => byName(n, seg)) ?? pool.find(n => fuzzy(n, seg));
+            if (!hit) { ok = false; break; }
+            cur = hit;
+        }
+        if (ok) return cur;
+    }
+    return null;
 }
 
 function resolvePlaceNameByContain(tree, text) {

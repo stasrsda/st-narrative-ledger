@@ -132,6 +132,8 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     const placeId = state.place;
     const node = placeId && tree ? tree.nodes?.[placeId] : null;
     const placePath = node ? pathLabel(tree, placeId) : (meta.placeName ?? '');
+    // 底单：正文第一行该长什么样，原样交给写文模型去抄
+    const headerLine = String(meta.headerLine || '');
 
     const onstage = onstageOf(pack, state, meta);
     // 动机与经验只对「情爱向」的角色有意义；臣属/亲族用 bond 区分，不走这条线
@@ -221,7 +223,8 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     return composeSceneBlock({
         pack, state, placePath, weather, festival,
         onstage, showAffNumbers, lean, motive, exp, auth, events, tables, props, items, budget,
-        placeTag, recent, reaction, codes, here, nearby: [nearby, forbid].filter(Boolean).join(' | '),
+        placeTag, recent, reaction, codes, here, headerLine,
+        nearby: [nearby, forbid].filter(Boolean).join(' | '),
     });
 }
 
