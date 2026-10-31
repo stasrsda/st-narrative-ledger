@@ -413,6 +413,10 @@ function render() {
                 dg.append(row('上一轮推进', `${a.minutes} 分（${a.why}）`));
             }
             dg.append(row('变量同步', (S.diag.vars ?? 0) + ' 个'));
+            const lwb = S.diag.lwb ?? {};
+            dg.append(row('小白X摘要', lwb.ok
+                ? `有 · 事件 ${lwb.events} / 事实 ${lwb.facts} / 弧光 ${lwb.arcs}`
+                : '（无，先让小白X总结一次）'));
             const books = S.diag.books ?? [];
             dg.append(row('世界书', books.length ? books.join(' / ') : '（无）'));
             if (books.length > 1) {

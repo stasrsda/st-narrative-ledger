@@ -31,6 +31,7 @@ import { retrieveCodes } from './src/core/codes/retrieve.js';
 import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
 import { buildOutlineMessages, renderModelOutline } from './src/llm/outline.js';
+import { readLwbSummary, formatLwbBrief, lwbStats } from './src/core/memory/lwb.js';
 import { normalizeSettle } from './src/llm/schema.js';
 import { toEvents } from './src/llm/settle.js';
 import { reviewText, summarize, looksTruncated } from './src/core/review/review.js';
@@ -440,7 +441,11 @@ async function composeModelOutline() {
             userText: lastUser,
             onstage,
             placeName,
-            recent: (state.emergent ?? []).slice(-2).map(e => e.name).join('、'),
+            recent: [
+                (state.emergent ?? []).slice(-2).map(e => e.name).join('、'),
+                // 小白X 的剧情摘要：我们的免费模型本来拿不到，这里借过来
+                formatLwbBrief(readLwbSummary(ctx().chatMetadata)),
+            ].filter(Boolean).join('\n'),
         });
 
         const d2 = settings.direct ?? {};
@@ -569,6 +574,7 @@ function diagInfo() {
             affNow: metaHint.affSample || '（无）',
             onstageSrc: readMeta()?.onstageSrc ?? 'manual',
             books: worldBookNames(),
+            lwb: lwbStats(ctx().chatMetadata),
             outline: outline?.text ?? '',
             hud: {
                 on: (() => { try { return globalThis.localStorage?.getItem('storyLedger.hud') !== '0'; } catch { return true; } })(),
