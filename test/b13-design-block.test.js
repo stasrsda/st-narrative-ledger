@@ -84,3 +84,13 @@ test('精简模式：不带动机/反应/邻', () => {
     assert.ok(!b.text.includes('反应'));
     assert.ok(!b.text.includes('邻:'));
 });
+
+test('此地：地点带关键人物时注入一行（顺带触发世界书关键词）', () => {
+    const b = buildSceneBlock({
+        pack, state: { ...meta.seed, place: 'p_yanhui' }, tree: tree(), chatSeed: 'x',
+        meta: { ...meta, placeId: 'p_yanhui', placeName: '雁回县', onstage: ['huozhen'] },
+        budget: Number.POSITIVE_INFINITY,
+    });
+    assert.match(b.text, /此地:/);
+    assert.match(b.text, /沈述/);
+});

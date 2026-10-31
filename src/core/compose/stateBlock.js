@@ -54,6 +54,7 @@ export function composeSceneBlock(o = {}) {
     parts.push({ key: 'header', text: head, locked: true });
 
     if (o.weather) parts.push({ key: 'weather', text: `天:${o.weather}` });
+    if (!lean && o.here) parts.push({ key: 'here', text: o.here });
     if (!lean && o.recent) parts.push({ key: 'recent', text: `近事:${o.recent}` });
     if (o.festival) parts.push({ key: 'festival', text: `节:${o.festival}` });
 

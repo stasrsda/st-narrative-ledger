@@ -2443,6 +2443,14 @@
       "system_prompt": false,
       "marker": false,
       "forbid_overrides": false
+    },
+    {
+      "identifier": "ledger-no-spoiler",
+      "name": "——— 结尾不剧透（账本）",
+      "content": "<不剧透>\n正文只写「此刻在场的人看见、听见、做到」的事。以下一律不许写进正文：\n- 旁白提示「某物与某人有关」「这背后另有隐情」这类预告；\n- 角色凭没有依据的直觉说出真相（“他忽然想到，那匣子里……”“这布置和沈述有关”）；\n- 把尚未查明的线索、尚未露面的人，直接说出来当结论；\n- 段末替读者总结“他不知道，这才是开始”。\n\n要留钩子，用可观察的东西：一个动作、一个停顿、一件不合常理的东西。看见不等于知道，读者自己会猜。\n</不剧透>",
+      "role": "system",
+      "injection_position": 0,
+      "injection_depth": 4
     }
   ],
   "prompt_order": [
@@ -2900,6 +2908,10 @@
         {
           "identifier": "24a2cd3e-434e-4dfd-9fa2-f3456ccb7748",
           "enabled": false
+        },
+        {
+          "identifier": "ledger-no-spoiler",
+          "enabled": true
         },
         {
           "identifier": "f4144185-384f-46b3-bf06-b08482cfd354",

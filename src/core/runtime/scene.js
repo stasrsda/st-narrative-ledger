@@ -172,6 +172,9 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
 
     const season = w?.season ?? null;
     const placeTag = placeTagOf(pack, node, season);
+    // 此地的关键人物：一是给模型知道谁在这儿，二是顺带触发世界书关键词
+    const here = (!lean && Array.isArray(node?.notables) && node.notables.length)
+        ? `此地:${node.notables.join('、')}` : '';
     const { nearby, forbid } = nearbyOf(tree, placeId);
     const recent = '';
     const reaction = lean ? '' : reactionOf(pack, onstage.filter(a => !a.isUser));
@@ -208,7 +211,7 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     return composeSceneBlock({
         pack, state, placePath, weather, festival,
         onstage, showAffNumbers, lean, motive, exp, auth, events, tables, props, items, budget,
-        placeTag, recent, reaction, codes, nearby: [nearby, forbid].filter(Boolean).join(' | '),
+        placeTag, recent, reaction, codes, here, nearby: [nearby, forbid].filter(Boolean).join(' | '),
     });
 }
 
