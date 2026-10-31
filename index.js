@@ -1374,8 +1374,9 @@ function enqueueSettle(msgIndex, pack, state, userText, aiText) {
         text: `${userText ?? ''}\n${aiText ?? ''}`,
         state,
     }, 10);
-    const aiThinking = String(msg.extra?.reasoning ?? thinking ?? '');
-            const msgs = buildSettleMessages({ pack, state, onstage, userText, aiText, aiThinking, candidates });
+    const aiMsg = messages()?.[msgIndex] ?? null;
+    const aiThinking = String(aiMsg?.extra?.reasoning ?? aiMsg?.extra?.thinking ?? '');
+    const msgs = buildSettleMessages({ pack, state, onstage, userText, aiText, aiThinking, candidates });
     settleQueue.push({ msgIndex, pack, state, messages: msgs, text: aiText });
 }
 
