@@ -615,6 +615,7 @@ function settleMessage() {
 
     const { pack, state, meta } = currentState();
     // ① 先切思考（标记 / 灰魂小标题 / 无标记三种都能认）
+    const originalLen = String(msg.mes ?? '').length;
     const norm = normalizeMessage(msg.mes ?? '');
     let body = String(norm.body ?? '').trim();
     const thinking = String(norm.thinking ?? '').trim();
@@ -629,7 +630,9 @@ function settleMessage() {
 
     // ② 思考一律搬进 extra.reasoning：界面折成灰块，正文里不再留标记
     //    这样 ST 不需要在「消息开头」找标记，也不会因为时间头挡在前面而解析失败
-    if (thinking) {
+    // 思考未闭合（只有 <think> 没有 </think>）时不要动原文：
+    // 那时候 body 是空的，一搬就会把整条正文搬进灰块，界面上看起来「正文全没了」
+    if (thinking && !norm.broken) {
         msg.extra = msg.extra ?? {};
         const prev = String(msg.extra.reasoning ?? '');
         if (!prev.includes(thinking.slice(0, 40))) {
@@ -683,8 +686,14 @@ function settleMessage() {
         const placeName = meta.placeName || node?.name || parsed?.place || '';
         const header = renderHeader(step.t, placeName, pack.calendar);
         const cleanBody = String(body ?? '').trim();
+        // 护栏：拆出来的正文明显太少（原文很长），说明切错了 —— 宁可不动，
+        // 也不要把用户的正文弄没
+        const tooShort = cleanBody.length < 30 && originalLen > 120;
+        if (tooShort) {
+            log('正文切得太少，本楼不改写：', `正文 ${cleanBody.length} 字 / 原文 ${originalLen} 字`);
+        }
         const next = cleanBody ? `${header}\n\n${cleanBody}` : `${header}\n`;
-        if (msg.mes !== next) {
+        if (!tooShort && msg.mes !== next) {
             msg.mes = next;
             try { ctx().saveChat?.(); } catch { /* noop */ }
             repaintChat();
