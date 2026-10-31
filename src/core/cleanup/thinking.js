@@ -85,7 +85,12 @@ export function normalizeMessage(text) {
 
     const body = (r.body ?? '').trim();
     const thinking = (r.thinking ?? '').trim();
-    const bodyLen = body.length;
+    // 先剥掉「时间头」「【在场】行」这类我们自己补进去的东西，再量正文长短
+    const stripped = body
+        .replace(/^[ \t]*『[^』]{6,60}』[^\n]*\n?/m, '')
+        .replace(/^[ \t]*【在场】[^\n]*\n?/gm, '')
+        .trim();
+    const bodyLen = stripped.length;
     const thinkLen = thinking.length;
     const bodyNoHeader = !headerInBody(body);
     const thinkHasHeader = headerInBody(thinking);
