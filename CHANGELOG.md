@@ -6,6 +6,15 @@
 
 ---
 
+## 0.9.73 — 2026-10-30
+
+**加了静态检查（no-undef），并立刻抓到两个真 bug：**
+- `lastAiMessage` 从未定义 → 诊断一调用就抛错（这就是「末楼首行还是 —」的原因）
+- `mergeCustomPlaces` 没导入 → 自建地点从来没并进地点树（新地等于白收）
+
+新增 `tools/lint-undef.mjs`（用 acorn 做作用域分析，不依赖 eslint）+ `test/b24-lint.test.js`：
+`node --test test/` 就会跑它，**未声明标识符 = 0 才算通过**。
+
 ## 0.9.72 — 2026-10-30
 
 - 修「重试结算这一楼失败：msg is not defined」：`enqueueSettle` 里误用了另一个函数的局部变量，

@@ -15,7 +15,7 @@ import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.j
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
 import { fold } from './src/core/ledger/ledger.js';
 import { openingMeta, openingLabel } from './src/core/runtime/opening.js';
-import { createTree, putNode, resolvePlaceName } from './src/core/place/tree.js';
+import { createTree, putNode, resolvePlaceName, mergeCustomPlaces } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
 import { renderHeader } from './src/core/calendar/guofeng.js';
@@ -663,6 +663,20 @@ function affView() {
     } catch {
         return { bar: [], all: [] };
     }
+}
+
+/** 最后一条非空 AI 消息的内容（跳过空的、跳过用户的） */
+function lastAiMessage() {
+    try {
+        const list = messages();
+        for (let i = list.length - 1; i >= 0; i--) {
+            const m = list[i];
+            if (!m || m.is_user) continue;
+            const t = String(m.mes ?? '').trim();
+            if (t) return t;
+        }
+    } catch { /* noop */ }
+    return '';
 }
 
 /** 诊断信息：不依赖任何局部变量，任何地方都能调 */

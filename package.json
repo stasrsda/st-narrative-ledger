@@ -5,6 +5,8 @@
   "type": "module",
   "description": "SillyTavern 叙事账本扩展",
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test \"test/*.test.js\"",
+    "lint": "node tools/lint-undef.mjs --check",
+    "check": "npm run lint && npm test"
   }
 }
