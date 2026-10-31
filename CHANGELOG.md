@@ -6,6 +6,17 @@
 
 ---
 
+## 0.9.92 — 2026-10-30
+
+按 **ST 1.19 源码调研**修正四处（结论已写进 `docs/ARCHITECTURE.md §11 平台事实`）：
+1. **重绘时点错了**：`MESSAGE_RECEIVED` 在 `addOneMessage` **之前**触发，那时 DOM 还没有这条消息，
+   旧代码「找不到就整页重绘」→ 正好把小白X 的按钮冲掉。
+   现在改成「排队 + 重试」，并绑 `CHARACTER_MESSAGE_RENDERED`（DOM 就绪）立即 flush。
+2. 重绘优先用官方 `updateMessageBlock(idx, msg)`，不再手改 `innerHTML`。
+3. 注入 key 加数字前缀（`StoryLedger_1_State` / `_2_Director` / `_3_Address` / `_4_Format`），
+   因为同 depth 的多条注入是按 **key 字母序** 拼接的。
+4. `CHAT_CHANGED` 时三个槽全部重置再注入（`clearChat()` 会清空整个 `extension_prompts`）。
+
 ## 0.9.91 — 2026-10-30
 
 **结构重构第一批（不改行为，只搬代码）**

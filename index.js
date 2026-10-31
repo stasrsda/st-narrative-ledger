@@ -1636,12 +1636,17 @@ async function setupSettings(attempt = 0) {
 }
 
 function onChatChanged() {
+    // clearChat() 会清空 extension_prompts，三个槽都要重置再注
     clearStatePrompt();
+    try {
+        setStatePrompt('', { depth: 2, key: PROMPT_KEY_DIRO });
+        setStatePrompt('', { depth: 2, key: PROMPT_KEY_ADDR });
+    } catch { /* noop */ }
     composeAndInject();
 }
 
 // 重绘：只更新改过的那一条消息
-const { repaintChat } = createRepaint({
+const { repaintChat, flushNow } = createRepaint({
     ctx, messages, lastMessageIndex, log,
 });
 
@@ -1862,6 +1867,12 @@ function boot() {
                 log('结算失败', e);
             }
         });
+        // 消息 DOM 就绪后再刷（MESSAGE_RECEIVED 时 DOM 还没有）
+        if (EV.CHARACTER_MESSAGE_RENDERED) {
+            eventSource.on(EV.CHARACTER_MESSAGE_RENDERED, () => {
+                try { flushNow(); } catch (e) { log('重绘失败', e?.message ?? e); }
+            });
+        }
         eventSource.on(EV.MESSAGE_SWIPED, onChatChanged);
         eventSource.on(EV.MESSAGE_DELETED, onChatChanged);
     } catch (e) {

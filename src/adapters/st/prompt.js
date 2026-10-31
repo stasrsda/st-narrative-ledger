@@ -1,7 +1,7 @@
 // 注入槽位（薄适配层）
-export const PROMPT_KEY = 'StoryLedger_State';
-export const PROMPT_KEY_FMT = 'StoryLedger_Format';
-export const PROMPT_KEY_DIRO = 'StoryLedger_Director';
+export const PROMPT_KEY = 'StoryLedger_1_State';
+export const PROMPT_KEY_FMT = 'StoryLedger_4_Format';
+export const PROMPT_KEY_DIRO = 'StoryLedger_2_Director';
 
 /** 由入口从 script.js 注入；拿不到就用默认值（与 ST 现行常量一致） */
 const P = { IN_CHAT: 1, SYSTEM: 0 };
@@ -15,7 +15,7 @@ export function configurePrompt({ types, roles } = {}) {
 export function promptConstants() {
     return { ...P };
 }
-export const PROMPT_KEY_ADDR = 'StoryLedger_Address';
+export const PROMPT_KEY_ADDR = 'StoryLedger_3_Address';
 
 function c() {
     return globalThis.SillyTavern?.getContext?.() ?? {};

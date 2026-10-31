@@ -169,3 +169,62 @@ ui → app → pipeline → (core | model | state) → adapters/st
 | 小白X | 长期记忆（事件/事实/关系/弧光/别名）、向量检索 | 不写它的 `storySummary`；只读 |
 | ST | 聊天、消息、提示词装配、模型调用转发 | 不整页重绘；不接管 setExtensionPrompt 以外的注入 |
 | 账本（本插件） | **此刻**：时辰、地点、在场、礼法、好感、底单 | 不做长期摘要（借小白X） |
+
+## 11. 平台事实（ST 1.19 源码调研，2026-10-30）
+
+这些是踩过的坑与据此做的设计决定，改代码前先读这一节。
+
+### 11.1 事件是「串行 await」的，但语义不一致
+
+`emit` 是 async，逐个 `await` 监听器（`public/lib/eventemitter.js:146`），异常被吞、不中断。
+
+| 事件 | 时机 | 是否 await |
+|---|---|---|
+| `GENERATION_AFTER_COMMANDS` | 生成前、提示词组装前 | ✅ 会被等 → **计划段可以在这里同步等副模型** |
+| `MESSAGE_RECEIVED` | `saveReply` 里，**`addOneMessage` 之前** | ✅ |
+| `CHARACTER_MESSAGE_RENDERED` | `addOneMessage` 之后，**DOM 已就绪** | ✅ |
+| `GENERATION_ENDED` | 「停止按钮由可见变隐藏」时 | ❌ 不可靠，**我们不用它** |
+
+因此：**重绘必须挂在 `CHARACTER_MESSAGE_RENDERED`**，不能挂在 `MESSAGE_RECEIVED`（那时 DOM 还没有这条消息）。
+
+### 11.2 setExtensionPrompt 的参数陷阱
+
+```js
+setExtensionPrompt(key, value, position, depth, scan = false, role = SYSTEM, filter = null)
+//                                        ↑ 第 5 位是 scan，不是 role（JSDoc 写错了）
+```
+- 同 key **覆盖**，不追加；`clearChat()` 会清空整个 `extension_prompts` → `CHAT_CHANGED` 后必须重注。
+- 同 position/depth 的多条按 **key 字母序** 拼接 → 我们的 key 用 `StoryLedger_1_State` / `_2_Director` / `_3_Address` / `_4_Format` 控制顺序。
+- Chat Completion 下，position 0/2 的注入会变成 Prompt Manager 里的条目，**用户能禁用/重排**——别依赖绝对位置。
+
+### 11.3 getContext() 每次都是新对象
+
+`chatMetadata`、`chatId`、`characterId`、`name1/2`、`mainApi` 都是**快照**；`chat_metadata` 会被整体重新赋值。
+→ 规则：**永远现取**，不缓存 `ctx()` 或其字段（`chat` 数组除外，它是原地修改的引用）。
+
+### 11.4 重绘只能用官方 API
+
+`printMessages()` → `redisplayChat` 删除 `startIndex` 起所有 `.mes` 并重建，别的扩展注入的 DOM/监听器全丢。
+→ 我们只用 `updateMessageBlock(idx, msg)`；`printMessages` 仅限「清理全部历史」。
+
+### 11.5 消息结构（结算要对齐的地方）
+
+```js
+{ mes, is_user, swipe_id, swipes[], swipe_info[],
+  extra: { api, model, reasoning, reasoning_duration, reasoning_signature, token_count } }
+```
+- 重新生成：**先删末条**（`MESSAGE_DELETED`）→ `GENERATION_AFTER_COMMANDS` → 新消息；
+- swipe：不删消息，`coreChat.pop()` 后原地重渲染；
+- `extra.reasoning` 回传受 **api + model 双重门控**，换模型后会被静默丢弃。
+
+### 11.6 世界书的「当前挂载」没有单一 API
+
+要合并 5 个来源：`selected_world_info`、`chat_metadata.world_info`、角色主书、`charLore[].extraBooks`、人设书。
+`getContext().getWorldInfoNames()` 返回的是**磁盘上所有书名**，不是挂载列表——我们只把它当参考，不当依据。
+
+### 11.7 调模型：两条路都留着
+
+- 会话内：`generateRaw` / `generateQuietPrompt`（会走提示词组装，可能被预设污染）
+- 独立请求：`ConnectionManagerRequestService.sendRequest(profileId, …)` 或 `/api/backends/chat-completions/generate`
+- 我们走后者（`src/model/transport.js`），因为它不污染主对话、可用独立模型、可传 `max_tokens`。
+- `custom_include_headers` 必须是 **YAML 字符串**（服务端 `yaml.parse`），传对象会被静默吞掉 → 401。
