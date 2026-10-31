@@ -1,4 +1,5 @@
 import * as placeTree from '../src/core/place/tree.js';
+import { parseNewPlacesComment } from '../src/core/clock/presence.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -189,4 +190,33 @@ test('名字@地点：不写地点也行', () => {
 
 test('名字@地点：旧的纯名字接口仍然可用', () => {
     assert.deepEqual(parsePresenceComment('<!--在场:霍振、沈母-->'), ['霍振', '沈母']);
+});
+
+test('新地：解析名字与上级地名', () => {
+    const r = parseNewPlacesComment('<!--新地:东南岔路>雁回县、城西破庙（雁回县）、荒村-->');
+    assert.deepEqual(r, [
+        { name: '东南岔路', parent: '雁回县' },
+        { name: '城西破庙', parent: '雁回县' },
+        { name: '荒村', parent: '' },
+    ]);
+});
+
+test('新地：并进树以后能被地名解析认出来', () => {
+    const t2 = placeTree.createTree();
+    for (const p of pack.places) placeTree.putNode(t2, p);
+    const added = placeTree.mergeCustomPlaces(t2, [
+        { name: '东南岔路', parent: 'p_yanhui' },
+        { name: '城西破庙', parent: 'p_yanhui' },
+    ]);
+    assert.equal(added, 2);
+    assert.equal(placeTree.resolvePlaceName(t2, '往东南岔路去')?.name, '东南岔路');
+    assert.equal(placeTree.resolvePlaceName(t2, '城西破庙')?.name, '城西破庙');
+});
+
+test('新地：重复并同一批不重复加', () => {
+    const t3 = placeTree.createTree();
+    for (const p of pack.places) placeTree.putNode(t3, p);
+    placeTree.mergeCustomPlaces(t3, [{ name: '荒村', parent: 'p_yanhui' }]);
+    const again = placeTree.mergeCustomPlaces(t3, [{ name: '荒村', parent: 'p_yanhui' }]);
+    assert.equal(again, 0);
 });

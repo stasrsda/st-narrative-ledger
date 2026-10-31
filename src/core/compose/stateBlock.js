@@ -56,8 +56,7 @@ export function composeSceneBlock(o = {}) {
     if (o.presenceHint !== false) {
         parts.push({
             key: 'presenceHint',
-            text: '输出约定（必做）:正文最后一行写 <!--在场:名字@地点、名字@地点--> ；'
-                + '地点写这个人此刻在哪（用[状态]块里的地名）；不在场的不写；谁也不在就写 <!--在场:-->',
+            text: '末行写 <!--在场:名字@地点、…-->；新地点另写 <!--新地:名字>上级地名-->',
         });
     }
 

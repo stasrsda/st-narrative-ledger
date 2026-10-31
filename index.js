@@ -22,7 +22,7 @@ import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { buildOutline } from './src/core/runtime/director.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
-import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, parsePresenceCommentDetailed, canBePresent } from './src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, parsePresenceCommentDetailed, canBePresent, parseNewPlacesComment } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { splitThinking, thinkingDominates, normalizeMessage, splitTailStory } from './src/core/cleanup/thinking.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
@@ -609,6 +609,7 @@ function diagInfo() {
             books: worldBookNames(),
             lwb: { ...lwbStats(ctx().chatMetadata), aliases: lwbAliases(ctx().chatMetadata).length },
             places: Object.values(treeOf(pack)?.nodes ?? {}).map(n => ({ id: n.id, name: n.name })),
+            customPlaces: (readMeta()?.customPlaces ?? []).length,
             outline: outline?.text ?? '',
             hud: {
                 on: (() => { try { return globalThis.localStorage?.getItem('storyLedger.hud') !== '0'; } catch { return true; } })(),
@@ -665,6 +666,11 @@ function packChoices() {
 function treeOf(pack) {
     const tree = createTree();
     for (const p of pack.places ?? []) putNode(tree, p);
+    // 主模型自己造的地点（存在 meta.customPlaces）
+    try {
+        const custom = readMeta()?.customPlaces ?? [];
+        if (custom.length) mergeCustomPlaces(tree, custom);
+    } catch { /* noop */ }
     return tree;
 }
 
@@ -957,6 +963,39 @@ function settleMessage() {
         }
     } catch (e) {
         log('职权自动添加失败', e?.message ?? e);
+    }
+
+    // 主模型新造的地点：收进地点表（只增不改，重的跳过）
+    try {
+        const fresh = parseNewPlacesComment(msg.mes ?? '');
+        if (fresh?.length) {
+            const meta2 = readMeta() ?? {};
+            const list = Array.isArray(meta2.customPlaces) ? [...meta2.customPlaces] : [];
+            const treeNow = treeOf(pack);
+            let added = 0;
+            for (const f of fresh) {
+                const name = String(f.name ?? '').trim();
+                if (!name) continue;
+                const exists = Object.values(treeNow.nodes ?? {}).some(n => n.name === name)
+                    || list.some(c => c.name === name);
+                if (exists) continue;
+                const parentNode = f.parent ? resolvePlaceName(treeNow, f.parent) : null;
+                list.push({
+                    name,
+                    parent: parentNode?.id ?? meta2.placeId ?? pack.opening?.place ?? null,
+                    parentName: parentNode?.name ?? '',
+                    scene: 'street',
+                    at: Date.now(),
+                });
+                added++;
+            }
+            if (added) {
+                writeMeta({ customPlaces: list });
+                log('收下主模型新造的地点：', added, '个（共', list.length, '个）');
+            }
+        }
+    } catch (e) {
+        log('收新地点失败', e?.message ?? e);
     }
 
     // 在场：① 主模型的隐藏注释 > ② 旧【在场】行 > ③ 正文证据推断

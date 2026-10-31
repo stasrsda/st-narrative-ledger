@@ -203,3 +203,34 @@ export function parsePresenceCommentDetailed(text) {
         .filter(e => e.name);
     return { entries, raw };
 }
+
+/**
+ * 主模型自己造的地点：
+ *   <!--新地:东南岔路>雁回县、城西破庙>雁回县-->
+ * 也接受 `名字（父名）`、只写 `名字`（父级留空）。
+ * @returns {{name:string, parent:string}[]|null}
+ */
+export function parseNewPlacesComment(text) {
+    const t2 = String(text ?? '');
+    const m = t2.match(/<!--\s*(?:新地|新地点|newplaces?)\s*[:：]\s*([\s\S]*?)-->/i);
+    if (!m) return null;
+    return (m[1] ?? '')
+        .split(/[、,，/｜|\n]+/)
+        .map(x => x.trim())
+        .filter(Boolean)
+        .filter(x => !/^(无|空|—|-|none)$/i.test(x))
+        .map(x => {
+            let name = x;
+            let parent = '';
+            const gt = x.split(/[>》〉]/);
+            if (gt.length > 1) {
+                name = gt[0].trim();
+                parent = gt[1].trim();
+            } else {
+                const par = x.match(/^(.+?)[（(](.+?)[）)]$/);
+                if (par) { name = par[1].trim(); parent = par[2].trim(); }
+            }
+            return { name, parent };
+        })
+        .filter(x => x.name && x.name.length <= 12);
+}

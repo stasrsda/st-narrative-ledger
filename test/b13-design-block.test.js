@@ -101,6 +101,7 @@ test('输出约定：状态块里带「写 <!--在场:…-->」的提示', () =>
         meta: { ...meta, placeId: 'p_wuli', onstage: ['huozhen'] },
         budget: Number.POSITIVE_INFINITY,
     });
-    assert.match(b.text, /输出约定/);
+    assert.match(b.text, /末行写/);
+    assert.match(b.text, /新地/);
     assert.match(b.text, /<!--在场:/);
 });

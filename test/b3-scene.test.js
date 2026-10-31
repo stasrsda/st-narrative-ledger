@@ -89,7 +89,7 @@ test('整块：带天气与节令', () => {
 test('整块：地点不在册也不崩', () => {
     const b = buildSceneBlock({ pack, state: { t, place: 'p_nope' }, tree: tree(), chatSeed: 'c1', meta: {} });
     assert.match(b.text, /^\[状态/);
-    assert.ok(!b.text.includes('地:'));
+    assert.ok(!/\n地:/.test(b.text), '地点不在册时不该有「地:」那一行');
 });
 
 test('精简模式：在场只给名字，不带好感', () => {

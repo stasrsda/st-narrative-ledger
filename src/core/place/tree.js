@@ -154,3 +154,28 @@ function resolvePlaceNameByContain(tree, text) {
     }
     return null;
 }
+
+/**
+ * 把「主模型自己造的地点」并进这棵树。
+ * @param {object} tree
+ * @param {{id:string,name:string,parent?:string,scene?:string}[]} list
+ */
+export function mergeCustomPlaces(tree, list) {
+    let added = 0;
+    for (const c of list ?? []) {
+        if (!c?.name) continue;
+        const id = c.id || ('p_custom_' + c.name.replace(/[^\w\u4e00-\u9fa5]/g, '') );
+        if (tree.nodes[id]) continue;
+        putNode(tree, {
+            id,
+            name: c.name,
+            parent: c.parent && tree.nodes[c.parent] ? c.parent : null,
+            scale: 'place',
+            scene: c.scene || 'street',
+            tags: c.tags ?? [],
+            aliases: c.aliases ?? [],
+        });
+        added++;
+    }
+    return added;
+}
