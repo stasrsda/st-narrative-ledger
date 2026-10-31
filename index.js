@@ -830,6 +830,28 @@ function settleMessage() {
         log('剥时间行失败', e?.message ?? e);
     }
 
+    // ③.6 正文里任何一行「纯时间/地点标注」都删掉（不只在开头）
+    try {
+        const isTimeLine = (ln) => {
+            const t2 = ln.trim();
+            if (!t2 || t2.length > 60) return false;
+            if (/^『[^』]{4,80}』$/.test(t2)) return true;
+            if (/\d{1,4}\s*年.*[月日]/.test(t2) && (t2.includes('·') || t2.includes('日'))) return true;
+            if (/星期[一二三四五六日天]/.test(t2)) return true;
+            if (/(子|丑|寅|卯|辰|巳|午|未|申|酉|戌|亥)(初|正)/.test(t2) && t2.length < 40) return true;
+            if (/^(地点|时间)[:：]/.test(t2)) return true;
+            return false;
+        };
+        const kept = String(body ?? '').split('\n').filter(ln => !isTimeLine(ln));
+        const cleaned = kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+        if (cleaned !== String(body ?? '').trim()) {
+            body = cleaned;
+            log('清掉正文里的时间行');
+        }
+    } catch (e) {
+        log('清时间行失败', e?.message ?? e);
+    }
+
     // ④ 统一写回：mes = 时间头 + 空行 + 正文（思考已经在 extra.reasoning 里）
     try {
         const treeNow = treeOf(pack);
