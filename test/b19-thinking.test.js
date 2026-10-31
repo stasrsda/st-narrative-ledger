@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { splitThinking, headerInBody, thinkingDominates, normalizeMessage } from '../src/core/cleanup/thinking.js';
+import { splitThinking, headerInBody, thinkingDominates, normalizeMessage, splitLooseCot } from '../src/core/cleanup/thinking.js';
 
 test('拆出 <思考> 块', () => {
     const r = splitThinking('<思考>我要写时间头『某日』然后正文</思考>\n正文第一句。');
@@ -87,4 +87,26 @@ test('DeepSeek 标记：正常楼不受影响', () => {
     const r = splitThinking(msg);
     assert.equal(r.had, false);
     assert.equal(r.broken, false);
+});
+
+test('无标记思考：按灰魂小标题切出来', () => {
+    const t = '『承平十六年九月十四』\n\n* 灰魂吐槽\n' + '   - 这段思考要够长才触发。'.repeat(12) +
+        '\n\n　　他勒马停在城外。\n　　霍振在身后。';
+    const r = splitLooseCot(t);
+    assert.equal(r.had, true);
+    assert.ok(r.thinking.includes('灰魂吐槽'));
+    assert.ok(!r.body.includes('灰魂吐槽'));
+    assert.ok(r.body.includes('他勒马'));
+});
+
+test('无标记思考：正文没缩进但有引号开头也认', () => {
+    const t = '* 灰魂吐槽\n' + '   - 思考内容。'.repeat(20) + '\n“门洞里有人。”\n队列没有停。';
+    const r = splitLooseCot(t);
+    assert.equal(r.had, true);
+    assert.ok(r.body.startsWith('“门洞里'));
+});
+
+test('无标记思考：正文不该被误切', () => {
+    const t = '　　他勒马停在城外。\n　　霍振在身后。';
+    assert.equal(splitLooseCot(t).had, false);
 });

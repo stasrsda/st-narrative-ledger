@@ -3,6 +3,51 @@
 const DEEPSEEK_BEGIN = /<[｜|]begin[▁_]of[▁_]thinking[｜|]>/g;
 const DEEPSEEK_END = /<[｜|]end[▁_]of[▁_]thinking[｜|]>/g;
 
+// 灰魂预设的思考小标题：模型没写 <think> 时，靠这些认
+const COT_HEADERS = [
+    '* 灰魂吐槽', '* 输入分析', '* 情景思考', '* 深度求索', '* 情节推进',
+    '* 文风规划', '* 质量检查', '* 关键NPC', '* 思辨脉络', '* 用户输入分析',
+    '* 字数', '* 规划', '灰魂吐槽', '输入分析',
+];
+
+/** 这一段是不是思考小标题行 */
+function isCotHeader(line) {
+    const t = line.trim();
+    if (!t || t.length > 30) return false;
+    return COT_HEADERS.some(h => t.startsWith(h));
+}
+
+/** 正文行的特征：中文缩进（全角空格）、或『』时间头、或以引号开口 */
+function looksLikeStory(line) {
+    const t = line;
+    return /^[\u3000]{1,2}\S/.test(t) || /^『/.test(t.trim()) || /^[「“"]/.test(t.trim());
+}
+
+/**
+ * 把开头那段「思考小标题 + 若干条」切出来。
+ * 触发条件：第一行（跳过时间头/空行）是 COT 小标题，且后面能找到正文行。
+ * @returns {{body:string, thinking:string, had:boolean}}
+ */
+export function splitLooseCot(text) {
+    const lines = String(text ?? '').split('\n');
+    let i = 0;
+    // 跳过时间头与空行
+    while (i < lines.length && (/^[ \t]*『[^』]{6,60}』/.test(lines[i]) || lines[i].trim() === '')) i++;
+    if (!isCotHeader(lines[i] ?? '')) return { body: text, thinking: '', had: false };
+
+    // 从 i 开始找第一行「像正文」的
+    let j = i;
+    while (j < lines.length && !looksLikeStory(lines[j])) j++;
+    if (j >= lines.length) return { body: text, thinking: '', had: false };
+
+    const head = lines.slice(0, i).join('\n');
+    const cot = lines.slice(i, j).join('\n');
+    const story = lines.slice(j).join('\n');
+    // 思考太短就不算（可能只是正文里提了一句）
+    if (cot.length < 80) return { body: text, thinking: '', had: false };
+    return { body: (head ? head + '\n\n' : '') + story, thinking: cot, had: true };
+}
+
 const PATTERNS = [
     { name: 'tag-think', re: /<think>([\s\S]*?)<\/think>/gi },
     { name: 'tag', re: /<思考>([\s\S]*?)<\/思考>/g },
@@ -75,6 +120,11 @@ export function thinkingDominates(thinking, body) {
  */
 export function normalizeMessage(text) {
     const r = splitThinking(text);
+    if (!r.had) {
+        // 没有标记：看开头是不是灰魂的思考小标题
+        const loose = splitLooseCot(text);
+        if (loose.had) return { ...loose, broken: false, recovered: false, loose: true };
+    }
     // 有 <think> 开头但没结尾：整段都是思考（ST 没解析成功时会出现）
     if (!r.had && /<think>/i.test(text) && !/<\/think>/i.test(text)) {
         return { body: '', thinking: String(text), had: true, broken: true, recovered: false };

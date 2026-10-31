@@ -621,6 +621,16 @@ function settleMessage() {
         writeMeta({ lastBroken: { at: Date.now(), len: (msg.mes ?? '').length } });
         log('思考标记没有闭合：这一楼只有思考，没有正文');
     }
+    if (norm.loose && norm.thinking) {
+        // 模型没写标记：把思考搬进 ST 的推理通道 → 界面折成灰块，正文保持干净
+        msg.extra = msg.extra ?? {};
+        const prevReason = String(msg.extra.reasoning ?? '');
+        msg.extra.reasoning = prevReason ? `${prevReason}\n\n${norm.thinking}` : norm.thinking;
+        msg.mes = body;
+        try { ctx().saveChat?.(); } catch { /* noop */ }
+        repaintChat();
+        log('认出未标记的思考，已折起来：', `${norm.thinking.length} 字`);
+    }
     if (norm.recovered) {
         // 正文被塞进了思考块：提回来，并写回消息，否则用户默认折叠时看不到
         msg.mes = body;
