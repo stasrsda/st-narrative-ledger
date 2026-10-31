@@ -22,7 +22,7 @@ import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { buildOutline } from './src/core/runtime/director.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
-import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment } from './src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, canBePresent } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { splitThinking, thinkingDominates, normalizeMessage, splitTailStory } from './src/core/cleanup/thinking.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
@@ -1051,8 +1051,20 @@ const settleQueue = createQueue({
                 const meta = readMeta() ?? {};
                 const list = Array.isArray(meta.onstage) ? [...meta.onstage] : [];
                 let added = 0;
+                const { pack: pk2, state: st2 } = currentState();
+                const tree2 = treeOf(pk2);
+                const placeNow = meta.placeId ?? st2.place;
                 for (const id of new Set(seen)) {
-                    if (!list.includes(id)) { list.push(id); added++; }
+                    if (list.includes(id)) continue;
+                    // 门 1：在逃的人不算在场（除非这一轮被抓/被押/开口）
+                    const a = pk2.index?.actor?.[id];
+                    if (a?.fugitive && !/擒|押|抓住|捉|绑|捆|跪|开口|招了|供出/.test(body)) continue;
+                    // 门 2：他得住得起这个地方（随行的除外）
+                    try {
+                        if (!canBePresent(a, { placeId: placeNow, tree: tree2 })) continue;
+                    } catch { /* 判不了就放行 */ }
+                    list.push(id);
+                    added++;
                 }
                 if (added) {
                     writeMeta({ onstage: list, onstageSrc: 'settle' });

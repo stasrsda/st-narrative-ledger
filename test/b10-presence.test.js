@@ -1,3 +1,4 @@
+import * as placeTree from '../src/core/place/tree.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -152,4 +153,21 @@ test('隐藏注释会被清理器删掉（不进上下文）', async () => {
     const r = scrubText('正文一句。\n<!--在场:霍振-->');
     assert.ok(!r.text.includes('<!--'), '注释要被删掉');
     assert.equal(r.text, '正文一句。');
+});
+
+test('在逃的人：只是被提到不算在场，被押上来才算', () => {
+    assert.deepEqual(inferPresence(pack, '沈述往东南跑了，追不上。', { placeId: 'p_shenzhai', tree }), []);
+    assert.deepEqual(inferPresence(pack, '沈述被押上来，跪在堂下。', { placeId: 'p_xianya', tree }), ['shenshu']);
+});
+
+test('驻地：沈母在沈宅算在场，在县衙不算', () => {
+    assert.deepEqual(inferPresence(pack, '沈母坐在东厢，抬头看了一眼。', { placeId: 'p_shenzhai', tree }), ['shenmu']);
+    assert.deepEqual(inferPresence(pack, '沈母坐在东厢，抬头看了一眼。', { placeId: 'p_xianya', tree }), []);
+});
+
+test('地点别名：沈述家 → 沈宅', () => {
+    const { resolvePlaceName } = placeTree;
+    assert.equal(resolvePlaceName(tree, '去沈述家里看看')?.id, 'p_shenzhai');
+    assert.equal(resolvePlaceName(tree, '县丞宅')?.id, 'p_shenzhai');
+    assert.equal(resolvePlaceName(tree, '雁回县县衙')?.id, 'p_xianya');
 });

@@ -9,6 +9,7 @@ const SPEECH_CUES = [
     '把', '将', '在', '正', '便', '就', '也', '又', '拿', '捧', '端', '抱', '提', '牵',
     '呈', '拟', '记', '写', '低头', '起身', '坐下', '没接话', '不答',
     '没有说话', '没说话', '不作声', '不响', '未答', '沉默',
+    '被押', '押上来', '押到', '被擒', '被捕', '绑', '捆', '扣下',
 ];
 
 // 句读：名字出现在这些字符之后，更像「新起的主语」
@@ -135,6 +136,8 @@ export function inferPresence(pack, text, { limit = 6, placeId = null, tree = nu
             ...aliasesOf(actor),
             ...((extraAliases?.get?.(actor.id)) ?? []),   // 小白X 认过的叫法
         ];
+        // 在逃的人：除非这一轮被抓/被押/开口，否则不算在场
+        if (actor.fugitive && !/擒|押|抓住|捉|绑|捆绑|跪|开口|招了|供出/.test(t)) continue;
         // ① 先看有没有说话/动作的证据（「霍振低声说」「知微，…」）
         const evidence = hasActionEvidence(t, alias);
         if (!evidence.hit) continue;

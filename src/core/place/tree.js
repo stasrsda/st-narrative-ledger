@@ -35,6 +35,7 @@ export function putNode(tree, node) {
         // 包里写死的陈设，必须带过来，否则会被原型抽样顶替
         props: Array.isArray(node.props) ? [...node.props] : null,
         notables: Array.isArray(node.notables) ? [...node.notables] : null,
+        aliases: Array.isArray(node.aliases) ? [...node.aliases] : [],
         officials: Array.isArray(node.officials) ? node.officials.map(o => ({ ...o })) : null,
     };
     return tree;
@@ -110,30 +111,46 @@ export function genPlaceName(worldId, parentId, index) {
  * 把正文里写的地名解析成地点 id。
  * 先精确匹配，再找出「被包含」的最长地名（雁回县北门 → 北门）。
  */
+function treeDepth(tree, id) {
+    let d = 0;
+    let cur = tree.nodes?.[id];
+    while (cur?.parent && d < 20) { cur = tree.nodes[cur.parent]; d++; }
+    return d;
+}
+
 export function resolvePlaceName(tree, text) {
-    const t = String(text ?? '').trim();
-    if (!t || !tree?.nodes) return null;
-    const nodes = Object.values(tree.nodes);
-    const exact = nodes.find(n => n.name === t);
-    if (exact) return exact;
-    const depthOf = (n) => {
-        let d = 0;
-        let cur = n;
-        while (cur?.parent && d < 32) {
-            cur = tree.nodes[cur.parent];
-            d++;
+    const t0 = String(text ?? '').trim();
+    if (!t0) return null;
+
+    // 候选：地名本身、别名。都按「包含」命中，取最深的那个；同深度取命中字符串更长的
+    const cands = [];
+    for (const n of Object.values(tree.nodes ?? {})) {
+        if (n?.id && n.name && t0.includes(n.name)) {
+            cands.push({ node: n, len: n.name.length });
         }
-        return d;
-    };
-    let best = null;
-    for (const n of nodes) {
-        if (!n.name || n.name.length < 2) continue;
-        if (!t.includes(n.name)) continue;
-        if (!best) { best = n; continue; }
-        // 更深（更具体）的优先；同级才比名字长度
-        const dn = depthOf(n);
-        const bd = depthOf(best);
-        if (dn > bd || (dn === bd && n.name.length > best.name.length)) best = n;
+        for (const a of n?.aliases ?? []) {
+            if (a && a.length >= 2 && t0.includes(a)) cands.push({ node: n, len: a.length });
+        }
     }
-    return best;
+    if (cands.length) {
+        cands.sort((a, b) => {
+            const d = treeDepth(tree, b.node.id) - treeDepth(tree, a.node.id);
+            return d !== 0 ? d : b.len - a.len;
+        });
+        return cands[0].node;
+    }
+
+    // 退回原逻辑：整串相等，再不行按原实现兜底
+    return resolvePlaceNameByContain(tree, t0);
+}
+
+function resolvePlaceNameByContain(tree, text) {
+    const t = String(text ?? '');
+    for (const n of Object.values(tree.nodes ?? {})) {
+        if (n?.name === t) return n;
+    }
+    for (const n of Object.values(tree.nodes ?? {})) {
+        if (n?.name && t.includes(n.name)) return n;
+    }
+    return null;
 }

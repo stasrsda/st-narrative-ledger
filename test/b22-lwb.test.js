@@ -71,7 +71,7 @@ test('用别名后，正文里的「县丞」也能认出是沈述', () => {
         { from: '县丞', to: '沈述' },
     ] } } } };
     const extra = aliasMapForActors(pack, chat);
-    const text = '县丞抬头看了一眼堂上。';
+    const text = '县丞被押上来，抬头看了一眼堂上。';
     assert.deepEqual(inferPresence(pack, text, { placeId: 'p_yanhui', tree, extraAliases: extra }), ['shenshu']);
     assert.deepEqual(inferPresence(pack, text, { placeId: 'p_yanhui', tree }), []);
 });

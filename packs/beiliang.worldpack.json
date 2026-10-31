@@ -5915,6 +5915,12 @@
           "role": "典史",
           "id": "dianshi"
         }
+      ],
+      "aliases": [
+        "雁回",
+        "县城",
+        "城里",
+        "衙后巷"
       ]
     },
     {
@@ -6152,6 +6158,41 @@
         "牧马"
       ],
       "idleYears": 0
+    },
+    {
+      "id": "p_shenzhai",
+      "name": "沈宅",
+      "parent": "p_yanhui",
+      "scene": "bedroom",
+      "indoor": true,
+      "aliases": [
+        "沈述家",
+        "沈家",
+        "县丞宅",
+        "沈宅",
+        "衙后巷",
+        "县丞府"
+      ],
+      "desc": "雁回县县丞沈述的宅子，院门朝南，一棵老枣树占去半个院子",
+      "props": [
+        "老枣树",
+        "石桌",
+        "箱笼",
+        "东厢",
+        "西厢",
+        "线袜",
+        "干辣椒"
+      ],
+      "officials": [
+        {
+          "role": "沈母",
+          "id": "shenmu"
+        },
+        {
+          "role": "沈知砚",
+          "id": "shenzhiyan"
+        }
+      ]
     }
   ],
   "actors": [
@@ -6709,7 +6750,7 @@
         }
       ],
       "beats": [],
-      "home": "p_wf_xi",
+      "home": "p_shenzhai",
       "travels": false
     },
     {
@@ -6732,7 +6773,7 @@
         }
       ],
       "beats": [],
-      "home": "p_wf_xi",
+      "home": "p_shenzhai",
       "travels": false
     },
     {
@@ -6771,7 +6812,8 @@
           "once": false,
           "do": "他不喊冤，先问「我家里人呢」"
         }
-      ]
+      ],
+      "fugitive": true
     },
     {
       "id": "zhubu",
