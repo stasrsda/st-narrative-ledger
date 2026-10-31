@@ -443,6 +443,7 @@ function diagInfo() {
         const metaHint = {
             onstage: meta?.onstage ?? [],
             lastEvents: (state.done?.length ?? 0) + (state.emergent?.length ?? 0),
+            lastFirst: (messages()[messages().length - 1]?.mes ?? '').split('\n')[0].slice(0, 40),
             lastLen: (messages()[messages().length - 1]?.mes ?? '').length,
             lastThink: splitThinking(messages()[messages().length - 1]?.mes ?? '').thinking.length,
             lastBody: splitThinking(messages()[messages().length - 1]?.mes ?? '').body.length,
@@ -688,6 +689,23 @@ function settleMessage() {
         } catch (e) {
             log('地点更新失败', e?.message ?? e);
         }
+    }
+
+    // 兜底：不管前面怎么处理，正文第一行必须是时间头
+    try {
+        const cur = String(msg.mes ?? '');
+        if (!/^[ \t]*『[^』]{6,60}』/.test(cur.trimStart())) {
+            const treeNow = treeOf(pack);
+            const node = treeNow.nodes?.[meta.placeId ?? state.place] ?? null;
+            const placeName = meta.placeName || node?.name || '';
+            const header = renderHeader(step.t, placeName, pack.calendar);
+            msg.mes = `${header}\n\n${cur.trimStart()}`;
+            try { ctx().saveChat?.(); } catch { /* noop */ }
+            repaintChat();
+            log('首行不是时间头，已补：', header);
+        }
+    } catch (e) {
+        log('校验首行失败', e?.message ?? e);
     }
 
     // 先清掉正文里的状态残留（<好感> 块、旧【在场】行等），避免它们跟着历史进上下文
