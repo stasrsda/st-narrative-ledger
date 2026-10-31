@@ -1,6 +1,6 @@
 // 一轮的总规划：时间跳转 + 地点 + 本场礼法 + 分镜
 // 由副模型一次产出，插件负责校验（算错的数字、不认识的地名一律丢掉）
-export function buildTurnMessages({ userText, placeName, onstage, places, ruleOutline, recent, timeText }) {
+export function buildTurnMessages({ userText, placeName, onstage, prevLine, places, ruleOutline, recent, timeText }) {
     const sys = [
         '你在做一部中文古代小说的「这一轮场务安排」。只输出一个 JSON 对象，不要解释。',
         '',
@@ -20,12 +20,14 @@ export function buildTurnMessages({ userText, placeName, onstage, places, ruleOu
         '- beats 3 到 5 条，按发生顺序；who 只能用给出的在场人名；不在场的不要写。',
         '- 不要替主角做决定；主角的动作留给他自己。',
         '- 只能用给出的信息，不要编新角色。',
+        '- 「上一幕在场」是上一轮谁在、什么状态；这一轮接着它走：人没退场就别换人，状态（伤、病）要延续。',
     ].join('\n');
 
     const user = [
         `【现在的时间】${timeText || '（未知）'}`,
         `【现在的地点】${placeName || '（未知）'}`,
         `【在场】${(onstage ?? []).join('、') || '（无）'}`,
+        `【上一幕在场】${prevLine || '（无）'}`,
         `【可选地点】${(places ?? []).slice(0, 60).join('、')}`,
         `【规则给的骨架】\n${ruleOutline || '（无）'}`,
         `【最近发生】\n${recent || '（无）'}`,

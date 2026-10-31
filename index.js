@@ -463,6 +463,15 @@ async function composeTurnPlan() {
                 formatLwbBrief(readLwbSummary(ctx().chatMetadata)),
             ].filter(Boolean).join('\n'),
             timeText: renderHeader(state.t ?? 0, placeName, pack.calendar).replace(/[『』]/g, ''),
+            prevLine: (meta.onstagePrev ?? [])
+                .map(id => {
+                    const nm = pack.index?.actor?.[id]?.name;
+                    if (!nm) return '';
+                    const note = meta.actorNote?.[id];
+                    return note ? `${nm}(${note})` : nm;
+                })
+                .filter(Boolean)
+                .join('、'),
         });
 
         const d2 = settings.direct ?? {};
@@ -1327,7 +1336,22 @@ const settleQueue = createQueue({
         }
         // 模型判到谁，说明谁在场 —— 自动补进名单
         try {
-            const seen = [...(parsed.data.results ?? []), ...(parsed.data.beats ?? [])]
+            // 结算的 note 存成每人一句极短注记（给「上场」行和副模型用）
+        try {
+            const notes = { ...(readMeta()?.actorNote ?? {}) };
+            let n = 0;
+            for (const r of parsed.data.results ?? []) {
+                if (!r?.actor || !r?.note) continue;
+                const txt = String(r.note).trim().slice(0, 12);
+                if (!txt) continue;
+                if (notes[r.actor] !== txt) { notes[r.actor] = txt; n++; }
+            }
+            if (n) writeMeta({ actorNote: notes });
+        } catch (e) {
+            log('存注记失败', e?.message ?? e);
+        }
+
+        const seen = [...(parsed.data.results ?? []), ...(parsed.data.beats ?? [])]
                 .map(x => x.actor)
                 .filter(Boolean);
             if (seen.length) {

@@ -135,8 +135,14 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     // 底单：正文第一行该长什么样，原样交给写文模型去抄
     const headerLine = String(meta.headerLine || '');
     // 上一轮的在场（只保留一轮，用来给模型接续，不累积）
+    const notes = meta.actorNote ?? {};
     const prevNames = (meta.onstagePrev ?? [])
-        .map(id => pack.index?.actor?.[id]?.name)
+        .map(id => {
+            const nm = pack.index?.actor?.[id]?.name;
+            if (!nm) return '';
+            const note = notes[id];
+            return note ? `${nm}(${note})` : nm;
+        })
         .filter(Boolean);
 
     const onstage = onstageOf(pack, state, meta);

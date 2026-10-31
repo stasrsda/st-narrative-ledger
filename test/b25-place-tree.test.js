@@ -93,3 +93,20 @@ test('此地行不出现「沈母沈母」这种重复', () => {
     });
     assert.ok(!/沈母沈母/.test(b.text), '不该重复姓名');
 });
+
+test('上场行带极短注记', () => {
+    const t = treeWithTwoStudies();
+    const seed = openingSeed(pack);
+    const b = buildSceneBlock({
+        pack, state: { ...seed, place: 'p_shenzhai' }, tree: t, chatSeed: 'x',
+        meta: {
+            seed, placeId: 'p_shenzhai',
+            onstage: ['baijingzhao'],
+            onstagePrev: ['huozhen', 'shenmu'],
+            actorNote: { huozhen: '左肩带伤' },
+        },
+        budget: Number.POSITIVE_INFINITY,
+    });
+    assert.match(b.text, /上场:.*霍振\(左肩带伤\)/);
+    assert.match(b.text, /沈母/);
+});

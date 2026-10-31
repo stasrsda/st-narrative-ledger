@@ -56,3 +56,19 @@ test('渲染：推进/换场/编排/钩子都写进大纲', () => {
     assert.match(text, /霍振：退半步/);
     assert.match(text, /留:门外一声响/);
 });
+
+test('副模型能看到「上一幕在场+注记」', () => {
+    const m = buildTurnMessages({
+        userText: '带上来',
+        placeName: '县衙',
+        onstage: ['霍振'],
+        prevLine: '霍振(左肩带伤)、沈母(病中)',
+        places: ['县衙'],
+        ruleOutline: '',
+        recent: '',
+        timeText: '',
+    });
+    assert.match(m[1].content, /上一幕在场/);
+    assert.match(m[1].content, /左肩带伤/);
+    assert.match(m[0].content, /接着它走/);
+});
