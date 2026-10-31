@@ -5214,10 +5214,19 @@
         "五进三路"
       ],
       "idleYears": 0,
-      "notables": [
-        "管家赵伯",
-        "厨役福叔",
-        "户房孙账房"
+      "officials": [
+        {
+          "role": "管家",
+          "id": "zhaobo"
+        },
+        {
+          "role": "厨役",
+          "id": "fushu"
+        },
+        {
+          "role": "户房",
+          "id": "sunzhangfang"
+        }
       ]
     },
     {
@@ -5316,9 +5325,15 @@
         "炭盆",
         "灯"
       ],
-      "notables": [
-        "沈母",
-        "沈知砚"
+      "officials": [
+        {
+          "role": "沈母",
+          "id": "shenmu"
+        },
+        {
+          "role": "沈知砚",
+          "id": "shenzhiyan"
+        }
       ]
     },
     {
@@ -5528,9 +5543,15 @@
         "五营"
       ],
       "idleYears": 0,
-      "notables": [
-        "副将霍振",
-        "亲卫队长秦铎"
+      "officials": [
+        {
+          "role": "副将",
+          "id": "huozhen"
+        },
+        {
+          "role": "亲卫队长",
+          "id": "qindou"
+        }
       ]
     },
     {
@@ -5622,10 +5643,19 @@
         "井台",
         "空院"
       ],
-      "notables": [
-        "门房钱伯",
-        "洒扫吴伯",
-        "厨下郑伯"
+      "officials": [
+        {
+          "role": "门房",
+          "id": "qianbo"
+        },
+        {
+          "role": "洒扫",
+          "id": "wubo"
+        },
+        {
+          "role": "厨下",
+          "id": "zhengbo"
+        }
       ]
     },
     {
@@ -5798,11 +5828,20 @@
         "破城"
       ],
       "idleYears": 0,
-      "notables": [
-        "县丞沈述",
-        "主簿",
-        "典史",
-        "牢头"
+      "officials": [
+        {
+          "role": "县丞",
+          "id": "shenshu",
+          "status": "在逃"
+        },
+        {
+          "role": "主簿",
+          "id": "zhubu"
+        },
+        {
+          "role": "典史",
+          "id": "dianshi"
+        }
       ]
     },
     {
@@ -5815,7 +5854,22 @@
       "tags": [
         "临时住处"
       ],
-      "idleYears": 0
+      "idleYears": 0,
+      "officials": [
+        {
+          "role": "县丞",
+          "id": "shenshu",
+          "status": "在逃"
+        },
+        {
+          "role": "主簿",
+          "id": "zhubu"
+        },
+        {
+          "role": "典史",
+          "id": "dianshi"
+        }
+      ]
     },
     {
       "id": "p_xy_datang",
@@ -6607,6 +6661,92 @@
       "beats": [],
       "home": "p_wf_xi",
       "travels": false
+    },
+    {
+      "id": "shenshu",
+      "name": "沈述",
+      "aliases": [
+        "沈县丞",
+        "县丞",
+        "沈大人"
+      ],
+      "rank": "客",
+      "aff": 0,
+      "bond": "love",
+      "stance": "beiliang_folk",
+      "knows": [],
+      "temper": "sly",
+      "home": "p_yanhui",
+      "travels": false,
+      "lines": [
+        {
+          "id": "fled",
+          "text": "雁回县县丞；开北门放草原兵入城，事后在逃",
+          "from": "[L4] 沈家"
+        },
+        {
+          "id": "daughter",
+          "text": "他是知微的父亲；女儿亲口告发过他",
+          "from": "[L4] 沈知微"
+        }
+      ],
+      "beats": [
+        {
+          "id": "caught",
+          "when": "被围住",
+          "mode": "beat",
+          "once": false,
+          "do": "他不喊冤，先问「我家里人呢」"
+        }
+      ]
+    },
+    {
+      "id": "zhubu",
+      "name": "刘主簿",
+      "aliases": [
+        "主簿",
+        "刘主簿"
+      ],
+      "rank": "仆",
+      "aff": 30,
+      "bond": "loyalty",
+      "stance": "beiliang_folk",
+      "knows": [],
+      "temper": "timid",
+      "home": "p_xianya",
+      "travels": false,
+      "lines": [
+        {
+          "id": "books",
+          "text": "县衙六房的册子都在他手上；他最怕被问「那日北门是谁开的」",
+          "from": "第1幕"
+        }
+      ],
+      "beats": []
+    },
+    {
+      "id": "dianshi",
+      "name": "陈典史",
+      "aliases": [
+        "典史",
+        "陈典史"
+      ],
+      "rank": "仆",
+      "aff": 25,
+      "bond": "loyalty",
+      "stance": "beiliang_folk",
+      "knows": [],
+      "temper": "upright",
+      "home": "p_xianya",
+      "travels": false,
+      "lines": [
+        {
+          "id": "jail",
+          "text": "管牢房；牢里的人吃什么、见谁，都经他的手",
+          "from": "第1幕"
+        }
+      ],
+      "beats": []
     }
   ],
   "tables": {
@@ -8313,6 +8453,15 @@
           "view"
         ],
         "source": "太后·可议"
+      },
+      {
+        "holder": "shenshu",
+        "scope": "county",
+        "rights": [
+          "view",
+          "act"
+        ],
+        "source": "县丞"
       }
     ],
     "seedNote": "开局分配。账目一职故意空着——知微是后来才接手的。改动用 grant/revoke 事件，不改这里。",
@@ -9262,7 +9411,10 @@
       "zhengbo": 50,
       "cuizhanggui": 40,
       "shenmu": -35,
-      "shenzhiyan": -30
+      "shenzhiyan": -30,
+      "shenshu": 0,
+      "zhubu": 30,
+      "dianshi": 25
     },
     "rank": {
       "zhiwei": "囚",
@@ -9275,7 +9427,10 @@
       "zhengbo": "仆",
       "cuizhanggui": "客",
       "shenmu": "客",
-      "shenzhiyan": "客"
+      "shenzhiyan": "客",
+      "shenshu": "客",
+      "zhubu": "仆",
+      "dianshi": "仆"
     },
     "done": [
       "e_break_city"

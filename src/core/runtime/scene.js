@@ -173,8 +173,18 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     const season = w?.season ?? null;
     const placeTag = placeTagOf(pack, node, season);
     // 此地的关键人物：一是给模型知道谁在这儿，二是顺带触发世界书关键词
-    const here = (!lean && Array.isArray(node?.notables) && node.notables.length)
-        ? `此地:${node.notables.join('、')}` : '';
+    // 此地的官与管事：从 officials 解析成「官职+姓名+状态」，写死，不让模型自由发挥
+    let here = '';
+    if (!lean && Array.isArray(node?.officials) && node.officials.length) {
+        const parts = node.officials.slice(0, 4).map(o => {
+            const a = pack.index?.actor?.[o.id];
+            const nm = a?.name ?? o.id;
+            return o.status ? `${o.role}${nm}(${o.status})` : `${o.role}${nm}`;
+        });
+        here = `此地:${parts.join('、')}`;
+    } else if (!lean && Array.isArray(node?.notables) && node.notables.length) {
+        here = `此地:${node.notables.join('、')}`;
+    }
     const { nearby, forbid } = nearbyOf(tree, placeId);
     const recent = '';
     const reaction = lean ? '' : reactionOf(pack, onstage.filter(a => !a.isUser));

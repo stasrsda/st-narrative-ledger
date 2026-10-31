@@ -35,6 +35,7 @@ export function putNode(tree, node) {
         // 包里写死的陈设，必须带过来，否则会被原型抽样顶替
         props: Array.isArray(node.props) ? [...node.props] : null,
         notables: Array.isArray(node.notables) ? [...node.notables] : null,
+        officials: Array.isArray(node.officials) ? node.officials.map(o => ({ ...o })) : null,
     };
     return tree;
 }
