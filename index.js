@@ -22,7 +22,7 @@ import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { buildOutline } from './src/core/runtime/director.js';
 import { createRepaint } from './src/app/repaint.js';
-import { resolveRole, describeRoles, withTimeout } from './src/model/roles.js';
+import { resolveRole, describeRoles, withTimeout, recordTiming, timingReport } from './src/model/roles.js';
 import { callRole } from './src/model/transport.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
 import { urgencyLine } from './src/core/clock/urgency.js';
@@ -578,7 +578,7 @@ async function composeTurnPlan() {
                 }),
         });
 
-        const plannerRun = await callRole(settings, 'planner', msgs, { resolveRole, withTimeout, log });
+        const plannerRun = await callRole(settings, 'planner', msgs, { resolveRole, withTimeout, log, recordTiming });
         if (!plannerRun.ok) log('规划失败：', plannerRun.error);
         const res = plannerRun.text;
 
@@ -599,7 +599,7 @@ async function composeTurnPlan() {
                     briefText: (msgs?.[1]?.content ?? '').slice(0, 6000),
                     draft: { minutes: plan.minutes, place: plan.place?.name ?? '', beats: plan.beats, hook: plan.hook, codes: plan.codes },
                 });
-                const delibRun = await callRole(settings, 'deliberator', dmsgs, { resolveRole, withTimeout, log });
+                const delibRun = await callRole(settings, 'deliberator', dmsgs, { resolveRole, withTimeout, log, recordTiming });
                 const dres = delibRun.text;
                 const ddata = extractJsonSafe(dres);
                 if (ddata) {
@@ -838,6 +838,8 @@ function diagInfo() {
                 }));
             }, []),
             customPlaces: (readMeta()?.customPlaces ?? []).length,
+            roles: safeField(() => describeRoles(settings), []),
+            roleTiming: safeField(() => timingReport(), {}),
             outline: lastOutlineText,
             hud: {
                 on: (() => { try { return globalThis.localStorage?.getItem('storyLedger.hud') !== '0'; } catch { return true; } })(),
@@ -877,7 +879,7 @@ function diagInfo() {
             actors: 0, sample: '—',
             onstage: '（读不到）', lastEvents: 0, affNow: '—',
             onstageSrc: 'manual', books: [], lwb: {}, places: [],
-            customPlaces: 0, outline: lastOutlineText,
+            customPlaces: 0, outline: lastOutlineText, roles: [], roleTiming: {},
             lastFirst: first, lastLen: len,
             hud: { on: true, onstage: 0 }, vars: {}, actorList: [],
             directReady: false, keyLen: 0, profileId: settings.profileId,
@@ -1391,7 +1393,7 @@ function settleMessage() {
 
 const settleQueue = createQueue({
     handler: async task => {
-        const settlerRun = await callRole(settings, 'settler', task.messages, { resolveRole, withTimeout, log });
+        const settlerRun = await callRole(settings, 'settler', task.messages, { resolveRole, withTimeout, log, recordTiming });
         if (!settlerRun.ok) throw new Error(settlerRun.error ?? '结算调用失败');
         const res = settlerRun.text;
         const actorIds = new Set(Object.keys(task.pack.index?.actor ?? {}));

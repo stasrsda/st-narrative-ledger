@@ -10,7 +10,7 @@ import { requestCustom, requestCompletion, transportAvailable } from '../adapter
  * @returns {Promise<{ok:boolean, text:string, via?:string, model?:string, ms:number, error?:string}>}
  */
 export async function callRole(settings, roleId, messages, deps) {
-    const { resolveRole, withTimeout, log } = deps;
+    const { resolveRole, withTimeout, log, recordTiming } = deps;
     const role = resolveRole(settings, roleId);
     const t0 = Date.now();
     if (!role) {
@@ -42,11 +42,13 @@ export async function callRole(settings, roleId, messages, deps) {
     const ms = Date.now() - t0;
     if (!res || res.timeout) {
         log?.(`[${role.label}] 超时 ${ms}ms`);
+        recordTiming?.(roleId, ms, false);
         return { ok: false, text: '', via: role.via, model: role.model, ms, error: 'timeout' };
     }
     if (res.err) {
         log?.(`[${role.label}] 失败`, res.err?.message ?? res.err);
         return { ok: false, text: '', via: role.via, model: role.model, ms, error: String(res.err?.message ?? res.err) };
     }
+    recordTiming?.(roleId, ms, true);
     return { ok: true, text: String(res.t ?? ''), via: role.via, model: role.model, ms };
 }

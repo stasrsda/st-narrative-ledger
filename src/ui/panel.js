@@ -463,7 +463,19 @@ function render() {
                 const label = di.baseUrl
                     ? `${di.model || '（无模型）'} @ ${di.baseUrl}（key ${di.keyLen ?? 0} 位）`
                     : (S.diag.profileId ? `未填（走连接配置 ${S.diag.profileId}）` : '未填');
-                dg.append(row('直连', label));
+                // 模型角色：谁在跑、多慢
+            const roles = S.diag.roles ?? [];
+            const timing = S.diag.roleTiming ?? {};
+            for (const r of roles) {
+                if (!r?.model || r.model === '未配置') continue;
+                const t = timing[r.id];
+                const ms = t?.lastMs ? `${Math.round(t.lastMs / 100) / 10}s` : '—';
+                dg.append(row(
+                    `角色·${r.label}`,
+                    `${r.model}（超时 ${Math.round((r.timeoutMs ?? 0) / 1000)}s ｜ 上次 ${ms}）`,
+                ));
+            }
+            dg.append(row('直连', label));
                 dg.append(row('直连落盘', `本地 ${di.inLs ? '有' : '无'} / ST 设置 ${di.inSt ? '有' : '无'}`));
             }
             dg.append(row('Key 长度', S.diag.keyLen ?? 0));
