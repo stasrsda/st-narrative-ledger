@@ -15,6 +15,39 @@ const SPEECH_CUES = [
 // 句读：名字出现在这些字符之后，更像「新起的主语」
 const SENTENCE_START = '。！？…”』」\n';
 
+// 「这个人此刻在这儿」的线索词：在/来/到/站/坐/守/候/进/出/说/问/答/看/迎/送/跟/带
+const NEAR_CUE = /[在来到站坐守候进出说问答看迎送往跟带把递拿跪起身走]|没有|沉默/;
+
+/**
+ * 名字附近有没有「人在这儿」的线索（前后 8 字内）。
+ * 用来区分「崔掌柜那边的货」和「崔掌柜在柜后头站着」。
+ */
+export function hasNearCue(text, aliases, span = 8) {
+    const t = String(text ?? '');
+    for (const name of aliases) {
+        if (!name || name.length < 2) continue;
+        let from = 0;
+        while (true) {
+            const i = t.indexOf(name, from);
+            if (i < 0) break;
+            from = i + name.length;
+            const after = t.slice(i + name.length, i + name.length + span);
+            const before = t.slice(Math.max(0, i - span), i);
+            if (NEAR_CUE.test(after) || NEAR_CUE.test(before)) return true;
+            // 列举也算：前面有「是/有/包括/家眷/在场」这类引入，名字前后是顿号
+            const enumCtx = /是|有|包括|以及|家眷|在场|人物|带|和/.test(
+                t.slice(Math.max(0, i - 16), i),
+            );
+            const enumAfter = /^[、,，]/.test(after.trim());
+            const enumBefore = /[、,，]$/.test(before.trim());
+            if (enumCtx || enumAfter || enumBefore) {
+                if (enumAfter || enumBefore) return true;
+            }
+        }
+    }
+    return false;
+}
+
 /**
  * 这个名字在正文里有「说话或动作」的证据吗？
  * @returns {{hit:boolean, why:string}}
@@ -143,8 +176,11 @@ export function inferPresence(pack, text, { limit = 6, placeId = null, tree = nu
         if (!loose) {
             const evidence = hasActionEvidence(t, alias);
             if (!evidence.hit) continue;
-        } else if (!alias.some(a => a.length >= 2 && t.includes(a))) {
-            continue;
+        } else {
+            // loose（思考）：光是提到不算，附近得有「人在这儿」的线索
+            const mentioned = alias.some(a => a.length >= 2 && t.includes(a));
+            if (!mentioned) continue;
+            if (!hasNearCue(t, alias, 8)) continue;
         }
         if (!hits.includes(actor.id)) hits.push(actor.id);
     }
@@ -158,6 +194,8 @@ export function inferPresence(pack, text, { limit = 6, placeId = null, tree = nu
  */
 export function canBePresent(actor, { placeId = null, tree = null } = {}) {
     if (!actor) return false;
+    // 随行的人（霍振、赵伯、秦铎这种跟着你走的）：哪都算，
+    // 但 inferPresence 那边还有「必须有人在这儿的线索」，光提到不算
     if (actor.travels) return true;
     const home = actor.home;
     if (!home) return false;

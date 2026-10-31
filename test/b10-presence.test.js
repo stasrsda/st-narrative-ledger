@@ -231,3 +231,21 @@ test('思考里没写在场：返回空', () => {
     assert.deepEqual(parsePresenceFromThinking('关键NPC：沈知微、霍振'), []);
     assert.deepEqual(parsePresenceFromThinking(''), []);
 });
+
+test('光提到不算在场：崔掌柜那边的货', () => {
+    assert.deepEqual(inferPresence(pack, '崔掌柜那边的货还没清点。', { placeId: 'p_shenzhai', tree, loose: true }), []);
+});
+
+test('有就地线索才算：崔掌柜在柜后头站着', () => {
+    assert.deepEqual(inferPresence(pack, '崔掌柜在柜后头站着。', { placeId: 'p_shenzhai', tree, loose: true }), ['cuizhanggui']);
+});
+
+test('列举也算：「家眷就是沈母、知微、知砚」', () => {
+    const ids = inferPresence(pack, '沈述家眷就是沈母、知微、知砚三人。', { placeId: 'p_shenzhai', tree, loose: true });
+    assert.deepEqual(ids.sort(), ['shenmu', 'shenzhiyan', 'zhiwei'].sort());
+});
+
+test('没有驻地又不随行的人：不因提到就出现', () => {
+    // 皇兄 home 为空、travels false
+    assert.deepEqual(inferPresence(pack, '皇兄在京城听说这件事。', { placeId: 'p_shenzhai', tree, loose: true }), []);
+});
