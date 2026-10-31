@@ -56,6 +56,7 @@ let diagHandler = null;
 let onstageHandler = null;
 let detailHandler = null;
 let directorHandler = null;
+let actorHomeHandler = null;
 let scrubHandler = null;
 
 try {
@@ -109,6 +110,10 @@ export function onStateDetailChange(fn) {
 
 export function onDirectorChange(fn) {
     directorHandler = fn;
+}
+
+export function onActorHomeChange(fn) {
+    actorHomeHandler = fn;
 }
 
 export function onScrubChat(fn) {
@@ -366,6 +371,22 @@ function render() {
                         }
                     });
                     line.append(cb, el('span', 'sl-check-name', a.name));
+                    // 驻地：下拉直接改，改完立刻按新驻地判定
+                    const sel = el('select', 'sl-home-select');
+                    const blank = el('option', '', '（未设）');
+                    blank.value = '';
+                    sel.append(blank);
+                    for (const p of (S.diag.places ?? [])) {
+                        const op = el('option', '', p.name);
+                        op.value = p.id;
+                        if (p.id === a.home) op.selected = true;
+                        sel.append(op);
+                    }
+                    sel.addEventListener('change', () => {
+                        a.home = sel.value;
+                        try { actorHomeHandler?.(a.id, sel.value); } catch (e) { console.warn('[叙事账本]', e); }
+                    });
+                    line.append(sel);
                     oc.append(line);
                 }
             }

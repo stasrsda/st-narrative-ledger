@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange, onStateDetailChange, onScrubChat, onDirectorChange } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange, onStateDetailChange, onScrubChat, onDirectorChange, onActorHomeChange } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -478,6 +478,33 @@ function extractJsonSafe(text) {
     }
 }
 
+/**
+ * 把 meta 里的角色覆盖（驻地/位份）写回包的 actor 对象。
+ * 包每次加载是新的对象，所以这里改是安全的。
+ */
+function applyActorOverrides(pack, meta) {
+    const home = meta?.actorHome ?? {};
+    const rank = meta?.actorRank ?? {};
+    for (const [id, placeId] of Object.entries(home)) {
+        const a = pack.index?.actor?.[id];
+        if (a) a.home = placeId;
+    }
+    for (const [id, r] of Object.entries(rank)) {
+        const a = pack.index?.actor?.[id];
+        if (a) a.rank = r;
+    }
+}
+
+/** 面板：改某个角色的驻地 */
+function setActorHome(id, placeId) {
+    const meta = readMeta() ?? {};
+    const home = { ...(meta.actorHome ?? {}) };
+    if (placeId) home[id] = placeId;
+    else delete home[id];
+    writeMeta({ actorHome: home });
+    log('驻地已改：', id, '→', placeId || '（清除）');
+}
+
 /** 改写消息内容后，让 ST 重新渲染（否则页面显示的还是旧 DOM） */
 let repaintTimer = null;
 function repaintChat() {
@@ -500,6 +527,12 @@ function repaintChat() {
 function addGuest(pack, guest) {
     if (!guest?.name) return;
     const meta = readMeta() ?? {};
+    // 用户改过的驻地/位份：覆盖世界包里的值（下次读包也不用重导）
+    try {
+        applyActorOverrides(pack, meta);
+    } catch (e) {
+        log('应用角色覆盖失败', e?.message ?? e);
+    }
     const guests = Array.isArray(meta.guests) ? [...meta.guests] : [];
     if (guests.some(g => g.name === guest.name)) return;
     guests.push({ ...guest, rank: guest.rank ?? '客', aff: 0, since: Date.now() });
@@ -575,6 +608,7 @@ function diagInfo() {
             onstageSrc: readMeta()?.onstageSrc ?? 'manual',
             books: worldBookNames(),
             lwb: { ...lwbStats(ctx().chatMetadata), aliases: lwbAliases(ctx().chatMetadata).length },
+            places: Object.values(treeOf(pack)?.nodes ?? {}).map(n => ({ id: n.id, name: n.name })),
             outline: outline?.text ?? '',
             hud: {
                 on: (() => { try { return globalThis.localStorage?.getItem('storyLedger.hud') !== '0'; } catch { return true; } })(),
@@ -584,6 +618,9 @@ function diagInfo() {
             actorList: Object.values(pack.index?.actor ?? {}).map(a => ({
                 id: a.id,
                 name: a.name,
+                rank: a.rank,
+                home: a.home ?? '',
+                aff: state.aff?.[a.id] ?? a.aff ?? 0,
                 on: (meta?.onstage ?? []).includes(a.id),
             })),
             directReady: Boolean(settings.direct?.baseUrl && settings.direct?.model),
@@ -1340,6 +1377,11 @@ function boot() {
         composeAndInject();
         log('清理历史残留', r);
         return r;
+    });
+
+    onActorHomeChange((id, placeId) => {
+        setActorHome(id, placeId);
+        refreshPanel();
     });
 
     onDirectorChange(v => {
