@@ -1,5 +1,6 @@
 // 结算结果 → 事件数组（纯函数）
 import { deltaFor } from '../core/affinity/affinity.js';
+import { codeAllowedAt } from '../core/codes/gate.js';
 
 /**
  * @param {object} pack
@@ -7,7 +8,7 @@ import { deltaFor } from '../core/affinity/affinity.js';
  * @param {object} data normalizeSettle 的输出
  * @returns {Array} 事件数组
  */
-export function toEvents(pack, state, data = {}) {
+export function toEvents(pack, state, data = {}, opts = {}) {
     const events = [];
     const actorIds = new Set(Object.keys(pack.index?.actor ?? {}));
     // 玩家角色不参与好感（没有「对自己好感」这回事）
@@ -49,6 +50,8 @@ export function toEvents(pack, state, data = {}) {
 
     for (const c of data.codeHits ?? []) {
         if (!pack.index?.code?.[c.id]) continue;
+        // 场景门：夜访只在卧房，问案只在公堂/牢房
+        if (!codeAllowedAt(pack.index.code[c.id], opts.scene ?? null)) continue;
         events.push({ k: 'trace', code: c.id, kind: c.kind, src: 'settle' });
     }
 

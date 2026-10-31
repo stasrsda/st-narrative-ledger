@@ -1502,7 +1502,8 @@ const settleQueue = createQueue({
         }
         const parsed = normalizeSettle(res, { actorIds, aliasMap, text: task.text });
         if (!parsed.ok) throw new Error(parsed.error);
-        const events = toEvents(task.pack, task.state, parsed.data);
+        const sceneNow = task.state?.place ? treeOf(task.pack).nodes?.[task.state.place]?.scene : null;
+        const events = toEvents(task.pack, task.state, parsed.data, { scene: sceneNow });
         if (!events.length) {
             settleStatus.at = Date.now();
             settleStatus.ok = true;

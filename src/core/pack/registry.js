@@ -33,7 +33,9 @@ export function normalizePack(pack) {
         actor: toIndex(p.actors, 'id'),
         rank: toIndex(Object.entries(p.ranks).map(([id, v]) => ({ id, ...v })), 'id'),
         event: toIndex(p.events, 'id'),
-        code: toIndex([...p.codes.rites, ...p.codes.house, ...p.codes.laws], 'id'),
+        // 所有礼法组都要进索引：漏了 procedure（勘问/立案）和 clan（宗族）会导致
+        // 结算永远记不上那些条目
+        code: toIndex(Object.values(p.codes).flat(), 'id'),
     };
     return p;
 }

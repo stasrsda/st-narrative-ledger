@@ -600,7 +600,9 @@
         "brief": "正妃正位、侧妃侧位、妾下首、通房不坐",
         "when": [
           "scene:inner_court",
-          "scene:banquet"
+          "scene:banquet",
+          "scene:hall",
+          "scene:court"
         ],
         "who": [
           "正妃",
@@ -988,7 +990,7 @@
         "name": "侍寝礼",
         "brief": "谁去哪里、能不能留，是位份语言",
         "when": [
-          "scene:inner_court",
+          "scene:bedroom",
           "夜"
         ],
         "who": [
@@ -9565,6 +9567,6 @@
       "e_break_city"
     ]
   },
-  "revision": 13,
-  "revisionNote": "写死皇兄/太后/崔掌柜/沈述的活动范围"
+  "revision": 14,
+  "revisionNote": "night_visit 限定卧房；seating 补上堂/厅"
 }
