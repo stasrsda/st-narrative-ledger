@@ -50,13 +50,16 @@ export function composeSceneBlock(o = {}) {
     const t = state.t ?? 0;
 
     const placeTail = o.placeTag ? `[${o.placeTag}]` : '';
-    const head = `时:${renderDate(t)}·${renderTime(t)}${o.placePath ? ` | 地:${o.placePath}${placeTail}` : ''}`;
+    // 有底单时，时间已经在底单里，这里只留地点（省一半字）
+    const head = o.headerLine
+        ? `地:${o.placePath || '（未知）'}${placeTail}`
+        : `时:${renderDate(t)}·${renderTime(t)}${o.placePath ? ` | 地:${o.placePath}${placeTail}` : ''}`;
     parts.push({ key: 'header', text: head, locked: true });
     // 输出约定放在最前面：放末尾模型会忽略
     if (o.presenceHint !== false) {
         parts.push({
             key: 'presenceHint',
-            text: '末行写 <!--在场:名字@地点、…-->（不知道地点就只写名字）；新地点另写 <!--新地:名字>上级-->',
+            text: '末行写 <!--在场:名字@地点-->；新地点另写 <!--新地:名字>上级-->',
         });
     }
 

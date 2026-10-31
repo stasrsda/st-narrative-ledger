@@ -6165,7 +6165,7 @@
       "id": "p_shenzhai",
       "name": "沈宅",
       "parent": "p_yanhui",
-      "scene": "bedroom",
+      "scene": "inner_court",
       "indoor": true,
       "aliases": [
         "沈述家",

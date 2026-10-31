@@ -284,3 +284,82 @@ chat_metadata.extensions.LittleWhiteBox.storySummary = {
 `src/core/memory/lwb.js` 已按上述结构重写：`readLwbSummary` / `factsForCast` / `relationsFor` /
 `arcsFor` / `eventsForCast` / `lwbAliases` / `aliasMapForActors` / `summarizedBoundary` / `lwbCast`。
 测试 `test/b22-lwb.test.js`（11 条）按真实结构断言。
+
+## 13. 一轮对话里的全部 AI（数据流 + 谁读谁写 + token）
+
+### 13.1 有哪几个 AI 在跑
+
+| # | 角色 | 谁 | 什么时候 | 看什么 | 产出 | 典型耗时 |
+|---|---|---|---|---|---|---|
+| 1 | **主模型** | 你的付费模型（DeepSeek，走预设 0.46） | 玩家发送后 | ST 组装好的完整 prompt（预设 19k 字 + 历史 + 世界书 + **我们的块** + **LWB 剧情记忆**） | 正文 + 思考 | ~60s |
+| 2 | **planner** | Qwen2.5-14B（直连，免费额度内） | `GENERATION_AFTER_COMMANDS`，**生成前** | 我们的 brief（~1200 token） | `minutes/place/codes/beats/hook` | 3~40s |
+| 3 | **deliberator** | 默认继承 planner | 同上，紧接 planner | brief + 草稿 | `situation/wants/facts/problems/beats/hook` | 3~40s |
+| 4 | **settler** | Qwen2.5-7B | `MESSAGE_RECEIVED` 之后，**异步** | 正文 + 思考摘录 + 候选礼法（~600 token） | `results/beats/codeHits/happened` | 2~10s |
+| 5 | **LWB 总结模型** | 小白X 自己配的模型 | 手动点总结（默认不自动） | 未总结楼层 | 写 `storySummary.json`（事件/事实/弧光/别名） | 数十秒 |
+| 6 | **LWB 嵌入模型** | `BAAI/bge-m3`（SiliconFlow） | 总结提交后 | 每楼切好的 chunk | 向量写 IndexedDB | 秒级/批 |
+| 7 | LWB 检索 | 无模型（纯几何） | 每轮生成前（generate_interceptor） | 最近 3 条 + 向量库 | `<剧情记忆>` 注入 | 毫秒~秒 |
+
+### 13.2 一轮的时间线
+
+```
+玩家点发送
+  │
+  ├─ MESSAGE_SENT                          （ST 存 user 消息）
+  ├─ GENERATION_STARTED
+  ├─ GENERATION_AFTER_COMMANDS  ← 被 await，所以我们能「等」
+  │    ├─ 规则段：时间/地点/在场/礼法/可发事件（纯函数）
+  │    ├─ 【AI 2】planner  出草稿          （3~40s）
+  │    ├─ 【AI 3】deliberator 审草稿       （3~40s）
+  │    └─ 写事件 clock/move → 组状态块 → 注入（depth 1）+ 大纲（depth 2）+ 记录底单
+  │
+  ├─ 提示词组装
+  │    ├─ 预设（0.46，19k 字）
+  │    ├─ 世界书扫描（关键词触发）
+  │    ├─ 【AI 7 的产物】<剧情记忆>（LWB 在 interceptor 里注入，depth 动态）
+  │    └─ 我们的 3 个槽（1_State / 2_Director / 3_Address）
+  │
+  ├─ 【AI 1】主模型生成（~60s，流式）
+  │
+  ├─ MESSAGE_RECEIVED（DOM 还没有这条消息）
+  │    ├─ 拆思考（标记/小标题/无标记三路）
+  │    ├─ 底单校验（抄对不动 / 抄错换回 / 没抄补上）
+  │    ├─ 在场四路合并（注释 > 思考 > 证据 > 结算）
+  │    └─ 入队 settler（异步，不阻塞）
+  ├─ addOneMessage
+  ├─ CHARACTER_MESSAGE_RENDERED  → LWB 补按钮 + 我们 flush 定向重绘
+  │
+  └─ 【AI 4】settler 返回 → 场景门/上限/在逃门 → 写 aff/trace/emergent 事件
+        └─ 下一轮的「上场」与人物状态就来自这里
+```
+
+### 13.3 每轮各段的 token 账（实测，2026-10-30）
+
+| 段 | 字符 | ≈token | 说明 |
+|---|---|---|---|
+| 我们的状态块 | 439 | **274** | 去重前 520/325 |
+| 导演大纲（含情境/诉求/事实点） | ~330 | ~205 | depth 2 |
+| 称谓块 | 视情况 | ~40 | 仅在两人以上 |
+| 底单 | 含在状态块 | — | 正文第一行由主模型抄 |
+| LWB `<剧情记忆>` | 不定 | 数百~数千 | 它自己的预算：CONSTRAINT 2000 / ARCS 1500 / EVENT 5000 … |
+| 预设 0.46 | 19k 字 | ~12k | **最大头**，主要是条目文本 |
+| 副模型 brief | 1925 | 1203 | 规划/思辨各一次（同一份） |
+| 结算请求 | ~600 | ~400 | 正文 + 思考摘录 |
+
+### 13.4 据此做的优化（0.9.95）
+
+| 问题 | 原来 | 现在 |
+|---|---|---|
+| 时间写两遍 | `时:…` + `底单:『…』` | 有底单时 `时:` 只留 `地:` |
+| 此地与在场重复 | 官员名单里的人在 `在场:` 又列一遍 | `此地:` 过滤掉已在场的人 |
+| 输出约定太长 | 90 字 | 42 字 |
+| 经验误挂 | 沈宅被当成卧室（scene=bedroom）→ 给沈母挂了亲密经验 | 沈宅改 `inner_court`；经验只给 `bond==='love'` |
+| 动机重复数字 | `动机:沈母 -35 屈从`（-35 已在在场里） | `动机:沈母 屈从` |
+
+**状态块 520 → 439 字符（-16%），每轮省约 50 token。**
+
+### 13.5 还没做但值得做的（按收益）
+
+1. **预设瘦身**：19k 字里能砍的（`临时制卡`、`NPC人性化` 长段）→ 每轮省几千 token，是最大的单点
+2. **LWB 预算下调**：它的 `<剧情记忆>` 预算上限合计 15k，实际用不满；把 EVENT 5000 调到 2500 更稳
+3. **规划缓存跨轮**：现在按「玩家原话」缓存；同一句话重生成不重算（已做）
+4. **settler 与 planner 共用一个模型实例**：省一次连接握手（收益小）

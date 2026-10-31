@@ -148,7 +148,10 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     const onstage = onstageOf(pack, state, meta);
     // 动机与经验只对「情爱向」的角色有意义；臣属/亲族用 bond 区分，不走这条线
     const focus = onstage.find(o => !o.isUser && (o.bond ?? 'love') === 'love');
-    const motive = (!lean && focus) ? `${focus.name} ${motiveLine(pack, focus.aff, { hasRank: !!focus.rank })}` : '';
+    // 好感数字在「在场:」里已经有，这里只留动机词（屈从/交易/自愿…）
+    const motive = (!lean && focus)
+        ? `${focus.name} ${motiveLine(pack, focus.aff, { hasRank: !!focus.rank })}`.replace(/-?\d+\s*/g, '')
+        : '';
 
     const w = node ? weatherFor({ pack, placeNode: node, t: state.t ?? 0, chatSeed }) : null;
     const weather = w?.word ? renderWeather(w) : '';
@@ -187,15 +190,18 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     // 此地的关键人物：一是给模型知道谁在这儿，二是顺带触发世界书关键词
     // 此地的官与管事：从 officials 解析成「官职+姓名+状态」，写死，不让模型自由发挥
     let here = '';
-    if (!lean && Array.isArray(node?.officials) && node.officials.length) {
-        const parts = node.officials.slice(0, 4).map(o => {
+    // 此地只列「没在在场名单里」的人，避免和 在场: 重复
+    const onIds = new Set((meta.onstage ?? []));
+    const officials = (node?.officials ?? []).filter(o => !onIds.has(o.id));
+    if (!lean && officials.length) {
+        const parts = officials.slice(0, 4).map(o => {
             const a = pack.index?.actor?.[o.id];
             const nm = a?.name ?? o.id;
             const head = o.role && o.role !== nm ? `${o.role}${nm}` : nm;
             return o.status ? `${head}(${o.status})` : head;
         });
         here = `此地:${parts.join('、')}`;
-    } else if (!lean && Array.isArray(node?.notables) && node.notables.length) {
+    } else if (!lean && !officials.length && Array.isArray(node?.notables) && node.notables.length) {
         here = `此地:${node.notables.join('、')}`;
     }
     const { nearby, forbid } = nearbyOf(tree, placeId);
@@ -222,7 +228,8 @@ export function buildSceneBlock({ pack, state, tree = null, chatSeed = '', meta 
     // 经验只在亲密相关时注入：亲密场景、卧室，或有人提起
     let exp = '';
     const intimateScene = meta.intimate || node?.scene === 'bedroom';
-    if (focus && shouldInjectExp({ intimate: intimateScene, mentioned: meta.expMentioned })) {
+    if (focus && (focus.bond ?? 'love') === 'love'
+        && shouldInjectExp({ intimate: intimateScene, mentioned: meta.expMentioned })) {
         const e = state.exp?.[focus.id] ?? expOf(state, focus.id);
         const ph = state.phase?.[focus.id] ?? null;
         if (e.total > 0 || intimateScene) exp = expLine(pack, focus.name, e, state.t ?? 0, ph);
