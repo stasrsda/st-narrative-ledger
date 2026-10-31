@@ -22,7 +22,7 @@ import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { buildOutline } from './src/core/runtime/director.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
-import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, canBePresent } from './src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, parsePresenceCommentDetailed, canBePresent } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { splitThinking, thinkingDominates, normalizeMessage, splitTailStory } from './src/core/cleanup/thinking.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
@@ -960,15 +960,40 @@ function settleMessage() {
     }
 
     // 在场：① 主模型的隐藏注释 > ② 旧【在场】行 > ③ 正文证据推断
-    const declaredInComment = parsePresenceComment(msg.mes ?? '');
-    if (declaredInComment) {
-        const { ids } = resolveActors(pack, declaredInComment);
+    const declaredC = parsePresenceCommentDetailed(msg.mes ?? '');
+    if (declaredC) {
+        const names = declaredC.entries.map(e => e.name);
+        const { ids } = resolveActors(pack, names);
         if (ids.length) {
             writeMeta({ onstage: ids, onstageSrc: 'ai-comment' });
             log('主模型声明在场：', ids.join(','));
-        } else if (declaredInComment.length === 0) {
+        } else if (names.length === 0) {
             writeMeta({ onstage: [], onstageSrc: 'ai-comment' });
             log('主模型声明：无人');
+        }
+        // 名字@地点 → 自动更新驻地（认不出的地点跳过，不覆盖）
+        try {
+            const treeNow = treeOf(pack);
+            const home = { ...(readMeta()?.actorHome ?? {}) };
+            let changed = 0;
+            for (const e of declaredC.entries) {
+                if (!e.place) continue;
+                const mapped = resolveActors(pack, [e.name]);
+                const id = mapped.ids?.[0];
+                if (!id) continue;
+                const hit = resolvePlaceName(treeNow, e.place);
+                if (!hit) continue;
+                if (home[id] !== hit.id) {
+                    home[id] = hit.id;
+                    changed++;
+                }
+            }
+            if (changed) {
+                writeMeta({ actorHome: home });
+                log('按主模型的输出更新驻地：', changed, '人');
+            }
+        } catch (err) {
+            log('更新驻地失败', err?.message ?? err);
         }
     }
 

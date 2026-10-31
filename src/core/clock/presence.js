@@ -179,3 +179,27 @@ export function parsePresenceComment(text) {
         .filter(x => !/^(无|无人|空|—|-|none)$/i.test(x));
     return [...new Set(names)];
 }
+
+/**
+ * 带地点的在场注释：
+ *   <!--在场:霍振@沈宅、沈母@沈宅、沈述@东南岔路-->
+ *   <!--在场:霍振、沈母-->                      （不写地点也行）
+ * @returns {{entries:{name:string, place:string}[], raw:string}|null}
+ */
+export function parsePresenceCommentDetailed(text) {
+    const t = String(text ?? '');
+    const m = t.match(/<!--\s*(?:在场|出场|presence)\s*[:：]\s*([^>]*?)-->/i);
+    if (!m) return null;
+    const raw = m[1] ?? '';
+    const entries = raw
+        .split(/[、,，/｜|\n]+/)
+        .map(x => x.trim())
+        .filter(Boolean)
+        .filter(x => !/^(无|无人|空|—|-|none)$/i.test(x))
+        .map(x => {
+            const [nm, pl] = x.split('@');
+            return { name: String(nm ?? '').trim(), place: String(pl ?? '').trim() };
+        })
+        .filter(e => e.name);
+    return { entries, raw };
+}

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizePack } from '../src/core/pack/registry.js';
-import { parsePresence, stripPresence, resolveActors, renderPresence, inferPresence, canBePresent, parsePresenceComment } from '../src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, renderPresence, inferPresence, canBePresent, parsePresenceComment, parsePresenceCommentDetailed } from '../src/core/clock/presence.js';
 import { createTree, putNode } from '../src/core/place/tree.js';
 
 const raw = JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8'));
@@ -170,4 +170,23 @@ test('地点别名：沈述家 → 沈宅', () => {
     assert.equal(resolvePlaceName(tree, '去沈述家里看看')?.id, 'p_shenzhai');
     assert.equal(resolvePlaceName(tree, '县丞宅')?.id, 'p_shenzhai');
     assert.equal(resolvePlaceName(tree, '雁回县县衙')?.id, 'p_xianya');
+});
+
+test('名字@地点：解析出人在哪', () => {
+    const r = parsePresenceCommentDetailed('正文\n<!--在场:霍振@沈宅、沈母@沈宅、沈述@东南岔路-->');
+    assert.deepEqual(r.entries, [
+        { name: '霍振', place: '沈宅' },
+        { name: '沈母', place: '沈宅' },
+        { name: '沈述', place: '东南岔路' },
+    ]);
+});
+
+test('名字@地点：不写地点也行', () => {
+    const r = parsePresenceCommentDetailed('<!--在场:霍振、沈母-->');
+    assert.deepEqual(r.entries.map(e => e.name), ['霍振', '沈母']);
+    assert.equal(r.entries[0].place, '');
+});
+
+test('名字@地点：旧的纯名字接口仍然可用', () => {
+    assert.deepEqual(parsePresenceComment('<!--在场:霍振、沈母-->'), ['霍振', '沈母']);
 });
