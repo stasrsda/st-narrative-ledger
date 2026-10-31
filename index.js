@@ -761,17 +761,37 @@ function setActorHome(id, placeId) {
     log('驻地已改：', id, '→', placeId || '（清除）');
 }
 
-/** 改写消息内容后，让 ST 重新渲染（否则页面显示的还是旧 DOM） */
+/**
+ * 改写消息内容后的重绘。
+ * 关键：**不要**整页 printMessages()——那会把其它扩展（小白X 等）注入到
+ * 每条消息右上角的按钮一起冲掉，而且它们只在 CHARACTER_MESSAGE_RENDERED
+ * 时注入一次，重绘后不会再补。
+ * 所以这里只把我们改过的那一条的 .mes_text 重新格式化。
+ */
 let repaintTimer = null;
-function repaintChat() {
+function repaintChat(targetIndex = null) {
     if (repaintTimer) return;
     repaintTimer = setTimeout(() => {
         repaintTimer = null;
         try {
             const c = ctx();
+            const full = targetIndex === -1;
+            const idx = Number.isInteger(targetIndex) && targetIndex >= 0 ? targetIndex : lastMessageIndex();
+            const m = messages()?.[idx];
+            if (full) {
+                ctx().printMessages?.();
+                return;
+            }
+            const node = document.querySelector(`#chat .mes[mesid="${idx}"] .mes_text`);
+            if (m && node && typeof c.messageFormatting === 'function') {
+                node.innerHTML = c.messageFormatting(
+                    m.mes ?? '', m.name ?? '', false, Boolean(m.is_user), idx,
+                );
+                return;
+            }
+            // 找不到那一条（比如正流式输出）：退回整页重绘
             if (typeof c.printMessages === 'function') {
                 c.printMessages();
-                log('已请求 ST 重绘消息');
             }
         } catch (e) {
             log('重绘失败', e?.message ?? e);
@@ -1558,7 +1578,7 @@ const settleQueue = createQueue({
         appendEvents(msg, events);
         try {
             ctx().saveChat?.();
-            repaintChat();
+            repaintChat(task.msgIndex);
         } catch {
             /* noop */
         }
@@ -1795,7 +1815,7 @@ function boot() {
     onScrubChat(() => {
         const r = scrubMessages(messages());
         try { ctx().saveChat?.(); } catch { /* noop */ }
-        repaintChat();
+        repaintChat(-1);
         composeAndInject();
         log('清理历史残留', r);
         return r;
