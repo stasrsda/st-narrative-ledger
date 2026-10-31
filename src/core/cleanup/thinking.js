@@ -48,6 +48,35 @@ export function splitLooseCot(text) {
     return { body: (head ? head + '\n\n' : '') + story, thinking: cot, had: true };
 }
 
+/**
+ * 思考块里裹着正文：找正文起点并切开。
+ * 不依赖「* 灰魂吐槽」这类小标题（用户可能关掉），只看正文特征：
+ *   - 以 「 或 “ 开头的对白行
+ *   - 以两个以上全角/半角空格缩进的段落行
+ * 要求：前面的思考 ≥120 字；后面的正文 ≥200 字，且至少两行「像正文」。
+ * @returns {{body:string, thinking:string, had:boolean}}
+ */
+export function splitTailStory(text) {
+    const raw = String(text ?? '');
+    if (raw.length < 300) return { body: raw, thinking: '', had: false };
+    const lines = raw.split('\n');
+
+    const storyish = (t) => /^[「“"]/.test(t.trim()) || /^[\u3000 ]{2,}\S/.test(t);
+    const countStory = (arr) => arr.filter(storyish).length;
+
+    for (let i = 2; i < lines.length; i++) {
+        if (!storyish(lines[i])) continue;
+        const head = lines.slice(0, i).join('\n');
+        const tailLines = lines.slice(i);
+        const tail = tailLines.join('\n');
+        if (head.length < 120) continue;
+        if (tail.length < 80) continue;
+        if (countStory(tailLines) < 2) continue;
+        return { body: tail.trim(), thinking: head.trim(), had: true };
+    }
+    return { body: raw, thinking: '', had: false };
+}
+
 const PATTERNS = [
     { name: 'tag-think', re: /<think>([\s\S]*?)<\/think>/gi },
     { name: 'tag', re: /<思考>([\s\S]*?)<\/思考>/g },
@@ -132,6 +161,9 @@ export function normalizeMessage(text) {
         // 没有标记：看开头是不是灰魂的思考小标题
         const loose = splitLooseCot(text);
         if (loose.had) return { ...loose, broken: false, recovered: false, loose: true };
+        // 开头不是小标题，但中间冒出一段对白/缩进 → 也当正文切出来
+        const tail = splitTailStory(text);
+        if (tail.had) return { ...tail, broken: false, recovered: false, loose: true };
     }
     // 有 <think> 开头但没结尾：ST 没解析成功时会出现。
     // 不能整条放弃（否则时间头也不写），尽量切开：去掉开头标记，再按小标题找正文。
@@ -140,6 +172,10 @@ export function normalizeMessage(text) {
         const loose = splitLooseCot(stripped);
         if (loose.had) {
             return { body: loose.body, thinking: loose.thinking, had: true, broken: true, recovered: false };
+        }
+        const tail = splitTailStory(stripped);
+        if (tail.had) {
+            return { body: tail.body, thinking: tail.thinking, had: true, broken: true, recovered: false };
         }
         return { body: stripped, thinking: '', had: true, broken: true, recovered: false };
     }

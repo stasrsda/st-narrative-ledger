@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { splitThinking, headerInBody, thinkingDominates, normalizeMessage, splitLooseCot } from '../src/core/cleanup/thinking.js';
+import { splitThinking, headerInBody, thinkingDominates, normalizeMessage, splitLooseCot, splitTailStory } from '../src/core/cleanup/thinking.js';
 
 test('拆出 <思考> 块', () => {
     const r = splitThinking('<思考>我要写时间头『某日』然后正文</思考>\n正文第一句。');
@@ -125,4 +125,23 @@ test('未闭合也尽力切：<think> 开头没结尾', () => {
     const t = '<think>* 灰魂吐槽\n' + '   - 想法。'.repeat(30) + '\n\n　　他勒马。';
     const r = normalizeMessage(t);
     assert.ok(r.body.includes('他勒马'));
+});
+
+test('尾巴正文：思考和正文都裹在一起时，按对白切开', () => {
+    const think = '用户输入：白景昭下令。\n我要注意：\n- 老聂说过一句。\n- 霍振去抄家，顺带看看县丞的宅子。\n'.repeat(8);
+    const story = '「三更……」老聂的喉咙里滚出半截话，手撑着地，跪直了些。\n'
+        + '　　霍振把最上面一册账本翻了两页，指尖停住，往白景昭这边推过来。\n'
+        + '「这不是他一个人的账。」他翻到写着字的一页，把纸角按平。\n'
+        + '　　堂上没有别的声音，只有廊下的风。\n';
+    const r = splitTailStory(think + story);
+    assert.equal(r.had, true);
+    assert.ok(r.body.includes('三更'));
+    assert.ok(!r.body.includes('用户输入'));
+    assert.ok(r.thinking.includes('用户输入'));
+});
+
+test('尾巴正文：正常正文不该被切', () => {
+    assert.equal(splitTailStory('　　他勒马停在城外。\n　　霍振在身后。').had, false);
+    // 短消息不切
+    assert.equal(splitTailStory('「一句话。」').had, false);
 });

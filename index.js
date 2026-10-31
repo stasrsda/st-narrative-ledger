@@ -24,7 +24,7 @@ import { buildOutline } from './src/core/runtime/director.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
-import { splitThinking, thinkingDominates, normalizeMessage } from './src/core/cleanup/thinking.js';
+import { splitThinking, thinkingDominates, normalizeMessage, splitTailStory } from './src/core/cleanup/thinking.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
 import { candidatesFor } from './src/core/codes/codes.js';
 import { retrieveCodes } from './src/core/codes/retrieve.js';
@@ -769,6 +769,25 @@ function settleMessage() {
             msg.extra.reasoning = prev ? `${prev}\n\n${thinking}` : thinking;
         }
         log('思考已折进 reasoning：', `${thinking.length} 字`);
+    }
+
+    // ②.5 救援：正文可能整条裹在思考里（reasoning 里既有思考也有正文）
+    //     这时候 body 是空的，只剩时间头，用户看到的就是「正文只有时间」
+    if (body.trim().length < 40) {
+        try {
+            const prevReason = String(msg.extra?.reasoning ?? '');
+            if (prevReason.length > 200) {
+                const tail = splitTailStory(prevReason);
+                if (tail.had && tail.body.length > 40) {
+                    body = tail.body;
+                    msg.extra = msg.extra ?? {};
+                    msg.extra.reasoning = tail.thinking;
+                    log('正文原本裹在思考里，已捞回：', `${tail.body.length} 字`);
+                }
+            }
+        } catch (e) {
+            log('从思考里捞正文失败', e?.message ?? e);
+        }
     }
 
     // ③ 正文去掉旧时间头后重新写一遍（时间以插件为准）
