@@ -70,5 +70,5 @@ test('副模型能看到「上一幕在场+注记」', () => {
     });
     assert.match(m[1].content, /上一幕在场/);
     assert.match(m[1].content, /左肩带伤/);
-    assert.match(m[0].content, /接着它走/);
+    assert.match(m[0].content, /人没退场就别换人/);
 });

@@ -1,6 +1,13 @@
 // 一轮的总规划：时间跳转 + 地点 + 本场礼法 + 分镜
 // 由副模型一次产出，插件负责校验（算错的数字、不认识的地名一律丢掉）
-export function buildTurnMessages({ userText, placeName, onstage, prevLine, places, ruleOutline, recent, timeText }) {
+// 副模型上下文宽裕：把人物卡（含忌/职权/状态）、场景、礼法、事件、玩家处境都给它。
+export function buildTurnMessages(brief = {}) {
+    const {
+        userText = '', placeName = '', placePath = '', sceneCn = '', timeText = '',
+        onstage = [], prevLine = '', places = [], ruleOutline = '', recent = '', lastAi = '',
+        cast = [], codes = [], events = {}, authority = [], player = {}, props = [],
+    } = brief;
+
     const sys = [
         '你在做一部中文古代小说的「这一轮场务安排」。只输出一个 JSON 对象，不要解释。',
         '',
@@ -14,29 +21,78 @@ export function buildTurnMessages({ userText, placeName, onstage, prevLine, plac
         '}',
         '',
         '规则：',
-        '- minutes 只能填分钟数。跨日写 1440，一个时辰 120，一刻 15，半个时辰 60。',
-        '- 玩家说了「次日/第二天」就必须 ≥1440；说了「一刻/马上」就 ≤30；没提时间就给场景自然耗时（问话 ~30、抄家 ~60、赶路 ~360）。',
-        '- place 只能从下面列出的地点里挑；名单外的别填。',
-        '- beats 3 到 5 条，按发生顺序；who 只能用给出的在场人名；不在场的不要写。',
+        '- minutes 只能填分钟数。跨日 1440，一个时辰 120，一刻 15，半个时辰 60。',
+        '- 玩家说「次日/第二天」必须 ≥1440；说「一刻/马上」≤30；没提就按场景自然耗时（问话 ~30、抄家 ~60、赶路 ~360）。',
+        '- place 只能从【可选地点】里挑。',
+        '- beats 3 到 5 条，按发生顺序；who 只能用【在场】或【上一幕在场】里的人名。',
+        '- 「上一幕在场」是上一轮谁在、什么状态；人没退场就别换人，伤/病要延续。',
+        '- 人物卡里「忌:」是不能碰的底线，beats 不许让人物违背它。',
+        '- 「能:」是职权；没这项权的人不能办这件事（文官不能调兵，仆役不能问案）。',
         '- 不要替主角做决定；主角的动作留给他自己。',
-        '- 只能用给出的信息，不要编新角色。',
-        '- 「上一幕在场」是上一轮谁在、什么状态；这一轮接着它走：人没退场就别换人，状态（伤、病）要延续。',
+        '- 不要编新角色、新地名、没给过的设定。',
+        '- hook 要可观察：一个动作、一个停顿、一件不合常理的东西。',
     ].join('\n');
 
-    const user = [
+    const castLines = cast.length
+        ? cast.map(c => {
+            const bits = [c.name];
+            if (c.rank) bits.push(c.rank);
+            if (c.bondCn) bits.push(c.bondCn);
+            if (typeof c.aff === 'number') bits.push(c.band ? `${c.aff}·${c.band}` : String(c.aff));
+            let head = `  · ${bits.join('｜')}`;
+            if (c.note) head += `  状态:${c.note}`;
+            const tail = [];
+            if (c.forbids?.length) tail.push(`忌:${c.forbids.join('；')}`);
+            if (c.goal) tail.push(`要:${c.goal}`);
+            if (c.rights?.length) tail.push(`能:${c.rights.join('/')}`);
+            return head + (tail.length ? `\n      ${tail.join('  ')}` : '');
+        }).join('\n')
+        : '（无）';
+
+    const codeLines = codes.length
+        ? codes.map(c => `  · ${c.id}｜${c.name}｜违制:${(c.breach ?? []).join('、')}`).join('\n')
+        : '（无）';
+
+    const ev = (label, arr) => (arr?.length ? `${label}${arr.join('、')}` : '');
+
+    const blocks = [
         `【现在的时间】${timeText || '（未知）'}`,
-        `【现在的地点】${placeName || '（未知）'}`,
-        `【在场】${(onstage ?? []).join('、') || '（无）'}`,
+        `【现在的地点】${placePath || placeName || '（未知）'}`,
+        sceneCn ? `【场景类型】${sceneCn}` : '',
+        `【在场】${onstage.join('、') || '（无）'}`,
         `【上一幕在场】${prevLine || '（无）'}`,
-        `【可选地点】${(places ?? []).slice(0, 60).join('、')}`,
-        `【规则给的骨架】\n${ruleOutline || '（无）'}`,
-        `【最近发生】\n${recent || '（无）'}`,
-        `【玩家这一句】\n${userText || '（空）'}`,
-    ].join('\n');
+        '',
+        '【人物卡】',
+        castLines,
+        '',
+        `【可选地点】${places.slice(0, 60).join('、') || '（无）'}`,
+        props.length ? `【此地陈设】${props.slice(0, 6).join('、')}` : '',
+        '',
+        '【本场礼法候选】',
+        codeLines,
+        '',
+        ev('【未结】', events.pending),
+        ev('【可触发】', events.canTrigger),
+        ev('【已结】', events.done),
+        authority.length ? `【职权】${authority.join('；')}` : '',
+        player.rank || player.items?.length
+            ? `【玩家】位份:${player.rank || '—'}${player.items?.length ? `  随身:${player.items.join('、')}` : ''}`
+            : '',
+        '',
+        '【规则给的骨架】',
+        ruleOutline || '（无）',
+        '',
+        '【最近发生】',
+        recent || '（无）',
+        lastAi ? `【上一轮正文末尾】${lastAi}` : '',
+        '',
+        '【玩家这一句】',
+        userText || '（空）',
+    ];
 
     return [
         { role: 'system', content: sys },
-        { role: 'user', content: user },
+        { role: 'user', content: blocks.filter(x => x !== '').join('\n') },
     ];
 }
 
@@ -90,6 +146,5 @@ export function renderTurnPlan(ruleOutline, plan) {
     }
     if (plan.hook) lines.push(`留:${plan.hook}`);
     if (!lines.length) return head;
-    // 把「节奏/接」这些规则行留下，其它（礼/可发）保留，末尾接编排
     return head ? `${head}\n${lines.join('\n')}` : `<导演>\n${lines.join('\n')}\n</导演>`;
 }

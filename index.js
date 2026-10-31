@@ -452,17 +452,67 @@ async function composeTurnPlan() {
         const onstage = onstageOf(pack, state, meta).map(o => o.name);
         const rule = buildOutline(pack, state, meta, lastUser, tree);
 
+        // ── 给副模型的信息：人物卡 + 场景 + 礼法 + 事件 + 职权 + 玩家 ──
+        const band = (v, bond) => bandOf(v, bond);
+        const bondCn = (b) => ({ love: '情', loyalty: '忠', kin: '亲' }[b] ?? b ?? '');
+        const nameOf = (id) => pack.index?.actor?.[id]?.name ?? id;
+
+        const castIds = [...new Set([...(meta.onstage ?? []), ...(meta.onstagePrev ?? [])])];
+        const cast = castIds.map(id => {
+            const a = pack.index?.actor?.[id];
+            if (!a) return null;
+            const aff = state.aff?.[id] ?? a.aff ?? 0;
+            const rights = (state.grant?.[id] ?? [])
+                .map(g => ({ view: '查看', act: '处置', delegate: '转授' }[g] ?? g))
+                .slice(0, 3);
+            return {
+                name: a.name,
+                rank: a.rank,
+                bondCn: bondCn(a.bond),
+                aff,
+                band: band(aff, a.bond ?? 'love'),
+                note: meta.actorNote?.[id] ?? '',
+                forbids: (a.lines ?? []).slice(0, 2).map(l => String(l.text ?? '').slice(0, 20)),
+                goal: (a.beats ?? [])[0]?.when ?? '',
+                rights,
+            };
+        }).filter(Boolean);
+
+        const nodeNow = tree.nodes?.[placeId] ?? null;
+        const codeList = retrieveCodes(pack, {
+            scene: nodeNow?.scene,
+            rankIds: cast.map(c => c.rank).filter(Boolean),
+            text: lastUser ?? '',
+            state,
+        }, 6).map(c => ({ id: c.id, name: c.name, breach: (c.breach ?? []).slice(0, 2) }));
+
+        const pend = (state.done ? [] : []).length ? [] : pendingEvents(pack, state, 4);
+        const eventsBrief = {
+            pending: pendingEvents(pack, state, 4).map(e => e?.name ?? e?.id ?? '').filter(Boolean),
+            canTrigger: pend.map(e => e?.name ?? '').filter(Boolean),
+            done: doneEventNames(pack, state, 4),
+        };
+
+        const authority = Object.entries(state.grant ?? {})
+            .slice(0, 4)
+            .map(([id, gs]) => `${nameOf(id)}:${(gs ?? []).slice(0, 3).join('/')}`);
+
+        const playerId = Object.values(pack.index?.actor ?? {}).find(a => a.isUser)?.id;
+        const player = {
+            rank: playerId ? pack.index.actor[playerId]?.rank : '',
+            items: Object.entries(state.items ?? {})
+                .filter(([, it]) => it?.hold === 'carry')
+                .map(([k]) => k)
+                .slice(0, 6),
+        };
+
         const msgs = buildTurnMessages({
             userText: lastUser,
             placeName,
-            onstage,
-            places: Object.values(tree.nodes ?? {}).map(n => n.name),
-            ruleOutline: rule.text,
-            recent: [
-                (state.emergent ?? []).slice(-2).map(e => e.name).join('、'),
-                formatLwbBrief(readLwbSummary(ctx().chatMetadata)),
-            ].filter(Boolean).join('\n'),
+            placePath: nodeNow ? pathLabel(tree, placeId) : placeName,
+            sceneCn: nodeNow?.scene ?? '',
             timeText: renderHeader(state.t ?? 0, placeName, pack.calendar).replace(/[『』]/g, ''),
+            onstage: onstage,
             prevLine: (meta.onstagePrev ?? [])
                 .map(id => {
                     const nm = pack.index?.actor?.[id]?.name;
@@ -472,6 +522,19 @@ async function composeTurnPlan() {
                 })
                 .filter(Boolean)
                 .join('、'),
+            places: Object.values(tree.nodes ?? {}).map(n => n.name),
+            ruleOutline: rule.text,
+            recent: [
+                (state.emergent ?? []).slice(-2).map(e => e.name).join('、'),
+                formatLwbBrief(readLwbSummary(ctx().chatMetadata)),
+            ].filter(Boolean).join('\n'),
+            lastAi: String([...messages()].reverse().find(m => !m.is_user && String(m.mes ?? '').trim())?.mes ?? '').slice(-200),
+            cast,
+            codes: codeList,
+            events: eventsBrief,
+            authority,
+            player,
+            props: nodeNow?.props ?? [],
         });
 
         const d2 = settings.direct ?? {};
