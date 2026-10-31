@@ -10,6 +10,10 @@ import { deltaFor } from '../core/affinity/affinity.js';
 export function toEvents(pack, state, data = {}) {
     const events = [];
     const actorIds = new Set(Object.keys(pack.index?.actor ?? {}));
+    // 玩家角色不参与好感（没有「对自己好感」这回事）
+    const selfIds = new Set(
+        Object.values(pack.index?.actor ?? {}).filter(a => a?.isUser).map(a => a.id),
+    );
     const seenEmergent = new Set((state.emergent ?? []).map(e => e.quote || e.name));
     const doneIds = new Set(state.done ?? []);
 
@@ -18,6 +22,7 @@ export function toEvents(pack, state, data = {}) {
     const gained = new Map();
     for (const r of data.results ?? []) {
         if (!actorIds.has(r.actor)) continue;
+        if (selfIds.has(r.actor)) continue;
         const delta = deltaFor(pack, r.kind);
         if (!delta) continue;
         let d = delta;

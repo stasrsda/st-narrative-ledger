@@ -140,6 +140,20 @@ async function loadBundledPacks() {
             const res = await fetch(new URL(`./packs/${name}.worldpack.json`, import.meta.url));
             if (!res.ok) continue;
             const pack = await res.json();
+            // 内置包如果比「以前导入过的」新，就用内置的（否则老包的旧数据会一直生效）
+            const old = registry.packs?.[pack.id];
+            if (old) {
+                const a = Number(pack.revision ?? 0);
+                const b = Number(old.revision ?? 0);
+                if (b > a) {
+                    log(`保留较新的导入包 ${pack.id}（r${b} > r${a}）`);
+                    continue;
+                }
+                if (b === a && !pack.revision) {
+                    // 两个都没有修订号：以内置为准（内置随插件升级）
+                }
+                log(`内置包更新：${pack.id} r${a} 覆盖 r${b}`);
+            }
             const r = addPack(registry, pack);
             if (!r.ok) log(`世界包 ${name} 校验失败`, r.errors?.slice(0, 3));
         } catch (e) {
@@ -701,6 +715,7 @@ function diagInfo() {
         return {
             packId: pack?.id ?? '—',
             packName: pack?.name ?? '—',
+            packRev: pack?.revision ?? 0,
             actors: Object.keys(pack?.index?.actor ?? {}).length,
             sample: pack ? sampleAffinity(pack) : '无角色',
             onstage: (metaHint.onstage ?? []).join(',') || '（空）',

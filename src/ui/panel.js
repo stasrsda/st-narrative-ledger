@@ -408,6 +408,7 @@ function render() {
         }
         if (S.diag) {
             const dg = card('诊断');
+            if (S.diag.packRev) dg.append(row('包修订', 'r' + S.diag.packRev));
             dg.append(row('当前包', `${S.diag.packName || '—'}（${S.diag.packId}）`));
             dg.append(row('角色数', S.diag.actors ?? 0));
             dg.append(row('基础好感', S.diag.sample ?? '—'));
