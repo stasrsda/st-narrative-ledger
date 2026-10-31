@@ -56,7 +56,7 @@ export function composeSceneBlock(o = {}) {
     if (o.presenceHint !== false) {
         parts.push({
             key: 'presenceHint',
-            text: '末行写 <!--在场:名字@地点、…-->；新地点另写 <!--新地:名字>上级地名-->',
+            text: '末行写 <!--在场:名字@地点、…-->（不知道地点就只写名字）；新地点另写 <!--新地:名字>上级-->',
         });
     }
 

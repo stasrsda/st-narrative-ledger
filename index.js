@@ -22,7 +22,7 @@ import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { buildOutline } from './src/core/runtime/director.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
-import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, parsePresenceCommentDetailed, canBePresent, parseNewPlacesComment } from './src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, parsePresenceCommentDetailed, canBePresent, parseNewPlacesComment, parsePresenceFromThinking } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { splitThinking, thinkingDominates, normalizeMessage, splitTailStory } from './src/core/cleanup/thinking.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
@@ -1052,20 +1052,34 @@ function settleMessage() {
     } else if (declared && declared.length === 0) {
         onIds = [];
     } else {
-        onIds = inferPresence(pack, body, {
+        const opts = {
             placeId: meta.placeId ?? state.place ?? null,
             tree: treeOf(pack),
             extraAliases: aliasMapForActors(pack, ctx().chatMetadata),
-        });
-        if (!onIds.length) {
-            // 这一楼没提到任何人（或被截断）→ 不要清空名单，沿用上一轮
-            onIds = null;
-            log('本楼没认出在场者，沿用上一轮名单');
+        };
+        const found = inferPresence(pack, body, opts);
+        // ① 思考里如果直接写了「在场：…」，那就是主模型的判断，最可信
+        let fromThinking = [];
+        try {
+            const named = parsePresenceFromThinking(msg.extra?.reasoning ?? thinking ?? '');
+            if (named.length) {
+                fromThinking = resolveActors(pack, named).ids ?? [];
+                if (fromThinking.length) log('思考里写了在场：', fromThinking.join(','));
+            }
+        } catch (e) {
+            log('读思考里的在场失败', e?.message ?? e);
+        }
+        // ② 你（用户角色）永远在场：视角就在你身上
+        const meIds = Object.values(pack.index?.actor ?? {}).filter(a => a.isUser).map(a => a.id);
+        onIds = [...new Set([...meIds, ...fromThinking, ...found])];
+        if (!found.length && !fromThinking.length) {
+            // 以前这里「沿用上一轮」，结果重生成之后名单一直是旧的（沈述在逃却一直在场）
+            log('本楼没认出别人，只留你自己；名单已按本轮重算');
         } else {
-            log('从正文推断在场：', onIds.join(','));
+            log('从正文推断在场：', found.join(','));
         }
     }
-    if (onIds && onIds.length) writeMeta({ onstage: onIds, onstageSrc: 'ai' });
+    if (onIds) writeMeta({ onstage: onIds, onstageSrc: onIds.length > 1 ? 'ai-evidence' : 'self' });
 
     if (parsed) {
         const prev = meta.lastT ?? 0;

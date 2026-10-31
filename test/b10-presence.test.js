@@ -1,5 +1,5 @@
 import * as placeTree from '../src/core/place/tree.js';
-import { parseNewPlacesComment } from '../src/core/clock/presence.js';
+import { parseNewPlacesComment, parsePresenceFromThinking } from '../src/core/clock/presence.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -219,4 +219,15 @@ test('新地：重复并同一批不重复加', () => {
     placeTree.mergeCustomPlaces(t3, [{ name: '荒村', parent: 'p_yanhui' }]);
     const again = placeTree.mergeCustomPlaces(t3, [{ name: '荒村', parent: 'p_yanhui' }]);
     assert.equal(again, 0);
+});
+
+test('思考里写了在场：能抠出来', () => {
+    assert.deepEqual(parsePresenceFromThinking('在场：霍振、沈知微'), ['霍振', '沈知微']);
+    assert.deepEqual(parsePresenceFromThinking('当前在场 - 白景昭 / 霍振'), ['白景昭', '霍振']);
+    assert.deepEqual(parsePresenceFromThinking('在场人物：沈母、知砚'), ['沈母', '知砚']);
+});
+
+test('思考里没写在场：返回空', () => {
+    assert.deepEqual(parsePresenceFromThinking('关键NPC：沈知微、霍振'), []);
+    assert.deepEqual(parsePresenceFromThinking(''), []);
 });

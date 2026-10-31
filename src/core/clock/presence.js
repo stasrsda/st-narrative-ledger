@@ -234,3 +234,21 @@ export function parseNewPlacesComment(text) {
         })
         .filter(x => x.name && x.name.length <= 12);
 }
+
+/**
+ * 从思考里抠「在场」名单。灰魂的思考常写：
+ *   在场：霍振、沈知微
+ *   在场人物：沈母、知砚
+ *   当前在场 - 白景昭 / 霍振
+ */
+export function parsePresenceFromThinking(text) {
+    const t = String(text ?? '');
+    const m = t.match(/(?:当前)?在场(?:人物|的人)?\s*[:：\-—]\s*([^\n]{2,60})/);
+    if (!m) return [];
+    return (m[1] ?? '')
+        .split(/[、,，/｜|]+/)
+        .map(x => x.trim().replace(/[（(].*?[）)]/g, '').trim())
+        .filter(Boolean)
+        .filter(x => x.length >= 2 && x.length <= 6)
+        .filter(x => !/^(无|无人|空|无其他|其余)$/.test(x));
+}
