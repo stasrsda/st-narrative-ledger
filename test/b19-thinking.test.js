@@ -73,13 +73,14 @@ test('DeepSeek 标记：切出思考与正文', () => {
     assert.ok(!r.body.includes('begin'));
 });
 
-test('DeepSeek 标记：没闭合时标 broken 且不当正文', () => {
-    const msg = '<｜begin▁of▁thinking｜>* 灰魂吐槽\n写着写着就没了';
+test('DeepSeek 标记：没闭合时标 broken，但不吞掉内容', () => {
+    const msg = '<｜begin▁of▁thinking｜>* 灰魂吐槽\n' + '写着写着，'.repeat(20) + '\n\n　　正文从这儿开始。';
     const r = splitThinking(msg);
     assert.equal(r.broken, true);
-    assert.equal(r.body, '');
+    assert.ok(!r.body.includes('begin'), '标记要清掉');
     const n = normalizeMessage(msg);
-    assert.equal(n.recovered, false, 'broken 时不该把思考当正文');
+    assert.equal(n.recovered, false, 'broken 时不该走「正文在思考里」的回填');
+    assert.ok(n.body.includes('正文从这儿开始'), '正文不能被吞');
 });
 
 test('DeepSeek 标记：正常楼不受影响', () => {
@@ -109,4 +110,19 @@ test('无标记思考：正文没缩进但有引号开头也认', () => {
 test('无标记思考：正文不该被误切', () => {
     const t = '　　他勒马停在城外。\n　　霍振在身后。';
     assert.equal(splitLooseCot(t).had, false);
+});
+
+test('未闭合也尽力切：DeepSeek 开头没结尾，仍能分出正文', () => {
+    const t = '<｜begin▁of▁thinking｜>* 灰魂吐槽\n' + '   - 思考内容很长。'.repeat(15) +
+        '\n\n　　城墙是夯土的。\n　　霍振在身后。';
+    const r = normalizeMessage(t);
+    assert.equal(r.broken, true);
+    assert.ok(r.body.includes('城墙是夯土的'), '正文不能被吞掉');
+    assert.ok(!r.body.includes('灰魂吐槽'), '思考不该留在正文');
+});
+
+test('未闭合也尽力切：<think> 开头没结尾', () => {
+    const t = '<think>* 灰魂吐槽\n' + '   - 想法。'.repeat(30) + '\n\n　　他勒马。';
+    const r = normalizeMessage(t);
+    assert.ok(r.body.includes('他勒马'));
 });

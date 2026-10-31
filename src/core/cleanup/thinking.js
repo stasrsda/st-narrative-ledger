@@ -77,10 +77,18 @@ export function splitThinking(text) {
             s = s.slice(0, start) + s.slice(cut + endMatch[0].length);
             had = true;
         } else {
-            // 有开头没结尾：思考没闭合，正文未知
+            // 有开头没结尾：不能整条放弃，去掉标记后按小标题找正文
             broken = true;
-            thinking += s.replace(DEEPSEEK_BEGIN, '');
-            s = '';
+            const stripped = s.replace(DEEPSEEK_BEGIN, '');
+            const loose = splitLooseCot(stripped);
+            if (loose.had) {
+                thinking += loose.thinking;
+                s = loose.body;
+            } else {
+                // 找不到正文特征：整段当正文（宁可思考混着，也不能让正文消失）
+                thinking = '';
+                s = stripped;
+            }
             had = true;
         }
         DEEPSEEK_BEGIN.lastIndex = 0;
@@ -125,9 +133,15 @@ export function normalizeMessage(text) {
         const loose = splitLooseCot(text);
         if (loose.had) return { ...loose, broken: false, recovered: false, loose: true };
     }
-    // 有 <think> 开头但没结尾：整段都是思考（ST 没解析成功时会出现）
+    // 有 <think> 开头但没结尾：ST 没解析成功时会出现。
+    // 不能整条放弃（否则时间头也不写），尽量切开：去掉开头标记，再按小标题找正文。
     if (!r.had && /<think>/i.test(text) && !/<\/think>/i.test(text)) {
-        return { body: '', thinking: String(text), had: true, broken: true, recovered: false };
+        const stripped = String(text).replace(/<think>/gi, '');
+        const loose = splitLooseCot(stripped);
+        if (loose.had) {
+            return { body: loose.body, thinking: loose.thinking, had: true, broken: true, recovered: false };
+        }
+        return { body: stripped, thinking: '', had: true, broken: true, recovered: false };
     }
     if (!r.had) return { ...r, recovered: false };
     // 思考没闭合：正文根本不存在，不要拿思考当正文
