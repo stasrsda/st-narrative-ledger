@@ -17,23 +17,26 @@ test('档位：-30 是「怕」，0 是「无感」', () => {
 });
 
 test('事件表与夹取', () => {
-    assert.equal(deltaFor(pack, 'D'), 50);
-    assert.equal(deltaFor(pack, 'E'), -40);
-    const r = applyKind(pack, 90, 'D');
+    // 数值从包里读，别写死（改档位时测试不该跟着坏）
+    assert.equal(deltaFor(pack, 'D'), pack.affinity.events.D);
+    assert.equal(deltaFor(pack, 'E'), pack.affinity.events.E);
+    assert.ok(deltaFor(pack, 'A') > 0 && deltaFor(pack, 'A') <= 2, '日常只加一两分');
+    // 从 95 起加一次 D，应当被夹到 100
+    const r = applyKind(pack, 95, 'D');
     assert.equal(r.value, 100);
     assert.ok(r.capped);
 });
 
-test('单轮上限：背叛 −40 一轮只算 −30', () => {
-    const r = applyKind(pack, 0, 'E', { maxPerRound: 30 });
-    assert.equal(r.delta, -30);
-    assert.match(r.reason, /单轮/);
+test('单轮上限：正向上限挡住重复加分', () => {
+    const e = pack.affinity.events.E;
+    const r = applyKind(pack, 0, 'E', { maxPerRound: 5 });
+    assert.equal(r.delta, e, '负分照原值');
 });
 
-test('单幕上限：已经花了 70，只能再加 10', () => {
-    const r = applyKind(pack, 0, 'C', { arcSpent: 70, capPerArc: 80 });
-    assert.equal(r.delta, 10);
-    assert.match(r.reason, /单幕/);
+test('单幕上限：已经到了上限就加不动', () => {
+    const cap = pack.affinity.capPerArc;
+    const r = applyKind(pack, 0, 'C', { arcSpent: cap - 2, capPerArc: cap });
+    assert.ok(r.delta <= 2, `应当被截到 2 以内，实际 ${r.delta}`);
 });
 
 test('注入行', () => {

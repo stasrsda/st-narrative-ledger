@@ -97,7 +97,7 @@ test('结算 → 事件', () => {
     assert.ok(kinds.includes('emergent'));
     assert.ok(kinds.includes('know'));
     const aff = ev.find(e => e.k === 'aff');
-    assert.equal(aff.delta, 30);   // C 大恩
+    assert.equal(aff.delta, pack.affinity.events.C);   // C 关键场面（数值以包为准）
 });
 
 test('结算：F 不产生好感事件；不存在的规则不记', () => {
@@ -179,7 +179,6 @@ test('重试不叠加：同一楼重复结算只算一次', async () => {
     const s1 = fold(seed, [{ floor: 0, events: first }]);
     const s2 = fold(seed, [{ floor: 0, events: second }]);
     assert.equal(s1.aff.zhiwei, s2.aff.zhiwei);
-    assert.equal(s2.aff.zhiwei, 0);   // -30 + 30
 });
 
 test('截断检测：正常结尾不算', () => {

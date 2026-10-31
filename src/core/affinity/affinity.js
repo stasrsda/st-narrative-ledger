@@ -32,8 +32,10 @@ export function applyKind(pack, current, kind, o = {}) {
     let delta = raw;
     const reasons = [];
 
-    if (Math.abs(delta) > maxPerRound) {
-        delta = Math.sign(delta) * maxPerRound;
+    // 单轮上限只管加分：一轮里最多发生一件“大事”。
+    // 负分（背叛）不按这个上限砍——否则一个 E 被削成 -5，等于没有后果。
+    if (delta > 0 && delta > maxPerRound) {
+        delta = maxPerRound;
         reasons.push('单轮上限');
     }
     const spent = Math.max(0, arcSpent);
