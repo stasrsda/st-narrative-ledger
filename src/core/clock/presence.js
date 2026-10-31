@@ -125,7 +125,7 @@ function aliasesOf(actor) {
  * 不要求 AI 写任何标记行，也就不会往历史里留垃圾。
  * @returns {string[]} 角色 id（最多 limit 个）
  */
-export function inferPresence(pack, text, { limit = 6, placeId = null, tree = null, extraAliases = null } = {}) {
+export function inferPresence(pack, text, { limit = 6, placeId = null, tree = null, extraAliases = null, loose = false } = {}) {
     const t = String(text ?? '');
     if (!t) return [];
     const hits = [];
@@ -139,8 +139,13 @@ export function inferPresence(pack, text, { limit = 6, placeId = null, tree = nu
         // 在逃的人：除非这一轮被抓/被押/开口，否则不算在场
         if (actor.fugitive && !/擒|押|抓住|捉|绑|捆绑|跪|开口|招了|供出/.test(t)) continue;
         // ① 先看有没有说话/动作的证据（「霍振低声说」「知微，…」）
-        const evidence = hasActionEvidence(t, alias);
-        if (!evidence.hit) continue;
+        //    loose 模式（用于思考）：提到就算候选，靠驻地与在逃门兜过滤
+        if (!loose) {
+            const evidence = hasActionEvidence(t, alias);
+            if (!evidence.hit) continue;
+        } else if (!alias.some(a => a.length >= 2 && t.includes(a))) {
+            continue;
+        }
         if (!hits.includes(actor.id)) hits.push(actor.id);
     }
     return hits.slice(0, limit);

@@ -1185,10 +1185,11 @@ function settleMessage() {
             // 「关键NPC分析」小节里的列表，也是主模型认为这一场有谁
             const cast = parseCastFromThinking(thinkText);
             const all = [...new Set([...named, ...cast])];
-            if (all.length) {
-                fromThinking = resolveActors(pack, all).ids ?? [];
-                if (fromThinking.length) log('思考里列了在场：', fromThinking.join(','));
-            }
+            // ③ 思考里提到的名字（宽松）：它写「家眷就是沈母、知微、知砚」这种也算
+            const looseIds = inferPresence(pack, thinkText, { ...opts, loose: true });
+            const direct = all.length ? (resolveActors(pack, all).ids ?? []) : [];
+            fromThinking = [...new Set([...direct, ...looseIds])];
+            if (fromThinking.length) log('思考里提到的人：', fromThinking.join(','));
         } catch (e) {
             log('读思考里的在场失败', e?.message ?? e);
         }

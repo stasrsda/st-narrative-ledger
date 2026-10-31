@@ -77,6 +77,6 @@ test('用别名后，正文里的「县丞」也能认出是沈述', () => {
 });
 
 test('不说话也算在场（有“没有说话”这类线索）', () => {
-    const ids = inferPresence(pack, '知微没有说话，只把袖口攥紧了。', { placeId: 'p_wf_xi', tree });
+    const ids = inferPresence(pack, '知微没有说话，只把袖口攥紧了。', { placeId: 'p_shenzhai', tree });
     assert.deepEqual(ids, ['zhiwei']);
 });
