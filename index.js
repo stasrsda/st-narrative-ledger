@@ -679,6 +679,37 @@ function settleMessage() {
         }
     }
 
+    // ③.5 正文里凡是「像时间头」的开头行都剥掉，只留插件写的那一条
+    //     能认：『…』 包裹的、含「·」且带年/月/日/时辰的、带星期的
+    try {
+        const lines = String(body ?? '').split('\n');
+        let cut = 0;
+        while (cut < 3 && cut < lines.length) {
+            const ln = lines[cut].trim();
+            if (!ln) { cut++; continue; }
+            const isTimeLine = /^『[^』]{4,80}』$/.test(ln)
+                || /\d{1,4}\s*年.*[月日]/.test(ln) && ln.includes('·')
+                || /星期[一二三四五六日天]/.test(ln)
+                || /(子|丑|寅|卯|辰|巳|午|未|申|酉|戌|亥)(初|正)/.test(ln) && ln.includes('·');
+            if (!isTimeLine) break;
+            // 顺手从这一行里认地名
+            try {
+                const hit = resolvePlaceName(treeOf(pack), ln);
+                if (hit && hit.id !== (meta.placeId ?? state.place)) {
+                    writeMeta({ placeId: hit.id, placeName: hit.name });
+                    log('从被剥掉的时间行认出地点：', hit.name);
+                }
+            } catch { /* noop */ }
+            cut++;
+        }
+        if (cut > 0) {
+            body = lines.slice(cut).join('\n').replace(/^\s*\n+/, '').trim();
+            log('剥掉正文里的旧时间行：', cut, '行');
+        }
+    } catch (e) {
+        log('剥时间行失败', e?.message ?? e);
+    }
+
     // ④ 统一写回：mes = 时间头 + 空行 + 正文（思考已经在 extra.reasoning 里）
     try {
         const treeNow = treeOf(pack);
