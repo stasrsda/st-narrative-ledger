@@ -520,7 +520,8 @@ function render() {
         if (list.length) {
             const sel = el('select', 'sl-input sl-select');
             for (const p of list) {
-                const o = el('option', null, `${p.name}（${p.id}）`);
+                const o = el('option', null,
+                    `${p.name}（${p.id}${p.revision ? ` · r${p.revision}` : ''}）`);
                 o.value = p.id;
                 if (p.id === S.packId) o.selected = true;
                 sel.append(o);
@@ -547,14 +548,26 @@ function render() {
 
         // 手机上一律用系统文件选择器：不限制 MIME，选到再说，
         // 因为不少安卓文件管理器会把 .json 标成 octet-stream，限制类型反而选不到。
-        const pickLabel = el('label', 'sl-btn sl-file-btn', '选择 JSON 文件');
-        pickLabel.setAttribute('for', 'story-ledger-file');
-        const file = el('input', '');
-        file.type = 'file';
-        file.id = 'story-ledger-file';
-        file.accept = '*/*';
-        file.style.display = 'none';
-        imp.append(pickLabel, file);
+        // Firefox 对 display:none 的 file input 不弹窗：放到屏幕外，再用按钮触发
+        let file = document.getElementById('story-ledger-file');
+        if (!file) {
+            file = el('input', '');
+            file.type = 'file';
+            file.id = 'story-ledger-file';
+            file.accept = '.json,application/json,*/*';
+            file.style.position = 'fixed';
+            file.style.left = '-9999px';
+            file.style.top = '0';
+            file.style.width = '1px';
+            file.style.height = '1px';
+            file.style.opacity = '0';
+            document.body.append(file);
+        }
+
+        const pickBtn = el('button', 'sl-btn', '选择 JSON 文件');
+        pickBtn.type = 'button';
+        pickBtn.addEventListener('click', () => file.click());
+        imp.append(pickBtn);
 
         imp.append(el('div', 'sl-note', '手机上点上面按钮 → 系统文件选择器 → 找到下载/微信里的 .json'));
 
@@ -579,8 +592,9 @@ function render() {
             try {
                 const r = await importHandler?.(text);
                 if (r?.ok) {
-                    S.importStatus = `已导入：${r.name || r.id}`;
+                    S.importStatus = `已导入并切换：${r.name || r.id}${r.revision ? `（r${r.revision}）` : ''}`;
                     istat.textContent = S.importStatus;
+                    render();
                 } else {
                     istat.textContent = '失败：' + (r?.msg ?? '未知错误');
                 }
@@ -603,13 +617,6 @@ function render() {
             }
         });
 
-        pickLabel.addEventListener('click', ev => {
-            // 有些移动端 WebView 里 label+for 不触发，手动点一次
-            if (ev.target === pickLabel) {
-                ev.preventDefault();
-                file.click();
-            }
-        });
 
         ibtn.addEventListener('click', () => {
             const text = ta.value.trim();
