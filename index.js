@@ -1056,7 +1056,18 @@ function composeAndInject() {
     const lastAi = msgs[msgs.length - 1]?.mes?.slice(-200) ?? '';
     const hintText = lastUser + lastAi;
     const varCount = syncChatVariables(state);
-    const block = buildSceneBlock({ pack, state, tree, chatSeed: chatId(), meta: { ...meta, hintText }, budget: Number.POSITIVE_INFINITY });   // 不设上限：一行都不丢
+
+    // 底单：这一轮正文第一行该长什么样。AI 照抄，插件只校验（不重写正文）
+    let headerLine = '';
+    try {
+        const leaf = tree.nodes?.[meta.placeId ?? state.place]?.name ?? meta.placeName ?? '';
+        headerLine = renderHeader(state.t ?? 0, leaf, pack.calendar);
+        if (headerLine) writeMeta({ headerLine });
+    } catch (e) {
+        log('生成底单失败', e?.message ?? e);
+    }
+
+    const block = buildSceneBlock({ pack, state, tree, chatSeed: chatId(), meta: { ...meta, hintText, headerLine }, budget: Number.POSITIVE_INFINITY });   // 不设上限：一行都不丢
     // 输出格式：让主模型在正文后写一行隐藏注释声明在场，插件解析后删掉
     const FORMAT_HINT = [
         '正文写完之后，另起一行写一行 HTML 注释，声明此刻在场的人：',
