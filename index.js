@@ -31,6 +31,7 @@ import { retrieveCodes } from './src/core/codes/retrieve.js';
 import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
 import { buildOutlineMessages, renderModelOutline } from './src/llm/outline.js';
+import { buildTurnMessages, validateTurnPlan, renderTurnPlan } from './src/llm/turnPlan.js';
 import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors } from './src/core/memory/lwb.js';
 import { normalizeSettle } from './src/llm/schema.js';
 import { toEvents } from './src/llm/settle.js';
@@ -414,6 +415,91 @@ function advanceFromUserInput() {
 }
 
 /**
+ * 生成前的一次总规划（合并版）：
+ * 让副模型一次给出 时间跳转 / 换场 / 礼法 / 分镜，插件校验后执行。
+ * 没开「副模型编排」或调用失败 → 回落规则推进（advanceFromUserInput）。
+ */
+let turnPlanCache = { key: '', text: '' };
+async function composeTurnPlan() {
+    const lastUser = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
+    const cacheKey = `${chatId()}|${lastUser}`;
+
+    // 规则先打底：时间地点即使模型不给，也要能走
+    if (!settings.directorModel || !transportAvailable()) {
+        advanceFromUserInput();
+        return;
+    }
+
+    try {
+        const { pack, state, meta } = currentState();
+        const tree = treeOf(pack);
+        const placeId = meta.placeId ?? state.place;
+        const placeName = tree.nodes?.[placeId]?.name ?? meta.placeName ?? '';
+        const onstage = onstageOf(pack, state, meta).map(o => o.name);
+        const rule = buildOutline(pack, state, meta, lastUser, tree);
+
+        const msgs = buildTurnMessages({
+            userText: lastUser,
+            placeName,
+            onstage,
+            places: Object.values(tree.nodes ?? {}).map(n => n.name),
+            ruleOutline: rule.text,
+            recent: [
+                (state.emergent ?? []).slice(-2).map(e => e.name).join('、'),
+                formatLwbBrief(readLwbSummary(ctx().chatMetadata)),
+            ].filter(Boolean).join('\n'),
+            timeText: renderHeader(state.t ?? 0, placeName, pack.calendar).replace(/[『』]/g, ''),
+        });
+
+        const d2 = settings.direct ?? {};
+        const res = d2.baseUrl && d2.model
+            ? await requestCustom({ baseUrl: d2.baseUrl, apiKey: d2.apiKey, model: d2.model, messages: msgs, maxTokens: 400 })
+            : await requestCompletion(msgs, { profileId: settings.profileId, maxTokens: 400 });
+
+        const data = extractJsonSafe(res);
+        const knownCodes = new Set(
+            Object.values(pack.codes ?? {}).flat().map(c => c.id),
+        );
+        const plan = validateTurnPlan(data, {
+            resolvePlace: (n) => resolvePlaceName(tree, n),
+            knownCodes,
+        });
+
+        if (!plan.ok) {
+            log('总规划没用（解析失败或空），回落规则推进');
+            advanceFromUserInput();
+            return;
+        }
+
+        // ① 时间：按模型给的分钟数推进（和规则一样走事件，方便回放）
+        const msg = [...messages()].reverse().find(m => m.is_user);
+        const evs = msg?.extra?.storyLedger?.events ?? [];
+        const already = evs.some(e => e?.k === 'clock' && e?.src === 'plan');
+        if (msg && !already) {
+            if (plan.minutes > 0) {
+                const nextT = (state.t ?? 0) + plan.minutes;
+                appendEvents(msg, [{ k: 'clock', t: nextT, src: 'plan' }]);
+                writeMeta({ lastAdvance: { minutes: plan.minutes, why: '副模型规划', from: state.t, to: nextT } });
+                log('按规划推进时间：', plan.minutes, '分钟');
+            }
+            if (plan.place && plan.place.id !== placeId) {
+                writeMeta({ placeId: plan.place.id, placeName: plan.place.name });
+                appendEvents(msg, [{ k: 'move', actor: 'user', place: plan.place.id, src: 'plan' }]);
+                log('按规划换场：', plan.place.name);
+            }
+        } else if (!msg) {
+            advanceFromUserInput();
+        }
+
+        turnPlanCache = { key: cacheKey, text: renderTurnPlan(rule.text, plan) };
+        log('本轮规划已生成：', `+${plan.minutes}分`, plan.place?.name ?? '', `${plan.beats.length} 个分镜`);
+    } catch (e) {
+        log('总规划失败，回落规则推进', e?.message ?? e);
+        try { advanceFromUserInput(); } catch { /* noop */ }
+    }
+}
+
+/**
  * 让副模型编排大纲（可选，settings.directorModel）。
  * ST 的 GENERATION_AFTER_COMMANDS 是 await 监听器的，所以这里等得起；
  * 失败/超时一律回落规则大纲，绝不阻塞生成。
@@ -733,9 +819,11 @@ function composeAndInject() {
         if (settings.director !== false) {
             const lastUser = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
             outline = buildOutline(pack, state, meta, lastUser, tree);
-            // 副模型编排过的话，用它的版本
+            // 副模型规划过的话，用它的版本
             const lastU = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
-            if (modelOutlineCache.key === `${chatId()}|${lastU}` && modelOutlineCache.text) {
+            if (turnPlanCache.key === `${chatId()}|${lastU}` && turnPlanCache.text) {
+                outline = { ...outline, text: turnPlanCache.text };
+            } else if (modelOutlineCache.key === `${chatId()}|${lastU}` && modelOutlineCache.text) {
                 outline = { ...outline, text: modelOutlineCache.text };
             }
             if (outline?.text && typeof setStatePrompt === 'function') {
@@ -1556,10 +1644,7 @@ function boot() {
         eventSource.on(EV.CHAT_CHANGED, onChatChanged);
         eventSource.on(EV.GENERATION_AFTER_COMMANDS, async () => {
             try {
-                advanceFromUserInput();
-                if (settings.directorModel) {
-                    await composeModelOutline();
-                }
+                await composeTurnPlan();
                 composeAndInject();
             } catch (e) {
                 log('注入失败', e);
