@@ -21,6 +21,9 @@ import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
 import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { buildOutline } from './src/core/runtime/director.js';
+import { createRepaint } from './src/app/repaint.js';
+import { resolveRole, describeRoles, withTimeout } from './src/model/roles.js';
+import { callRole } from './src/model/transport.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
 import { urgencyLine } from './src/core/clock/urgency.js';
 import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, parsePresenceCommentDetailed, canBePresent, parseNewPlacesComment, parsePresenceFromThinking, parseCastFromThinking } from './src/core/clock/presence.js';
@@ -431,12 +434,11 @@ function advanceFromUserInput() {
     }
 }
 
-/**
- * 生成前的一次总规划（合并版）：
- * 让副模型一次给出 时间跳转 / 换场 / 礼法 / 分镜，插件校验后执行。
- * 没开「副模型编排」或调用失败 → 回落规则推进（advanceFromUserInput）。
- */
+// 规划缓存：同一句玩家输入只算一次（重试/刷新不重复花钱）
 let turnPlanCache = { key: '', text: '' };
+// 最近一次注入给写作模型的大纲文本（诊断里显示）
+let lastOutlineText = '';
+
 async function composeTurnPlan() {
     const lastUser = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
     const cacheKey = `${chatId()}|${lastUser}`;
@@ -576,10 +578,9 @@ async function composeTurnPlan() {
                 }),
         });
 
-        const d2 = settings.direct ?? {};
-        const res = d2.baseUrl && d2.model
-            ? await requestCustom({ baseUrl: d2.baseUrl, apiKey: d2.apiKey, model: d2.model, messages: msgs, maxTokens: 400 })
-            : await requestCompletion(msgs, { profileId: settings.profileId, maxTokens: 400 });
+        const plannerRun = await callRole(settings, 'planner', msgs, { resolveRole, withTimeout, log });
+        if (!plannerRun.ok) log('规划失败：', plannerRun.error);
+        const res = plannerRun.text;
 
         const data = extractJsonSafe(res);
         const knownCodes = new Set(
@@ -598,9 +599,8 @@ async function composeTurnPlan() {
                     briefText: (msgs?.[1]?.content ?? '').slice(0, 6000),
                     draft: { minutes: plan.minutes, place: plan.place?.name ?? '', beats: plan.beats, hook: plan.hook, codes: plan.codes },
                 });
-                const dres = d2.baseUrl && d2.model
-                    ? await requestCustom({ baseUrl: d2.baseUrl, apiKey: d2.apiKey, model: d2.model, messages: dmsgs, maxTokens: 420 })
-                    : await requestCompletion(dmsgs, { profileId: settings.profileId, maxTokens: 420 });
+                const delibRun = await callRole(settings, 'deliberator', dmsgs, { resolveRole, withTimeout, log });
+                const dres = delibRun.text;
                 const ddata = extractJsonSafe(dres);
                 if (ddata) {
                     const revised = validateTurnPlan(
@@ -673,54 +673,6 @@ async function composeTurnPlan() {
  * ST 的 GENERATION_AFTER_COMMANDS 是 await 监听器的，所以这里等得起；
  * 失败/超时一律回落规则大纲，绝不阻塞生成。
  */
-let modelOutlineCache = { key: '', text: '' };
-let lastOutlineText = '';
-async function composeModelOutline() {
-    try {
-        const { pack, state, meta } = currentState();
-        if (!transportAvailable()) return;
-        const d = settings.director ?? {};
-        if (!d.baseUrl || !d.model) {
-            if (!settings.profileId) return;
-        }
-        const lastUser = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
-        const cacheKey = `${chatId()}|${lastUser}`;
-        if (modelOutlineCache.key === cacheKey && modelOutlineCache.text) return;
-
-        const tree = treeOf(pack);
-        const onstage = onstageOf(pack, state, meta).map(o => o.name);
-        const placeName = tree.nodes?.[meta.placeId ?? state.place]?.name ?? meta.placeName ?? '';
-        const rule = buildOutline(pack, state, meta, lastUser, tree);
-
-        const msgs = buildOutlineMessages({
-            ruleOutline: rule.text,
-            userText: lastUser,
-            onstage,
-            placeName,
-            recent: [
-                (state.emergent ?? []).slice(-2).map(e => e.name).join('、'),
-                // 小白X 的剧情摘要：我们的免费模型本来拿不到，这里借过来
-                formatLwbBrief(readLwbSummary(ctx().chatMetadata)),
-            ].filter(Boolean).join('\n'),
-        });
-
-        const d2 = settings.direct ?? {};
-        const res = d2.baseUrl && d2.model
-            ? await requestCustom({ baseUrl: d2.baseUrl, apiKey: d2.apiKey, model: d2.model, messages: msgs, maxTokens: 260 })
-            : await requestCompletion(msgs, { profileId: settings.profileId, maxTokens: 260 });
-
-        const data = extractJsonSafe(res);
-        const text = data ? renderModelOutline(data, rule.text) : '';
-        if (text) {
-            modelOutlineCache = { key: cacheKey, text };
-            log('副模型大纲已生成', `${text.length} 字`);
-        } else {
-            log('副模型大纲解析失败，用规则大纲');
-        }
-    } catch (e) {
-        log('副模型编排失败，用规则大纲', e?.message ?? e);
-    }
-}
 
 function extractJsonSafe(text) {
     try {
@@ -761,43 +713,6 @@ function setActorHome(id, placeId) {
     log('驻地已改：', id, '→', placeId || '（清除）');
 }
 
-/**
- * 改写消息内容后的重绘。
- * 关键：**不要**整页 printMessages()——那会把其它扩展（小白X 等）注入到
- * 每条消息右上角的按钮一起冲掉，而且它们只在 CHARACTER_MESSAGE_RENDERED
- * 时注入一次，重绘后不会再补。
- * 所以这里只把我们改过的那一条的 .mes_text 重新格式化。
- */
-let repaintTimer = null;
-function repaintChat(targetIndex = null) {
-    if (repaintTimer) return;
-    repaintTimer = setTimeout(() => {
-        repaintTimer = null;
-        try {
-            const c = ctx();
-            const full = targetIndex === -1;
-            const idx = Number.isInteger(targetIndex) && targetIndex >= 0 ? targetIndex : lastMessageIndex();
-            const m = messages()?.[idx];
-            if (full) {
-                ctx().printMessages?.();
-                return;
-            }
-            const node = document.querySelector(`#chat .mes[mesid="${idx}"] .mes_text`);
-            if (m && node && typeof c.messageFormatting === 'function') {
-                node.innerHTML = c.messageFormatting(
-                    m.mes ?? '', m.name ?? '', false, Boolean(m.is_user), idx,
-                );
-                return;
-            }
-            // 找不到那一条（比如正流式输出）：退回整页重绘
-            if (typeof c.printMessages === 'function') {
-                c.printMessages();
-            }
-        } catch (e) {
-            log('重绘失败', e?.message ?? e);
-        }
-    }, 400);
-}
 
 /** 轻角色：临时出现的人，只有名字与身分 */
 function addGuest(pack, guest) {
@@ -1090,8 +1005,6 @@ function composeAndInject() {
             const lastU = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
             if (turnPlanCache.key === `${chatId()}|${lastU}` && turnPlanCache.text) {
                 outline = { ...outline, text: turnPlanCache.text };
-            } else if (modelOutlineCache.key === `${chatId()}|${lastU}` && modelOutlineCache.text) {
-                outline = { ...outline, text: modelOutlineCache.text };
             }
             lastOutlineText = outline?.text ?? '';
             if (outline?.text && typeof setStatePrompt === 'function') {
@@ -1478,16 +1391,9 @@ function settleMessage() {
 
 const settleQueue = createQueue({
     handler: async task => {
-        const d = settings.direct ?? {};
-        const res = d.baseUrl && d.model
-            ? await requestCustom({
-                baseUrl: d.baseUrl,
-                apiKey: d.apiKey,
-                model: d.model,
-                messages: task.messages,
-                maxTokens: 400,
-            })
-            : await requestCompletion(task.messages, { profileId: settings.profileId });
+        const settlerRun = await callRole(settings, 'settler', task.messages, { resolveRole, withTimeout, log });
+        if (!settlerRun.ok) throw new Error(settlerRun.error ?? '结算调用失败');
+        const res = settlerRun.text;
         const actorIds = new Set(Object.keys(task.pack.index?.actor ?? {}));
         // 模型经常直接写中文名，这里建一张「名字/别称 → id」的表
         const aliasMap = new Map();
@@ -1733,6 +1639,11 @@ function onChatChanged() {
     clearStatePrompt();
     composeAndInject();
 }
+
+// 重绘：只更新改过的那一条消息
+const { repaintChat } = createRepaint({
+    ctx, messages, lastMessageIndex, log,
+});
 
 function boot() {
     try { mountPanel(); } catch (e) { log('建面板失败', e?.message ?? e); }

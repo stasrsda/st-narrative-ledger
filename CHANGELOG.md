@@ -6,6 +6,17 @@
 
 ---
 
+## 0.9.91 — 2026-10-30
+
+**结构重构第一批（不改行为，只搬代码）**
+- 新增 `docs/ARCHITECTURE.md`：从 AI 工作流（感觉段/计划段/写作段/记账段）重画架构、契约、降级矩阵、迁移表
+- `src/app/repaint.js`：定向重绘独立成模块（不再整页 printMessages 冲掉小白X 按钮）
+- `src/model/roles.js`：**模型角色槽** —— planner / deliberator / settler / summarizer，
+  每个角色可单独指定模型、maxTokens、超时；deliberator 默认继承 planner
+- `src/model/transport.js`：所有模型调用收口到 `callRole()`，带超时与降级
+- 规划 / 思辨 / 结算三处调用改走角色槽（planner 默认 14B，settler 默认 7B）
+- 删掉 289 行死代码（`composeModelOutline`，早已被 `composeTurnPlan` 取代）
+
 ## 0.9.90 — 2026-10-30
 
 礼法命中加**场景门**（`core/codes/gate.js`）：
