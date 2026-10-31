@@ -1,3 +1,4 @@
+import { createTree, putNode, resolvePlaceName } from '../src/core/place/tree.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -188,4 +189,20 @@ test('校验：开局在场者不在册要报错', () => {
     p.opening.onstage = ['路人甲'];
     const errs = validatePack(p).errors.filter(e => e.path === 'opening.onstage');
     assert.equal(errs.length, 1);
+});
+
+test('地名解析：精确与包含', () => {
+    const tree = createTree();
+    for (const p of pack.places) putNode(tree, p);
+    assert.equal(resolvePlaceName(tree, '北门外五里')?.id, 'p_wuli');
+    assert.ok(resolvePlaceName(tree, '雁回县城内'));
+    assert.equal(resolvePlaceName(tree, '某个不存在的地方'), null);
+});
+
+test('地名解析：取更深的那个', () => {
+    const tree = createTree();
+    for (const p of pack.places) putNode(tree, p);
+    // 银安殿在镇北王府之下，应当优先于王府
+    const hit = resolvePlaceName(tree, '镇北王府银安殿');
+    assert.equal(hit?.id, 'p_wf_yinan');
 });

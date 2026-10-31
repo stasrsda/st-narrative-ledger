@@ -103,3 +103,35 @@ export function genPlaceName(worldId, parentId, index) {
     const b = NAME_TAIL[(h >>> 8) % NAME_TAIL.length];
     return a + b;
 }
+
+/**
+ * 把正文里写的地名解析成地点 id。
+ * 先精确匹配，再找出「被包含」的最长地名（雁回县北门 → 北门）。
+ */
+export function resolvePlaceName(tree, text) {
+    const t = String(text ?? '').trim();
+    if (!t || !tree?.nodes) return null;
+    const nodes = Object.values(tree.nodes);
+    const exact = nodes.find(n => n.name === t);
+    if (exact) return exact;
+    const depthOf = (n) => {
+        let d = 0;
+        let cur = n;
+        while (cur?.parent && d < 32) {
+            cur = tree.nodes[cur.parent];
+            d++;
+        }
+        return d;
+    };
+    let best = null;
+    for (const n of nodes) {
+        if (!n.name || n.name.length < 2) continue;
+        if (!t.includes(n.name)) continue;
+        if (!best) { best = n; continue; }
+        // 更深（更具体）的优先；同级才比名字长度
+        const dn = depthOf(n);
+        const bd = depthOf(best);
+        if (dn > bd || (dn === bd && n.name.length > best.name.length)) best = n;
+    }
+    return best;
+}

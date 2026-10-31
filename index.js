@@ -15,7 +15,7 @@ import { createRegistry, addPack, resolvePack } from './src/core/pack/registry.j
 import { BUILTIN_PACK } from './src/core/pack/builtin.js';
 import { fold } from './src/core/ledger/ledger.js';
 import { openingMeta, openingLabel } from './src/core/runtime/opening.js';
-import { createTree, putNode } from './src/core/place/tree.js';
+import { createTree, putNode, resolvePlaceName } from './src/core/place/tree.js';
 import { buildSceneBlock, onstageOf, pendingEvents, doneEventNames } from './src/core/runtime/scene.js';
 import { parseHeader, rewriteHeader } from './src/core/clock/clock.js';
 import { renderHeader } from './src/core/calendar/guofeng.js';
@@ -624,6 +624,24 @@ function settleMessage() {
         log('模型没写时间头，已补：', header);
         try { ctx().saveChat?.(); } catch { /* noop */ }
         refreshPanel({ headerFixed: true });
+    }
+
+    // 时间头里写了地名 → 更新当前地点（地点是叙事推着走的，不该永远是开局那一个）
+    if (parsed?.place) {
+        try {
+            const treeNow = treeOf(pack);
+            const hit = resolvePlaceName(treeNow, parsed.place);
+            const nowId = meta.placeId ?? state.place ?? null;
+            if (hit && hit.id !== nowId) {
+                writeMeta({ placeId: hit.id, placeName: hit.name });
+                appendEvents(msg, [{ k: 'move', actor: 'user', place: hit.id, src: 'header' }]);
+                log('地点更新', `${parsed.place} → ${hit.name}`);
+            } else if (!hit) {
+                log('地名认不出，保持原地点：', parsed.place);
+            }
+        } catch (e) {
+            log('地点更新失败', e?.message ?? e);
+        }
     }
 
     // 先清掉正文里的状态残留（<好感> 块、旧【在场】行等），避免它们跟着历史进上下文
