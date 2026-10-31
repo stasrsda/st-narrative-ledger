@@ -94,3 +94,13 @@ test('此地：地点带关键人物时注入一行（顺带触发世界书关�
     assert.match(b.text, /此地:/);
     assert.match(b.text, /沈述/);
 });
+
+test('输出约定：状态块里带「写 <!--在场:…-->」的提示', () => {
+    const b = buildSceneBlock({
+        pack, state: { ...meta.seed, place: 'p_wuli' }, tree: tree(), chatSeed: 'x',
+        meta: { ...meta, placeId: 'p_wuli', onstage: ['huozhen'] },
+        budget: Number.POSITIVE_INFINITY,
+    });
+    assert.match(b.text, /输出约定/);
+    assert.match(b.text, /<!--在场:/);
+});

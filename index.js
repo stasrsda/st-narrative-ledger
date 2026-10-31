@@ -549,11 +549,8 @@ function composeAndInject() {
         '只写名字，用顿号分隔；不在场的不要写；谁也不在就写 <!--在场:-->。',
         '这一行读者看不到，插件读完会删掉，不要写进正文，也不要解释它。',
     ].join('\n');
-    try {
-        setStatePrompt(FORMAT_HINT, { depth: 3, key: PROMPT_KEY_FMT });
-    } catch (e) {
-        log('注入输出格式失败', e?.message ?? e);
-    }
+    // 注意：输出约定已写进状态块本身（depth 1），这里不再单独占一个槽，
+    // 免得同一件事说两遍、还离新消息更远。
 
     const ok = settings.enabled && (setStatePrompt(block.text) || setRawSlot(block.text));
 

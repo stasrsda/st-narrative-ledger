@@ -74,6 +74,13 @@ export function composeSceneBlock(o = {}) {
     if (o.props) parts.push({ key: 'props', text: o.props });
     if (o.items) parts.push({ key: 'items', text: o.items });
 
+    // 输出约定：让主模型用隐藏注释声明在场（读者看不见，插件读完就删）
+    if (o.presenceHint !== false) {
+        parts.push({
+            key: 'presenceHint',
+            text: '输出约定:正文写完后另起一行写 <!--在场:名字、名字-->（读者看不见，插件读完即删；谁也不在写 <!--在场:-->）',
+        });
+    }
     parts.push({ key: 'footer', text: '与<info>冲突时以本块为准。', locked: true });
 
     const dropped = [];
