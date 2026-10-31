@@ -6,6 +6,7 @@ export function buildTurnMessages(brief = {}) {
         userText = '', placeName = '', placePath = '', sceneCn = '', timeText = '',
         onstage = [], prevLine = '', places = [], ruleOutline = '', recent = '', lastAi = '',
         cast = [], codes = [], events = {}, authority = [], player = {}, props = [],
+        world = [], rounds = [], maxChars = 7000,
     } = brief;
 
     const sys = [
@@ -79,6 +80,11 @@ export function buildTurnMessages(brief = {}) {
             ? `【玩家】位份:${player.rank || '—'}${player.items?.length ? `  随身:${player.items.join('、')}` : ''}`
             : '',
         '',
+        world.length
+            ? '【相关设定】\n' + world.map(w => `· ${w.comment}\n  ${w.content}`).join('\n')
+            : '',
+        rounds.length ? '【最近三轮】\n' + rounds.map((r, i) => `第${i + 1}轮:${r}`).join('\n') : '',
+        '',
         '【规则给的骨架】',
         ruleOutline || '（无）',
         '',
@@ -90,9 +96,23 @@ export function buildTurnMessages(brief = {}) {
         userText || '（空）',
     ];
 
+    let text = blocks.filter(x => x !== '').join('\n');
+    // 上下文保险：太长就按「最近三轮 → 相关设定 → 最近发生」的顺序砍
+    if (text.length > maxChars) {
+        text = blocks
+            .filter(x => x !== '' && !x.startsWith('【最近三轮】'))
+            .join('\n');
+    }
+    if (text.length > maxChars) {
+        text = text.split('\n').reduce((acc, line) => {
+            if (acc.length + line.length > maxChars) return acc;
+            return acc ? `${acc}\n${line}` : line;
+        }, '');
+    }
+
     return [
         { role: 'system', content: sys },
-        { role: 'user', content: blocks.filter(x => x !== '').join('\n') },
+        { role: 'user', content: text },
     ];
 }
 

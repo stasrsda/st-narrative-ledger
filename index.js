@@ -34,6 +34,7 @@ import { buildOutlineMessages, renderModelOutline } from './src/llm/outline.js';
 import { buildTurnMessages, validateTurnPlan, renderTurnPlan } from './src/llm/turnPlan.js';
 import { buildDeliberateMessages } from './src/llm/deliberate.js';
 import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors } from './src/core/memory/lwb.js';
+import { loadWorldbook, pickWorldEntries } from './src/core/memory/worldbook.js';
 import { normalizeSettle } from './src/llm/schema.js';
 import { toEvents } from './src/llm/settle.js';
 import { reviewText, summarize, looksTruncated } from './src/core/review/review.js';
@@ -507,6 +508,24 @@ async function composeTurnPlan() {
                 .slice(0, 6),
         };
 
+        // 世界书条目（我们随扩展带的那本）+ 最近三轮正文尾巴
+        let world = [];
+        try {
+            const wb = await loadWorldbook(new URL('./worldbook/beiliang-v3.json', import.meta.url));
+            world = pickWorldEntries(wb, {
+                place: pathLabel(tree, placeId),
+                names: onstage,
+                text: lastUser,
+            }, 2, 420);
+        } catch (e) {
+            log('读世界书失败', e?.message ?? e);
+        }
+
+        const rounds = [...messages()]
+            .filter(m => !m.is_user && String(m.mes ?? '').trim())
+            .slice(-3)
+            .map(m => String(m.mes).replace(/\s+/g, ' ').slice(-150));
+
         const msgs = buildTurnMessages({
             userText: lastUser,
             placeName,
@@ -536,6 +555,8 @@ async function composeTurnPlan() {
             authority,
             player,
             props: nodeNow?.props ?? [],
+            world,
+            rounds,
         });
 
         const d2 = settings.direct ?? {};

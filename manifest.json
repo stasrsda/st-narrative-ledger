@@ -6,7 +6,7 @@
   "js": "index.js",
   "css": "style.css",
   "author": "stasrsda",
-  "version": "0.9.82",
+  "version": "0.9.83",
   "homePage": "https://github.com/stasrsda/st-narrative-ledger",
   "auto_update": false,
   "hooks": {
