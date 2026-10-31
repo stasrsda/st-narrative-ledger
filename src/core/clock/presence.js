@@ -1,5 +1,56 @@
 import { ancestors } from '../place/tree.js';
 
+// 说话 / 动作 / 对白：这些才是「人在场」的证据
+const SPEECH_CUES = [
+    '说', '道', '问', '答', '应', '喊', '叫', '笑', '叹', '吼', '低声', '沉声', '自语',
+    '看', '望', '望向他', '回头', '抬手', '抬眼看', '点头', '摇头', '皱眉', '沉默',
+    '走', '站', '坐', '跪', '行礼', '抱拳', '拱手', '躬身', '退', '进', '上前',
+    '接过', '递', '伸手', '按刀', '翻', '掀', '拉', '推', '扶',
+    '把', '将', '在', '正', '便', '就', '也', '又', '拿', '捧', '端', '抱', '提', '牵',
+    '呈', '拟', '记', '写', '低头', '起身', '坐下', '没接话', '不答',
+];
+
+// 句读：名字出现在这些字符之后，更像「新起的主语」
+const SENTENCE_START = '。！？…”』」\n';
+
+/**
+ * 这个名字在正文里有「说话或动作」的证据吗？
+ * @returns {{hit:boolean, why:string}}
+ */
+export function hasActionEvidence(text, aliases) {
+    const t = String(text ?? '');
+    for (const name of aliases) {
+        if (!name || name.length < 2) continue;
+        let from = 0;
+        while (true) {
+            const i = t.indexOf(name, from);
+            if (i < 0) break;
+            from = i + name.length;
+            const after = t.slice(i + name.length, i + name.length + 6);
+            const before = t.slice(Math.max(0, i - 6), i);
+            // ① 名字 + 动作/说话
+            if (SPEECH_CUES.some(c => after.startsWith(c) || after.includes(c))) {
+                return { hit: true, why: `${name}${after.slice(0, 3)}` };
+            }
+            // ② 名字 + 冒号/引号 → 直接对白
+            if (/^\s*[：:]\s*[「“"]/.test(after)) {
+                return { hit: true, why: `${name}：…` };
+            }
+            // ③ 名字在句首（前面是句读或开头），后面紧跟逗号 → 主语
+            const atStart = i === 0 || SENTENCE_START.includes(t[i - 1]);
+            if (atStart && /^\s*[，,]/.test(after)) {
+                return { hit: true, why: `${name}，…` };
+            }
+            // ④ 对话归属：「……」名字说
+            if (/[」”"]\s*$/.test(before) && SPEECH_CUES.some(c => after.startsWith(c))) {
+                return { hit: true, why: `…」${name}说` };
+            }
+        }
+    }
+    return { hit: false, why: '' };
+}
+
+
 // 在场行解析：主模型在正文前写【在场】名字、名字
 export const PRESENCE_MARK = '【在场】';
 
@@ -80,9 +131,10 @@ export function inferPresence(pack, text, { limit = 6, placeId = null, tree = nu
         // 只要不在自己够得着的地方，被提到也不算在场
         if (!canBePresent(actor, { placeId, tree })) continue;
         const alias = aliasesOf(actor);
-        // 用最长的别称判断，避免「知微」误命中别人的名字
-        const found = alias.some(a => a.length >= 2 && t.includes(a));
-        if (found && !hits.includes(actor.id)) hits.push(actor.id);
+        // ① 先看有没有说话/动作的证据（「霍振低声说」「知微，…」）
+        const evidence = hasActionEvidence(t, alias);
+        if (!evidence.hit) continue;
+        if (!hits.includes(actor.id)) hits.push(actor.id);
     }
     return hits.slice(0, limit);
 }

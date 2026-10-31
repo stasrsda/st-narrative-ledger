@@ -47,7 +47,7 @@ test('渲染在场行', () => {
 });
 
 test('从正文推断：全名与去姓别称都能认', () => {
-    const ids = inferPresence(pack, '霍振低声说了一句，沈知微抬头，知微没接话。');
+    const ids = inferPresence(pack, '霍振低声说了一句，沈知微抬头看了看，知微没接话。');
     assert.deepEqual(ids.sort(), ['huozhen', 'zhiwei'].sort());
 });
 
@@ -111,4 +111,28 @@ test('驻地：后宅女眷不出内院', () => {
     assert.ok(!atCourt.includes('qixia'), '东跨院的人不该出现在银安殿');
     const atDong = inferPresence(pack, text, { placeId: 'p_wf_dong', tree });
     assert.ok(atDong.includes('qixia'));
+});
+
+test('证据判定：说过话 / 做过动作才算在场', () => {
+    const ids = inferPresence(pack, '霍振在后面喊了一声「跟上」，六十骑散开。', { placeId: 'p_wuli', tree });
+    assert.deepEqual(ids, ['huozhen']);
+});
+
+test('证据判定：只是被提到不算在场', () => {
+    assert.deepEqual(inferPresence(pack, '孙账房那边的账还没报。', { placeId: 'p_wuli', tree }), []);
+    assert.deepEqual(inferPresence(pack, '沈述这个名字他听过。', { placeId: 'p_wuli', tree }), []);
+});
+
+test('证据判定：名字作主语（后面跟逗号）也算', () => {
+    assert.deepEqual(inferPresence(pack, '霍振，你带两骑去看。', { placeId: 'p_wuli', tree }), ['huozhen']);
+});
+
+test('证据判定：对白归属（…」霍振说）也算', () => {
+    const ids = inferPresence(pack, '「王爷，县衙那边有动静。」霍振压低声音。', { placeId: 'p_wuli', tree });
+    assert.deepEqual(ids, ['huozhen']);
+});
+
+test('证据判定：县丞出场（沈述）', () => {
+    const ids = inferPresence(pack, '沈述跪在堂下，抬头看了一眼。', { placeId: 'p_yanhui', tree });
+    assert.deepEqual(ids, ['shenshu']);
 });

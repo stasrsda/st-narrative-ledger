@@ -514,13 +514,19 @@ function currentState() {
     const state = fold(meta.seed, eventsByFloor());
     state.place = meta.placeId ?? meta.seed?.place ?? state.place;
 
-    // 在场名单：meta 里没写、或者写了太多（>6）都回落到世界包的开局名单
+    // 在场名单的优先级（从高到低）：
+    //   ① 手动勾选 / 正文【在场】行  —— 直接写进 meta，这里不覆盖
+    //   ② 结算报到（副模型判到谁）
+    //   ③ 正文证据推断（说过话 / 做过动作）
+    //   ④ 包的开局名单 —— 只在「从来没设置过」时用一次
     const openingList = basePack.opening?.onstage ?? [];
-    if (!Array.isArray(meta.onstage) || meta.onstage.length === 0 || meta.onstage.length > 6) {
-        if (openingList.length) {
-            meta.onstage = [...openingList];
-            log('在场名单异常，回落到开局：', openingList.join(','));
-        }
+    if (!Array.isArray(meta.onstage)) {
+        meta.onstage = openingList.length ? [...openingList] : [];
+        log('首次设置在场名单（开局）：', meta.onstage.join(',') || '（空）');
+    } else if (meta.onstage.length > 6) {
+        // 超过 6 人截断，而不是整个重置 —— 重置会把你手动设的名单也冲掉
+        meta.onstage = meta.onstage.slice(0, 6);
+        log('在场名单超过 6 人，截断为：', meta.onstage.join(','));
     }
     const pack = withGuests(basePack, meta);
     return { pack, state, meta };
