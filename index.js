@@ -31,7 +31,7 @@ import { retrieveCodes } from './src/core/codes/retrieve.js';
 import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
 import { buildOutlineMessages, renderModelOutline } from './src/llm/outline.js';
-import { readLwbSummary, formatLwbBrief, lwbStats } from './src/core/memory/lwb.js';
+import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors } from './src/core/memory/lwb.js';
 import { normalizeSettle } from './src/llm/schema.js';
 import { toEvents } from './src/llm/settle.js';
 import { reviewText, summarize, looksTruncated } from './src/core/review/review.js';
@@ -574,7 +574,7 @@ function diagInfo() {
             affNow: metaHint.affSample || '（无）',
             onstageSrc: readMeta()?.onstageSrc ?? 'manual',
             books: worldBookNames(),
-            lwb: lwbStats(ctx().chatMetadata),
+            lwb: { ...lwbStats(ctx().chatMetadata), aliases: lwbAliases(ctx().chatMetadata).length },
             outline: outline?.text ?? '',
             hud: {
                 on: (() => { try { return globalThis.localStorage?.getItem('storyLedger.hud') !== '0'; } catch { return true; } })(),
@@ -910,7 +910,11 @@ function settleMessage() {
     } else if (declared && declared.length === 0) {
         onIds = [];
     } else {
-        onIds = inferPresence(pack, body, { placeId: meta.placeId ?? state.place ?? null, tree: treeOf(pack) });
+        onIds = inferPresence(pack, body, {
+            placeId: meta.placeId ?? state.place ?? null,
+            tree: treeOf(pack),
+            extraAliases: aliasMapForActors(pack, ctx().chatMetadata),
+        });
         if (!onIds.length) {
             // 这一楼没提到任何人（或被截断）→ 不要清空名单，沿用上一轮
             onIds = null;
@@ -981,6 +985,10 @@ const settleQueue = createQueue({
             aliasMap.set(id, id);
             if (a.name) aliasMap.set(a.name, id);
             for (const al of a.aliases ?? []) aliasMap.set(al, id);
+        }
+        // 小白X 的别名也并进来：它认过的叫法比我们手写的准
+        for (const [id, list] of aliasMapForActors(task.pack, ctx().chatMetadata)) {
+            for (const a of list) if (!aliasMap.has(a)) aliasMap.set(a, id);
         }
         const parsed = normalizeSettle(res, { actorIds, aliasMap, text: task.text });
         if (!parsed.ok) throw new Error(parsed.error);

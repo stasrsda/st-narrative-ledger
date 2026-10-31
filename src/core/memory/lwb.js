@@ -56,3 +56,38 @@ export function lwbStats(chatMeta) {
     if (!s) return { ok: false, events: 0, facts: 0, arcs: 0 };
     return { ok: true, events: s.events.length, facts: s.facts.length, arcs: s.arcs.length };
 }
+
+/**
+ * 小白X 的别名对：[{from, to}]
+ * from 是正文里出现过的叫法，to 是它认定的主名。
+ */
+export function lwbAliases(chatMeta) {
+    try {
+        const raw = chatMeta?.extensions?.LittleWhiteBox?.storySummary?.characterAliases;
+        if (!Array.isArray(raw)) return [];
+        return raw
+            .map(a => ({ from: String(a?.from ?? '').trim(), to: String(a?.to ?? '').trim() }))
+            .filter(a => a.from && a.to && a.from !== a.to);
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * 把别名挂到我们的角色 id 上。
+ * @returns {Map<string, string[]>} id → 额外别名
+ */
+export function aliasMapForActors(pack, chatMeta) {
+    const out = new Map();
+    const pairs = lwbAliases(chatMeta);
+    if (!pairs.length) return out;
+    const actors = Object.values(pack?.index?.actor ?? {});
+    for (const { from, to } of pairs) {
+        const hit = actors.find(a => a.name === to || (a.aliases ?? []).includes(to));
+        if (!hit) continue;
+        const list = out.get(hit.id) ?? [];
+        if (!list.includes(from)) list.push(from);
+        out.set(hit.id, list);
+    }
+    return out;
+}

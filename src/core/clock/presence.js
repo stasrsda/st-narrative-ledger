@@ -8,6 +8,7 @@ const SPEECH_CUES = [
     '接过', '递', '伸手', '按刀', '翻', '掀', '拉', '推', '扶',
     '把', '将', '在', '正', '便', '就', '也', '又', '拿', '捧', '端', '抱', '提', '牵',
     '呈', '拟', '记', '写', '低头', '起身', '坐下', '没接话', '不答',
+    '没有说话', '没说话', '不作声', '不响', '未答', '沉默',
 ];
 
 // 句读：名字出现在这些字符之后，更像「新起的主语」
@@ -123,14 +124,17 @@ function aliasesOf(actor) {
  * 不要求 AI 写任何标记行，也就不会往历史里留垃圾。
  * @returns {string[]} 角色 id（最多 limit 个）
  */
-export function inferPresence(pack, text, { limit = 6, placeId = null, tree = null } = {}) {
+export function inferPresence(pack, text, { limit = 6, placeId = null, tree = null, extraAliases = null } = {}) {
     const t = String(text ?? '');
     if (!t) return [];
     const hits = [];
     for (const actor of Object.values(pack?.index?.actor ?? {})) {
         // 只要不在自己够得着的地方，被提到也不算在场
         if (!canBePresent(actor, { placeId, tree })) continue;
-        const alias = aliasesOf(actor);
+        const alias = [
+            ...aliasesOf(actor),
+            ...((extraAliases?.get?.(actor.id)) ?? []),   // 小白X 认过的叫法
+        ];
         // ① 先看有没有说话/动作的证据（「霍振低声说」「知微，…」）
         const evidence = hasActionEvidence(t, alias);
         if (!evidence.hit) continue;

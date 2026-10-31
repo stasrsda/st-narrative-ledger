@@ -1,6 +1,14 @@
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readLwbSummary, formatLwbBrief, lwbStats } from '../src/core/memory/lwb.js';
+import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors } from '../src/core/memory/lwb.js';
+import { normalizePack } from '../src/core/pack/registry.js';
+import { createTree, putNode } from '../src/core/place/tree.js';
+import { inferPresence } from '../src/core/clock/presence.js';
+
+const pack = normalizePack(JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8')));
+const tree = createTree();
+for (const p of pack.places) putNode(tree, p);
 
 const CHAT = {
     extensions: {
@@ -46,4 +54,29 @@ test('压成简短前情：事件/事实/弧光，跳过已撤回事实', () => 
 test('前情不会太长（给副模型的空间有限）', () => {
     const brief = formatLwbBrief(readLwbSummary(CHAT));
     assert.ok(brief.length < 400, `现在 ${brief.length} 字`);
+});
+
+test('别名表能挂到角色 id 上', () => {
+    const chat = { extensions: { LittleWhiteBox: { storySummary: { characterAliases: [
+        { from: '县丞', to: '沈述' },
+        { from: '老霍', to: '霍振' },
+    ] } } } };
+    const m = aliasMapForActors(pack, chat);
+    assert.deepEqual(m.get('shenshu'), ['县丞']);
+    assert.deepEqual(m.get('huozhen'), ['老霍']);
+});
+
+test('用别名后，正文里的「县丞」也能认出是沈述', () => {
+    const chat = { extensions: { LittleWhiteBox: { storySummary: { characterAliases: [
+        { from: '县丞', to: '沈述' },
+    ] } } } };
+    const extra = aliasMapForActors(pack, chat);
+    const text = '县丞抬头看了一眼堂上。';
+    assert.deepEqual(inferPresence(pack, text, { placeId: 'p_yanhui', tree, extraAliases: extra }), ['shenshu']);
+    assert.deepEqual(inferPresence(pack, text, { placeId: 'p_yanhui', tree }), []);
+});
+
+test('不说话也算在场（有“没有说话”这类线索）', () => {
+    const ids = inferPresence(pack, '知微没有说话，只把袖口攥紧了。', { placeId: 'p_wf_xi', tree });
+    assert.deepEqual(ids, ['zhiwei']);
 });
