@@ -252,3 +252,25 @@ export function parsePresenceFromThinking(text) {
         .filter(x => x.length >= 2 && x.length <= 6)
         .filter(x => !/^(无|无人|空|无其他|其余)$/.test(x));
 }
+
+/**
+ * 思考里的「关键NPC分析 / 人物」小节：
+ *   * 关键NPC分析
+ *      - 霍振：执行者，不多话
+ *      - 沈知微：护家
+ * 这种列表就是主模型认为「这一场有谁」。
+ */
+export function parseCastFromThinking(text) {
+    const t2 = String(text ?? '');
+    const m = t2.match(/(?:关键\s*NPC|人物安排|本场人物|出场人物)[^\n]*\n([\s\S]*?)(?=\n\s*\*\s|\n\s*#|$)/i);
+    if (!m) return [];
+    const out = [];
+    for (const line of m[1].split('\n')) {
+        const mm = line.match(/^\s*[-*·]\s*([^：:，,（(]{2,6})[：:]/);
+        if (!mm) continue;
+        const name = mm[1].trim();
+        if (/^(主人|玩家|我|他|她)$/.test(name)) continue;
+        if (!out.includes(name)) out.push(name);
+    }
+    return out;
+}

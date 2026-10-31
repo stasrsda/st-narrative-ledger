@@ -22,7 +22,7 @@ import { renderHeader } from './src/core/calendar/guofeng.js';
 import { composeAddressBlock } from './src/core/compose/addressBlock.js';
 import { buildOutline } from './src/core/runtime/director.js';
 import { advanceTurn, renderAdvance } from './src/core/clock/auto.js';
-import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, parsePresenceCommentDetailed, canBePresent, parseNewPlacesComment, parsePresenceFromThinking } from './src/core/clock/presence.js';
+import { parsePresence, stripPresence, resolveActors, inferPresence, parsePresenceComment, parsePresenceCommentDetailed, canBePresent, parseNewPlacesComment, parsePresenceFromThinking, parseCastFromThinking } from './src/core/clock/presence.js';
 import { scrubText, scrubMessages } from './src/core/cleanup/scrub.js';
 import { splitThinking, thinkingDominates, normalizeMessage, splitTailStory } from './src/core/cleanup/thinking.js';
 import { detectOfficials, officialToGrants } from './src/core/authority/autogrant.js';
@@ -672,8 +672,8 @@ function diagInfo() {
         const metaHint = {
             onstage: meta?.onstage ?? [],
             lastEvents: (state.done?.length ?? 0) + (state.emergent?.length ?? 0),
-            lastFirst: (messages()[messages().length - 1]?.mes ?? '').split('\n')[0].slice(0, 40),
-            lastLen: (messages()[messages().length - 1]?.mes ?? '').length,
+            lastFirst: lastAiMessage().split('\n')[0].slice(0, 40),
+            lastLen: lastAiMessage().length,
             lastThink: splitThinking(messages()[messages().length - 1]?.mes ?? '').thinking.length,
             lastBody: splitThinking(messages()[messages().length - 1]?.mes ?? '').body.length,
             lastCut: looksTruncated(splitThinking(messages()[messages().length - 1]?.mes ?? '').body),
@@ -1180,10 +1180,14 @@ function settleMessage() {
         // ① 思考里如果直接写了「在场：…」，那就是主模型的判断，最可信
         let fromThinking = [];
         try {
-            const named = parsePresenceFromThinking(msg.extra?.reasoning ?? thinking ?? '');
-            if (named.length) {
-                fromThinking = resolveActors(pack, named).ids ?? [];
-                if (fromThinking.length) log('思考里写了在场：', fromThinking.join(','));
+            const thinkText = msg.extra?.reasoning ?? thinking ?? '';
+            const named = parsePresenceFromThinking(thinkText);
+            // 「关键NPC分析」小节里的列表，也是主模型认为这一场有谁
+            const cast = parseCastFromThinking(thinkText);
+            const all = [...new Set([...named, ...cast])];
+            if (all.length) {
+                fromThinking = resolveActors(pack, all).ids ?? [];
+                if (fromThinking.length) log('思考里列了在场：', fromThinking.join(','));
             }
         } catch (e) {
             log('读思考里的在场失败', e?.message ?? e);
