@@ -63,11 +63,9 @@ export function composeSceneBlock(o = {}) {
         });
     }
 
-    if (!lean && o.headerLine) {
-        parts.push({
-            key: 'slip',
-            text: `底单:${o.headerLine}｜正文第一行原样抄这一行，一字不改，然后空一行写正文`,
-        });
+    // 时间头由插件自己写（DSH Tavern 原则：状态不由模型输出，决不会掉格式）
+    if (!lean) {
+        parts.push({ key: 'slip', text: '首行:时间地点由插件自动加，你不要写' });
     }
     if (!lean && o.prevOnstage) {
         parts.push({ key: 'prev', text: `上场:${o.prevOnstage}（你接过的那一幕）` });

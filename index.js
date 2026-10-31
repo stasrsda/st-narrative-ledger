@@ -1132,41 +1132,46 @@ function settleMessage() {
         }
     }
 
-    // ③.5 底单是 AI 自己贴的：只校验，不乱删
-    //      （以前这里会把正文里的时间行全删掉，会把刚贴好的底单也删掉）
+    // ③.5 时间头由插件写：先把模型自己写的任何时间行清掉（它不该写）
     try {
-        const expected = String(readMeta()?.headerLine ?? '').trim();
-        const firstLine = String(body ?? '').split('\n').map(x => x.trim()).find(Boolean) ?? '';
-        const norm = (x) => x.replace(/[『』\s]/g, '');
-        const wantNorm = norm(expected);
-        if (expected && norm(firstLine).startsWith(wantNorm.slice(0, 12))) {
-            log('AI 已按底单贴好时间头');
-        } else if (expected && firstLine && /^『[^』]+』/.test(firstLine)) {
-            // 贴了但写错（年份/时辰不对）→ 换成底单那一行
-            const lines = String(body ?? '').split('\n');
-            const idx = lines.findIndex(x => x.trim().length > 0);
-            lines[idx] = expected;
-            body = lines.join('\n');
-            log('时间头与底单不符，已换成底单：', expected);
-        } else if (expected) {
-            body = `${expected}\n\n${String(body ?? '').trim()}`;
-            log('AI 没贴底单，已补上：', expected);
+        const isTimeLine = (ln) => {
+            const s2 = ln.trim();
+            if (!s2 || s2.length > 80) return false;
+            if (/^『[^』]{4,80}』$/.test(s2)) return true;
+            if (/\d{1,4}\s*年.*[月日]/.test(s2) && (s2.includes('·') || s2.includes('日'))) return true;
+            if (/星期[一二三四五六日天]/.test(s2)) return true;
+            if (/(子|丑|寅|卯|辰|巳|午|未|申|酉|戌|亥)(初|正)/.test(s2) && s2.length < 40) return true;
+            if (/^(地点|时间|首行)[:：]/.test(s2)) return true;
+            return false;
+        };
+        const lines = String(body ?? '').split('\n');
+        const kept = lines.filter(ln => !isTimeLine(ln));
+        if (kept.length !== lines.length) {
+            body = kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+            log('清掉模型自写的时间行', lines.length - kept.length, '行');
         }
     } catch (e) {
-        log('校验底单失败', e?.message ?? e);
+        log('清时间行失败', e?.message ?? e);
     }
 
-    // ④ 写回：正文由 AI 写（含底单），插件只在内容确实变了时才存
+    // ④ 写回：时间头由插件加，正文原样保留
     try {
         const cleanBody = String(body ?? '').trim();
         const tooShort = cleanBody.length < 30 && originalLen > 120;
+        const treeNow = treeOf(pack);
+        const nodeNow = treeNow.nodes?.[meta.placeId ?? state.place] ?? null;
+        const placeNow = meta.placeName || nodeNow?.name || '';
+        const header = renderHeader(state.t ?? 0, placeNow, pack.calendar);
         if (tooShort) {
             log('正文切得太少，本楼不改写：', `正文 ${cleanBody.length} 字 / 原文 ${originalLen} 字`);
-        } else if (cleanBody && msg.mes !== cleanBody) {
-            msg.mes = cleanBody;
-            try { ctx().saveChat?.(); } catch { /* noop */ }
-            repaintChat();
-            log('正文已写回：', `${cleanBody.length} 字`);
+        } else if (cleanBody) {
+            const next = `${header}\n\n${cleanBody}`;
+            if (msg.mes !== next) {
+                msg.mes = next;
+                try { ctx().saveChat?.(); } catch { /* noop */ }
+                repaintChat();
+                log('插件已写时间头 + 正文：', `${cleanBody.length} 字`);
+            }
         }
     } catch (e) {
         log('写回正文失败', e?.message ?? e);

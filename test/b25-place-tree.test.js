@@ -35,7 +35,7 @@ test('同名小地点：只写「书房」按当前地点消歧', () => {
     assert.equal(resolvePlaceName(t, '书房', { fromId: 'p_jing_wangfu' })?.id, 'p_jw_shufang');
 });
 
-test('底单：状态块里给出要抄的那一行', () => {
+test('时间头：不再让模型抄底单，改为插件渲染（块里只有一行约束）', () => {
     const t = treeWithTwoStudies();
     const seed = openingSeed(pack);
     const b = buildSceneBlock({
@@ -50,9 +50,10 @@ test('底单：状态块里给出要抄的那一行', () => {
         },
         budget: Number.POSITIVE_INFINITY,
     });
-    assert.match(b.text, /底单:/);
-    assert.match(b.text, /沈宅/);
-    assert.match(b.text, /原样抄/);
+    assert.ok(!b.text.includes('底单:'), '不该再让模型抄底单');
+    assert.match(b.text, /首行:时间地点由插件自动加/);
+    // 有底单（=插件会渲染时间头）时，块的头部只留地点，不重复时间
+    assert.match(b.text, /^地:/m);
 });
 
 test('地点行本身也是树状', () => {
