@@ -70,7 +70,8 @@ export function rankCodes(pack, { scene = null, rankIds = [], text = '', state =
             if (rankIds.length && (code.who ?? []).some(w => rankIds.includes(w))) score += 2;
             if (prefer.includes(kind)) score += 2;
             score += textHits(code, text);
-            if (recentIds.has(code.id)) score -= 3;
+            // 刚命中过的降权要够狠：否则分数高的那条永远排第一，反复报同一条
+            if (recentIds.has(code.id)) score -= 8;
             // 只有场景硬匹配或正文命中，才可能进入候选
             const strong = score >= 4;
             if (strong) out.push({ code: { ...code, kind }, score });
