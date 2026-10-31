@@ -1190,7 +1190,9 @@ function settleMessage() {
             tree: treeOf(pack),
             extraAliases: aliasMapForActors(pack, ctx().chatMetadata),
         };
-        const found = inferPresence(pack, body, opts);
+        const clearedMap = readMeta()?.fugitivesCleared ?? {};
+        const opts2 = { ...opts, cleared: clearedMap };
+        const found = inferPresence(pack, body, opts2);
         // ① 思考里如果直接写了「在场：…」，那就是主模型的判断，最可信
         let fromThinking = [];
         try {
@@ -1200,7 +1202,7 @@ function settleMessage() {
             const cast = parseCastFromThinking(thinkText);
             const all = [...new Set([...named, ...cast])];
             // ③ 思考里提到的名字（宽松）：它写「家眷就是沈母、知微、知砚」这种也算
-            const looseIds = inferPresence(pack, thinkText, { ...opts, loose: true });
+            const looseIds = inferPresence(pack, thinkText, { ...opts2, loose: true });
             const direct = all.length ? (resolveActors(pack, all).ids ?? []) : [];
             fromThinking = [...new Set([...direct, ...looseIds])];
             if (fromThinking.length) log('思考里提到的人：', fromThinking.join(','));
@@ -1218,6 +1220,27 @@ function settleMessage() {
         }
     }
     if (onIds) writeMeta({ onstage: onIds, onstageSrc: onIds.length > 1 ? 'ai-evidence' : 'self' });
+
+    // 这一轮真把人拿住了：解除在逃状态（以后他就能正常出场）
+    try {
+        const grabbed = /拿下|押到|押上来|擒|抓住|捉住|捆了|绑了|扣了/.test(String(body ?? ''));
+        if (grabbed && onIds?.length) {
+            const meta2 = readMeta() ?? {};
+            const clearedNow = { ...(meta2.fugitivesCleared ?? {}) };
+            let changed = 0;
+            for (const id of onIds) {
+                const a = pack.index?.actor?.[id];
+                if (a?.fugitive && !clearedNow[id]) {
+                    clearedNow[id] = Date.now();
+                    changed++;
+                    log('已解除在逃：', a.name);
+                }
+            }
+            if (changed) writeMeta({ fugitivesCleared: clearedNow });
+        }
+    } catch (e) {
+        log('解除在逃失败', e?.message ?? e);
+    }
 
     if (parsed) {
         const prev = meta.lastT ?? 0;

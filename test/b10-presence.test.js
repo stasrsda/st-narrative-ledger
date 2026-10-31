@@ -237,7 +237,7 @@ test('光提到不算在场：崔掌柜那边的货', () => {
 });
 
 test('有就地线索才算：崔掌柜在柜后头站着', () => {
-    assert.deepEqual(inferPresence(pack, '崔掌柜在柜后头站着。', { placeId: 'p_shenzhai', tree, loose: true }), ['cuizhanggui']);
+    assert.deepEqual(inferPresence(pack, '崔掌柜在柜后头站着。', { placeId: 'p_xishi', tree, loose: true }), ['cuizhanggui']);
 });
 
 test('列举也算：「家眷就是沈母、知微、知砚」', () => {
@@ -248,4 +248,29 @@ test('列举也算：「家眷就是沈母、知微、知砚」', () => {
 test('没有驻地又不随行的人：不因提到就出现', () => {
     // 皇兄 home 为空、travels false
     assert.deepEqual(inferPresence(pack, '皇兄在京城听说这件事。', { placeId: 'p_shenzhai', tree, loose: true }), []);
+});
+
+test('皇兄只在京城/皇宫一带', () => {
+    const f = (place) => inferPresence(pack, '皇兄在殿上召见群臣。', { placeId: place, tree, loose: true });
+    assert.deepEqual(f('p_taihe'), ['huangxiong']);
+    assert.deepEqual(f('p_shenzhai'), []);
+});
+
+test('太后基本不出慈宁宫', () => {
+    assert.deepEqual(inferPresence(pack, '太后在慈宁宫咳了两声。', { placeId: 'p_cining', tree, loose: true }), ['taihou']);
+    assert.deepEqual(inferPresence(pack, '太后在雁回县。', { placeId: 'p_shenzhai', tree, loose: true }), []);
+});
+
+test('崔掌柜走商队：只在西市一带，且要被提到在场动作', () => {
+    assert.deepEqual(inferPresence(pack, '崔掌柜在西市卸货。', { placeId: 'p_xishi', tree, loose: true }), ['cuizhanggui']);
+    assert.deepEqual(inferPresence(pack, '崔掌柜那边的货还没清点。', { placeId: 'p_xishi', tree, loose: true }), []);
+    assert.deepEqual(inferPresence(pack, '崔掌柜在县衙门口站着。', { placeId: 'p_shenzhai', tree, loose: true }), []);
+});
+
+test('沈述：在逃时不出现；被拿住后解除', () => {
+    assert.deepEqual(inferPresence(pack, '沈述往东南跑了。', { placeId: 'p_shenzhai', tree, loose: true }), []);
+    assert.deepEqual(inferPresence(pack, '沈述被押上来，跪在堂下。', { placeId: 'p_shenzhai', tree, loose: true }), ['shenshu']);
+    // 解除之后，只是被提到也不再算；但带线索就算
+    const cleared = new Set(['shenshu']);
+    assert.deepEqual(inferPresence(pack, '沈述在堂下站着。', { placeId: 'p_shenzhai', tree, loose: true, cleared }), ['shenshu']);
 });

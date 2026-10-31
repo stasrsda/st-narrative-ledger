@@ -158,7 +158,7 @@ function aliasesOf(actor) {
  * 不要求 AI 写任何标记行，也就不会往历史里留垃圾。
  * @returns {string[]} 角色 id（最多 limit 个）
  */
-export function inferPresence(pack, text, { limit = 6, placeId = null, tree = null, extraAliases = null, loose = false } = {}) {
+export function inferPresence(pack, text, { limit = 6, placeId = null, tree = null, extraAliases = null, loose = false, cleared = null } = {}) {
     const t = String(text ?? '');
     if (!t) return [];
     const hits = [];
@@ -170,7 +170,9 @@ export function inferPresence(pack, text, { limit = 6, placeId = null, tree = nu
             ...((extraAliases?.get?.(actor.id)) ?? []),   // 小白X 认过的叫法
         ];
         // 在逃的人：除非这一轮被抓/被押/开口，否则不算在场
-        if (actor.fugitive && !/擒|押|抓住|捉|绑|捆绑|跪|开口|招了|供出/.test(t)) continue;
+        const caughtCue = /擒|押|抓住|捉|绑|捆绑|跪|开口|招了|供出|拿下|扣了/.test(t);
+        const isCleared = Boolean(cleared?.has?.(actor.id) || cleared?.[actor.id]);
+        if (actor.fugitive && !isCleared && !caughtCue) continue;
         // ① 先看有没有说话/动作的证据（「霍振低声说」「知微，…」）
         //    loose 模式（用于思考）：提到就算候选，靠驻地与在逃门兜过滤
         if (!loose) {
@@ -180,7 +182,9 @@ export function inferPresence(pack, text, { limit = 6, placeId = null, tree = nu
             // loose（思考）：光是提到不算，附近得有「人在这儿」的线索
             const mentioned = alias.some(a => a.length >= 2 && t.includes(a));
             if (!mentioned) continue;
-            if (!hasNearCue(t, alias, 8)) continue;
+            // 走商队/流动的人（roaming）：窗口更窄，必须紧挨着在场动词
+            const span = actor.roaming ? 5 : 8;
+            if (!hasNearCue(t, alias, span)) continue;
         }
         if (!hits.includes(actor.id)) hits.push(actor.id);
     }

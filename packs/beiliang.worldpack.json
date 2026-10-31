@@ -6506,8 +6506,9 @@
       ],
       "temper": "sly",
       "bond": "kin",
-      "home": null,
-      "travels": false
+      "home": "p_jingcheng",
+      "travels": false,
+      "note": "除非剧情有旨意召见，否则不出京城"
     },
     {
       "id": "taihou",
@@ -6523,8 +6524,9 @@
       ],
       "temper": "cold",
       "bond": "kin",
-      "home": null,
-      "travels": false
+      "home": "p_cining",
+      "travels": false,
+      "note": "深居慈宁宫，非大典不出"
     },
     {
       "id": "qindou",
@@ -6733,8 +6735,10 @@
         }
       ],
       "beats": [],
-      "home": null,
-      "travels": true
+      "home": "p_xishi",
+      "travels": false,
+      "roaming": true,
+      "note": "商队往来，偶尔进城；不在西市一带就不会露面"
     },
     {
       "id": "shenmu",
@@ -9561,6 +9565,6 @@
       "e_break_city"
     ]
   },
-  "revision": 12,
-  "revisionNote": "含沈宅、在逃状态、短名别名、自建地点"
+  "revision": 13,
+  "revisionNote": "写死皇兄/太后/崔掌柜/沈述的活动范围"
 }
