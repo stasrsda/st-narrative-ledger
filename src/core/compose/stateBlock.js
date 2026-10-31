@@ -52,6 +52,14 @@ export function composeSceneBlock(o = {}) {
     const placeTail = o.placeTag ? `[${o.placeTag}]` : '';
     const head = `时:${renderDate(t)}·${renderTime(t)}${o.placePath ? ` | 地:${o.placePath}${placeTail}` : ''}`;
     parts.push({ key: 'header', text: head, locked: true });
+    // 输出约定放在最前面：放末尾模型会忽略
+    if (o.presenceHint !== false) {
+        parts.push({
+            key: 'presenceHint',
+            text: '输出约定（必做）:正文写完后，最后一行写 <!--在场:名字、名字--> ；'
+                + '读者看不见这一行，插件读完就删；不在场的不写，谁也不在就写 <!--在场:-->',
+        });
+    }
 
     if (o.weather) parts.push({ key: 'weather', text: `天:${o.weather}` });
     if (!lean && o.here) parts.push({ key: 'here', text: o.here });
@@ -74,13 +82,6 @@ export function composeSceneBlock(o = {}) {
     if (o.props) parts.push({ key: 'props', text: o.props });
     if (o.items) parts.push({ key: 'items', text: o.items });
 
-    // 输出约定：让主模型用隐藏注释声明在场（读者看不见，插件读完就删）
-    if (o.presenceHint !== false) {
-        parts.push({
-            key: 'presenceHint',
-            text: '输出约定:正文写完后另起一行写 <!--在场:名字、名字-->（读者看不见，插件读完即删；谁也不在写 <!--在场:-->）',
-        });
-    }
     parts.push({ key: 'footer', text: '与<info>冲突时以本块为准。', locked: true });
 
     const dropped = [];

@@ -886,10 +886,10 @@ function settleMessage() {
     if (declaredInComment) {
         const { ids } = resolveActors(pack, declaredInComment);
         if (ids.length) {
-            writeMeta({ onstage: ids, onstageSrc: 'ai' });
+            writeMeta({ onstage: ids, onstageSrc: 'ai-comment' });
             log('主模型声明在场：', ids.join(','));
         } else if (declaredInComment.length === 0) {
-            writeMeta({ onstage: [], onstageSrc: 'ai' });
+            writeMeta({ onstage: [], onstageSrc: 'ai-comment' });
             log('主模型声明：无人');
         }
     }
@@ -1014,7 +1014,7 @@ const settleQueue = createQueue({
                     if (!list.includes(id)) { list.push(id); added++; }
                 }
                 if (added) {
-                    writeMeta({ onstage: list });
+                    writeMeta({ onstage: list, onstageSrc: 'settle' });
                     log('结算补充在场', list.join(','));
                 }
             }

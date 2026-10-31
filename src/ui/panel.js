@@ -392,7 +392,14 @@ function render() {
             dg.append(row('基础好感', S.diag.sample ?? '—'));
             dg.append(row('此刻好感', S.diag.affNow ?? '—'));
             dg.append(row('在场名单', S.diag.onstage ?? '（空）'));
-            dg.append(row('在场来源', S.diag.onstageSrc === 'ai' ? '主模型写的【在场】行' : '手动/开局'));
+            const srcCn = {
+                'ai-comment': '主模型自己报的（<!--在场:…-->）',
+                'ai-evidence': '从正文推断（说话/动作）',
+                'settle': '结算报到',
+                'manual': '手动/开局',
+                'ai': '主模型写的【在场】行',
+            }[S.diag.onstageSrc] ?? '手动/开局';
+            dg.append(row('在场来源', srcCn));
             dg.append(row('事件数', S.diag.lastEvents ?? 0));
             dg.append(row('末楼首行', S.diag.lastFirst ?? '—'));
             dg.append(row('末楼字数', S.diag.lastLen ?? 0));
