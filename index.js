@@ -4,7 +4,7 @@
 try { console.log('[叙事账本] module start'); } catch { /* noop */ }
 
 import { VERSION } from './src/core/version.js';
-import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange, onStateDetailChange, onScrubChat } from './src/ui/panel.js';
+import { mountPanel, refreshPanel, openDrawer, closeDrawer, onProfileChange, onReset, onPackChange, onSaveProfile, onTestModel, onImportPack, onListModels, onSettleNow, onExportDiag, onOnstageChange, onStateDetailChange, onScrubChat, onDirectorChange } from './src/ui/panel.js';
 import {
     ctx, chatId, messages, lastMessageIndex, readMeta, writeMeta,
     appendEvents, eventsByFloor, packMatchNames,
@@ -30,6 +30,7 @@ import { candidatesFor } from './src/core/codes/codes.js';
 import { retrieveCodes } from './src/core/codes/retrieve.js';
 import { createQueue } from './src/llm/queue.js';
 import { buildSettleMessages } from './src/llm/prompt.js';
+import { buildOutlineMessages, renderModelOutline } from './src/llm/outline.js';
 import { normalizeSettle } from './src/llm/schema.js';
 import { toEvents } from './src/llm/settle.js';
 import { reviewText, summarize, looksTruncated } from './src/core/review/review.js';
@@ -411,6 +412,67 @@ function advanceFromUserInput() {
     }
 }
 
+/**
+ * 让副模型编排大纲（可选，settings.directorModel）。
+ * ST 的 GENERATION_AFTER_COMMANDS 是 await 监听器的，所以这里等得起；
+ * 失败/超时一律回落规则大纲，绝不阻塞生成。
+ */
+let modelOutlineCache = { key: '', text: '' };
+async function composeModelOutline() {
+    try {
+        const { pack, state, meta } = currentState();
+        if (!transportAvailable()) return;
+        const d = settings.director ?? {};
+        if (!d.baseUrl || !d.model) {
+            if (!settings.profileId) return;
+        }
+        const lastUser = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
+        const cacheKey = `${chatId()}|${lastUser}`;
+        if (modelOutlineCache.key === cacheKey && modelOutlineCache.text) return;
+
+        const tree = treeOf(pack);
+        const onstage = onstageOf(pack, state, meta).map(o => o.name);
+        const placeName = tree.nodes?.[meta.placeId ?? state.place]?.name ?? meta.placeName ?? '';
+        const rule = buildOutline(pack, state, meta, lastUser, tree);
+
+        const msgs = buildOutlineMessages({
+            ruleOutline: rule.text,
+            userText: lastUser,
+            onstage,
+            placeName,
+            recent: (state.emergent ?? []).slice(-2).map(e => e.name).join('、'),
+        });
+
+        const d2 = settings.direct ?? {};
+        const res = d2.baseUrl && d2.model
+            ? await requestCustom({ baseUrl: d2.baseUrl, apiKey: d2.apiKey, model: d2.model, messages: msgs, maxTokens: 260 })
+            : await requestCompletion(msgs, { profileId: settings.profileId, maxTokens: 260 });
+
+        const data = extractJsonSafe(res);
+        const text = data ? renderModelOutline(data, rule.text) : '';
+        if (text) {
+            modelOutlineCache = { key: cacheKey, text };
+            log('副模型大纲已生成', `${text.length} 字`);
+        } else {
+            log('副模型大纲解析失败，用规则大纲');
+        }
+    } catch (e) {
+        log('副模型编排失败，用规则大纲', e?.message ?? e);
+    }
+}
+
+function extractJsonSafe(text) {
+    try {
+        const s2 = String(text ?? '');
+        const a = s2.indexOf('{');
+        const b = s2.lastIndexOf('}');
+        if (a < 0 || b <= a) return null;
+        return JSON.parse(s2.slice(a, b + 1));
+    } catch {
+        return null;
+    }
+}
+
 /** 改写消息内容后，让 ST 重新渲染（否则页面显示的还是旧 DOM） */
 let repaintTimer = null;
 function repaintChat() {
@@ -622,6 +684,11 @@ function composeAndInject() {
         if (settings.director !== false) {
             const lastUser = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
             outline = buildOutline(pack, state, meta, lastUser, tree);
+            // 副模型编排过的话，用它的版本
+            const lastU = [...messages()].reverse().find(m => m.is_user)?.mes ?? '';
+            if (modelOutlineCache.key === `${chatId()}|${lastU}` && modelOutlineCache.text) {
+                outline = { ...outline, text: modelOutlineCache.text };
+            }
             if (outline?.text && typeof setStatePrompt === 'function') {
                 setStatePrompt(outline.text, { depth: 2, key: PROMPT_KEY_DIRO });
             }
@@ -1208,6 +1275,12 @@ function boot() {
         return r;
     });
 
+    onDirectorChange(v => {
+        settings.directorModel = Boolean(v);
+        try { globalThis.localStorage?.setItem('storyLedger.directorModel', v ? '1' : '0'); } catch { /* noop */ }
+        log('副模型编排大纲', v ? '开' : '关');
+    });
+
     onStateDetailChange(v => {
         settings.stateDetail = v;
         try { globalThis.localStorage?.setItem('storyLedger.stateDetail', v); } catch { /* noop */ }
@@ -1293,10 +1366,13 @@ function boot() {
     if (typeof eventSource?.on !== 'function') { log('事件源不可用，扩展只会显示面板'); refreshPanel({ env: envInfo() }); return; }
     try {
         eventSource.on(EV.CHAT_CHANGED, onChatChanged);
-        eventSource.on(EV.GENERATION_AFTER_COMMANDS, () => {
+        eventSource.on(EV.GENERATION_AFTER_COMMANDS, async () => {
             try {
                 advanceFromUserInput();
-    composeAndInject();
+                if (settings.directorModel) {
+                    await composeModelOutline();
+                }
+                composeAndInject();
             } catch (e) {
                 log('注入失败', e);
             }

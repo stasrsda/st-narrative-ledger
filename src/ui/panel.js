@@ -37,6 +37,7 @@ const S = {
     onstageEdit: false,
     hudCollapsed: false,
     stateDetail: 'lean',
+    directorModel: false,
     cleanMsg: '',
     hudOn: true,
     directMsg: '',
@@ -54,6 +55,7 @@ let settleNowHandler = null;
 let diagHandler = null;
 let onstageHandler = null;
 let detailHandler = null;
+let directorHandler = null;
 let scrubHandler = null;
 
 try {
@@ -103,6 +105,10 @@ export function onOnstageChange(fn) {
 
 export function onStateDetailChange(fn) {
     detailHandler = fn;
+}
+
+export function onDirectorChange(fn) {
+    directorHandler = fn;
 }
 
 export function onScrubChat(fn) {

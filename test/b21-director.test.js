@@ -5,6 +5,7 @@ import { normalizePack } from '../src/core/pack/registry.js';
 import { createTree, putNode } from '../src/core/place/tree.js';
 import { openingSeed } from '../src/core/runtime/opening.js';
 import { buildOutline } from '../src/core/runtime/director.js';
+import { buildOutlineMessages, renderModelOutline } from '../src/llm/outline.js';
 
 const pack = normalizePack(JSON.parse(readFileSync(new URL('../packs/beiliang.worldpack.json', import.meta.url), 'utf8')));
 const tree = createTree();
@@ -38,4 +39,34 @@ test('大纲：可发列的是事件名，不是 [object Object]', () => {
 test('大纲：token 控制在 250 以内', () => {
     const o = outline('p_yanhui', ['baijingzhao', 'huozhen', 'shenshu'], '进城查问');
     assert.ok(o.tokens < 250, `现在 ${o.tokens}`);
+});
+
+test('副模型编排：请求里带上规则骨架与玩家输入', () => {
+    const msgs = buildOutlineMessages({
+        ruleOutline: '<导演>场:县衙</导演>',
+        userText: '把县丞带上来',
+        onstage: ['霍振', '沈述'],
+        placeName: '县衙',
+        recent: '城破',
+    });
+    assert.equal(msgs.length, 2);
+    const u = msgs[1].content;
+    assert.match(u, /县衙/);
+    assert.match(u, /把县丞带上来/);
+    assert.match(u, /霍振/);
+});
+
+test('副模型编排：beats 渲染成大纲', () => {
+    const text = renderModelOutline(
+        { beats: [{ who: '霍振', do: '拔刀挡在前面' }, { who: '沈述', do: '抬头看了一眼' }], hook: '门外一聲響' },
+        '<导演>场:县衙</导演>',
+    );
+    assert.match(text, /编排:/);
+    assert.match(text, /霍振：拔刀挡在前面/);
+    assert.match(text, /留:门外一聲響/);
+});
+
+test('副模型编排：解析不出来就返回空串（回落规则大纲）', () => {
+    assert.equal(renderModelOutline(null, 'x'), '');
+    assert.equal(renderModelOutline({ beats: [] }, 'x'), '');
 });
