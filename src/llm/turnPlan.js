@@ -160,7 +160,10 @@ export function renderTurnPlan(ruleOutline, plan) {
     const lines = [];
     if (plan.minutes > 0) lines.push(`时间推进:${plan.minutes} 分钟`);
     if (plan.place) lines.push(`换场:${plan.place.name}`);
-    if (plan.beats.length) {
+    if (plan.situation) lines.push(`情境:${String(plan.situation).slice(0, 120)}`);
+    if (plan.wants?.length) lines.push(`诉求:${plan.wants.slice(0, 4).join('；')}`);
+    if (plan.facts?.length) lines.push(`事实点:${plan.facts.slice(0, 5).join('；')}`);
+    if (plan.beats?.length) {
         const bs = plan.beats.map((b, i) => `  ${i + 1}. ${b.who}：${b.do}`).join('\n');
         lines.push(`编排:\n${bs}`);
     }

@@ -594,6 +594,16 @@ async function composeTurnPlan() {
                     logicNotes = Array.isArray(ddata.problems)
                         ? ddata.problems.map(x => String(x).slice(0, 16)).filter(Boolean).slice(0, 4)
                         : [];
+                    // 三套框架（认知情境 / 关键NPC / 情节推进）的产出
+                    if (typeof ddata.situation === 'string' && ddata.situation.trim()) {
+                        plan.situation = ddata.situation.trim().slice(0, 100);
+                    }
+                    if (Array.isArray(ddata.wants)) {
+                        plan.wants = ddata.wants.map(x => String(x).slice(0, 18)).filter(Boolean).slice(0, 4);
+                    }
+                    if (Array.isArray(ddata.facts)) {
+                        plan.facts = ddata.facts.map(x => String(x).slice(0, 18)).filter(Boolean).slice(0, 5);
+                    }
                     log('思辨第二遍：', logicNotes.length ? logicNotes.join('；') : '未发现问题');
                 }
             } catch (e) {
