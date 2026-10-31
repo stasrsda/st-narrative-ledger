@@ -7,7 +7,8 @@ export function buildTurnMessages(brief = {}) {
         onstage = [], prevLine = '', places = [], ruleOutline = '', recent = '', lastAi = '',
         cast = [], codes = [], events = {}, authority = [], player = {}, props = [],
         world = [], rounds = [], maxChars = 7000,
-        urgency = '', relations = [], items = [],
+        urgency = '', knownFacts = [], items = [],
+        relations = [], arcs = [], story = [],
     } = brief;
 
     const sys = [
@@ -77,7 +78,10 @@ export function buildTurnMessages(brief = {}) {
         ev('【未结】', events.pending),
         ev('【可触发】', events.canTrigger),
         ev('【已结】', events.done),
-        relations.length ? `【已知事实】${relations.join('；')}` : '',
+        knownFacts.length ? `【已知事实】${knownFacts.join('；')}` : '',
+        relations.length ? `【人物关系】${relations.join('；')}` : '',
+        arcs.length ? `【角色弧光】${arcs.join('；')}` : '',
+        story.length ? `【相关前情】\n${story.map(x => '  · ' + x).join('\n')}` : '',
         authority.length ? `【职权】${authority.join('；')}` : '',
         player.rank || player.items?.length
             ? `【玩家】位份:${player.rank || '—'}${items.length ? `  随身:${items.join('、')}` : ''}`

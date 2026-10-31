@@ -34,7 +34,7 @@ import { buildSettleMessages } from './src/llm/prompt.js';
 import { buildOutlineMessages, renderModelOutline } from './src/llm/outline.js';
 import { buildTurnMessages, validateTurnPlan, renderTurnPlan } from './src/llm/turnPlan.js';
 import { buildDeliberateMessages } from './src/llm/deliberate.js';
-import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors, factsForCast } from './src/core/memory/lwb.js';
+import { readLwbSummary, formatLwbBrief, lwbStats, lwbAliases, aliasMapForActors, factsForCast, relationsFor, arcsFor, eventsForCast } from './src/core/memory/lwb.js';
 import { loadWorldbook, pickWorldEntries } from './src/core/memory/worldbook.js';
 import { normalizeSettle } from './src/llm/schema.js';
 import { toEvents } from './src/llm/settle.js';
@@ -561,7 +561,10 @@ async function composeTurnPlan() {
             urgency: (() => {
                 try { return urgencyLine(state.t ?? 0); } catch { return ''; }
             })(),
-            relations: factsForCast(ctx().chatMetadata, cast.map(c => c.name), 6),
+            knownFacts: factsForCast(ctx().chatMetadata, cast.map(c => c.name), 6),
+            relations: relationsFor(ctx().chatMetadata, cast.map(c => c.name), 6),
+            arcs: arcsFor(ctx().chatMetadata, cast.map(c => c.name), 4),
+            story: eventsForCast(ctx().chatMetadata, cast.map(c => c.name), 3),
             items: Object.values(state.items ?? {})
                 .filter(it => it && (it.hold === 'carry' || it.holder === playerId))
                 .slice(0, 6)

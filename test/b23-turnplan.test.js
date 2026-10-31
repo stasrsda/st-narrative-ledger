@@ -78,7 +78,7 @@ test('副模型能看到紧迫度 / 已知事实 / 随身物品状态', () => {
         userText: '带上来',
         placeName: '县衙',
         urgency: '距天亮还有 4 个时辰',
-        relations: ['沈述 位置=在逃'],
+        knownFacts: ['沈述 位置=在逃'],
         items: ['佩刀(卷刃)'],
         player: { rank: '王' },
         onstage: ['霍振'],
